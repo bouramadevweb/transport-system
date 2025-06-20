@@ -1,0 +1,47 @@
+# Environnement Python
+*env/
+*venv/
+ENV/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# Base de données locale
+*.sqlite3
+
+# Fichiers de config ou secrets
+.env
+*.env
+*.secret
+secrets.json
+
+# Django logs & cache
+*.log
+*.pot
+*.mo
+*.py[cod]
+db.sqlite3
+media/
+staticfiles/
+
+# Migrations compilées
+**/migrations/__pycache__/
+**/migrations/*.pyc
+**/migrations/*.pyo
+
+# Node modules (si tu as du JS)
+node_modules/
+
+# Mac & système
+.DS_Store
+Thumbs.db
