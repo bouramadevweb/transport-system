@@ -45,7 +45,7 @@ STATUT_MISSION_CHOICES = [
 ]
 
 class Entreprise(models.Model):
-    id_entreprise = models.AutoField(primary_key=True)
+    pk_entreprise = models.CharField(max_length=250,primary_key=True)
     nom = models.CharField(max_length=100)
     secteur_activite = models.CharField(max_length=100, blank=True, null=True)
     email_contact = models.EmailField(max_length=100, blank=True, null=True)
@@ -54,7 +54,7 @@ class Entreprise(models.Model):
     statut = models.CharField(max_length=10, choices=STATUT_ENTREPRISE_CHOICES, default='active')
 
 class Utilisateur(models.Model):
-    id_utilisateur = models.AutoField(primary_key=True)
+    pk_utilisateur = models.CharField(max_length=250, primary_key=True)
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
     nom_utilisateur = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
@@ -64,7 +64,7 @@ class Utilisateur(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
 
 class Chauffeur(models.Model):
-    id_chauffeur = models.AutoField(primary_key=True)
+    pk_chauffeur = models.CharField(max_length=250,primary_key=True)
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
     nom = models.CharField(max_length=50)
     prenom = models.CharField(max_length=50)
@@ -72,7 +72,7 @@ class Chauffeur(models.Model):
     email = models.EmailField(blank=True, null=True)
 
 class UtilisateurChauffeur(models.Model):
-    id_utilisateur_chauffeur = models.AutoField(primary_key=True)
+    pk_utilisateur_chauffeur = models.CharField(max_length=250,primary_key=True)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
     email = models.EmailField(unique=True)
     mot_de_passe_hash = models.CharField(max_length=255)
@@ -80,19 +80,19 @@ class UtilisateurChauffeur(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
 
 class Camion(models.Model):
-    id_camion = models.AutoField(primary_key=True)
+    pk_camion = models.CharField(max_length=250,primary_key=True)
     immatriculation = models.CharField(max_length=20, unique=True)
     modele = models.CharField(max_length=50, blank=True, null=True)
     capacite_tonnes = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
 class Mecanicien(models.Model):
-    id_mecanicien = models.AutoField(primary_key=True)
+    pk_mecanicien = models.CharField(max_length=250,primary_key=True)
     nom = models.CharField(max_length=100)
     telephone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
 
 class Fournisseur(models.Model):
-    id_fournisseur = models.AutoField(primary_key=True)
+    pk_fournisseur = models.CharField(max_length=250,primary_key=True)
     nom = models.CharField(max_length=100)
     telephone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
@@ -101,7 +101,7 @@ class Fournisseur(models.Model):
     commentaire = models.TextField(blank=True, null=True)
 
 class Transitaire(models.Model):
-    id_transitaire = models.AutoField(primary_key=True)
+    pk_transitaire = models.CharField(max_length=250,primary_key=True)
     nom = models.CharField(max_length=100)
     telephone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
@@ -110,7 +110,7 @@ class Transitaire(models.Model):
     commentaire = models.TextField(blank=True, null=True)
 
 class Client(models.Model):
-    id_client = models.AutoField(primary_key=True)
+    pk_client = models.CharField(max_length=250,primary_key=True)
     nom = models.CharField(max_length=100)
     type_client = models.CharField(max_length=10, choices=TYPE_CLIENT_CHOICES)
     telephone = models.CharField(max_length=20, blank=True, null=True)
@@ -120,7 +120,7 @@ class Client(models.Model):
     commentaire = models.TextField(blank=True, null=True)
 
 class Conteneur(models.Model):
-    id_conteneur = models.AutoField(primary_key=True)
+    pk_conteneur = models.CharField(max_length=250,primary_key=True)
     numero_conteneur = models.CharField(max_length=30, unique=True)
     type_conteneur = models.CharField(max_length=50, blank=True, null=True)
     poids = models.DecimalField(max_digits=6, decimal_places=2, default=0)
@@ -128,7 +128,7 @@ class Conteneur(models.Model):
     transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
 
 class ContratTransport(models.Model):
-    id_contrat = models.AutoField(primary_key=True)
+    pk_contrat = models.CharField(max_length=250,primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
     transitaire = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
@@ -143,14 +143,14 @@ class ContratTransport(models.Model):
     signature_transitaire = models.BooleanField(default=False)
 
 class Affectation(models.Model):
-    id_affectation = models.AutoField(primary_key=True)
+    pk_affectation = models.CharField(max_length=250,primary_key=True)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
     camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
     date_affectation = models.DateField(auto_now_add=True)
     date_fin_affectation = models.DateField(blank=True, null=True)
 
 class FraisTrajet(models.Model):
-    id_frais = models.AutoField(primary_key=True)
+    pk_frais = models.CharField(max_length=250,primary_key=True)
     origine = models.CharField(max_length=50)
     destination = models.CharField(max_length=50)
     frais_route = models.DecimalField(max_digits=10, decimal_places=2)
@@ -160,7 +160,7 @@ class FraisTrajet(models.Model):
         unique_together = ('origine', 'destination')
 
 class Mission(models.Model):
-    id_mission = models.AutoField(primary_key=True)
+    pk_mission = models.CharField(max_length=250,primary_key=True)
     camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
     date_depart = models.DateField()
@@ -180,7 +180,7 @@ class MissionConteneur(models.Model):
         unique_together = ('mission', 'conteneur')
 
 class Reparation(models.Model):
-    id_reparation = models.AutoField(primary_key=True)
+    pk_reparation = models.CharField(max_length=250,primary_key=True)
     camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.SET_NULL, blank=True, null=True)
     date_reparation = models.DateField()
@@ -195,7 +195,7 @@ class ReparationMecanicien(models.Model):
         unique_together = ('reparation', 'mecanicien')
 
 class PieceReparee(models.Model):
-    id_piece = models.AutoField(primary_key=True)
+    pk_piece = models.CharField(max_length=250,primary_key=True)
     reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
     nom_piece = models.CharField(max_length=100)
     quantite = models.PositiveIntegerField(default=1)
@@ -203,7 +203,7 @@ class PieceReparee(models.Model):
     fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE)
 
 class PaiementMission(models.Model):
-    id_paiement = models.AutoField(primary_key=True)
+    pk_paiement = models.CharField(max_length=250,primary_key=True)
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
     montant_total = models.DecimalField(max_digits=10, decimal_places=2)
     montant_avance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
