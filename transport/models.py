@@ -61,7 +61,7 @@ class Entreprise(models.Model):
     statut = models.CharField(max_length=10, choices=STATUT_ENTREPRISE_CHOICES, default='active')
 
     def __str__(self):
-        return self.nom, self.secteur_activite
+        return self.pk_entreprise,  self.nom, self.secteur_activite, self.email_contact, self.telephone_contact, self.date_creation, self.statut
 
 
 class Utilisateur(models.Model):
@@ -75,7 +75,7 @@ class Utilisateur(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.nom_utilisateur
+        return f"{self.pk_utilisateur}, {self.entreprise}, {self.nom_utilisateur}, {self.email}, {self.email}, {self.mot_de_passe_hash}, {self.role}, {self.actif}, {self.date_creation}"
 
 
 class Chauffeur(models.Model):
@@ -87,7 +87,7 @@ class Chauffeur(models.Model):
     email = models.EmailField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.nom} {self.prenom}"
+        return f"{self.pk_chauffeur}, {self.entreprise},{self.nom}, {self.prenom}, {self.telephone}, {self.email}"
 
 
 class UtilisateurChauffeur(models.Model):
@@ -99,7 +99,7 @@ class UtilisateurChauffeur(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.email
+        return f"{self.pk_utilisateur_chauffeur},{self.chauffeur}, {self.email}, {self.mot_de_passe_hash}, {self.actif} ,{self.date_creation}"
 
 
 class Camion(models.Model):
@@ -109,7 +109,7 @@ class Camion(models.Model):
     capacite_tonnes = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
     def __str__(self):
-        return self.immatriculation
+        return f"{self.pk_camion},{self.immatriculation},{self.modele}, {self.capacite_tonnes}"
 
 
 class Mecanicien(models.Model):
@@ -119,7 +119,7 @@ class Mecanicien(models.Model):
     email = models.EmailField(blank=True, null=True)
 
     def __str__(self):
-        return self.nom
+        return f"{self.pk_mecanicien}, {self.nom}, {self.telephone}, {self.email}"
 
 
 class Fournisseur(models.Model):
@@ -132,7 +132,7 @@ class Fournisseur(models.Model):
     commentaire = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return self.nom
+        return  f"{self.pk_fournisseur}, {self.telephone}, {self.email}, {self.adresse}, {self.fiabilite}, {self.commentaire},  {self.nom}"
 
 
 class Transitaire(models.Model):
@@ -190,7 +190,7 @@ class ContratTransport(models.Model):
     signature_transitaire = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.pk_contrat ,self.conteneur, self.client, self.transitaire
+        return f"{self.pk_contrat} ,{self.conteneur}, {self.client}, {self.transitaire}"
 
 
 class Affectation(models.Model):
