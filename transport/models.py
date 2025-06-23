@@ -209,10 +209,10 @@ class Cautions(models.Model):
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.SET_NULL, blank=True, null=True)
     camion = models.ForeignKey(Camion, on_delete=models.SET_NULL, blank=True, null=True)
-    montant = models.IntegerField()
+    montant =  models.DecimalField(max_digits=10, decimal_places=2, default=0)
     non_rembourser = models.BooleanField(default=False)
     est_rembourser = models.BooleanField(default=True)
-    montant_rembourser =models.IntegerField()
+    montant_rembourser = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"{self.pk_caution}, {self.conteneur}, {self.contrat}, {self.transiteur} {self.client}, {self.chauffeur}, {self.camion}, {self.montant}, {self.non_rembourser}, {self.est_rembourser}, {self.montant_rembourser}"
