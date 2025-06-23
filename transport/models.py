@@ -174,6 +174,24 @@ class ContratTransport(models.Model):
     signature_client = models.BooleanField(default=False)
     signature_transitaire = models.BooleanField(default=False)
 
+    def __str__(self):
+        return (
+            f"Contrat {self.pk_contrat} | "
+            f"Conteneur: {self.conteneur.numero_conteneur} | "
+            f"Client: {self.client.nom if self.client else 'N/A'} | "
+            f"Transitaire: {self.transitaire.nom if self.transitaire else 'N/A'} | "
+            f"Entreprise: {self.entreprise.nom} | "
+            f"Camion: {self.camion.immatriculation} | "
+            f"Chauffeur: {self.chauffeur.nom} {self.chauffeur.prenom} | "
+            f"Début: {self.date_debut} | "
+            f"Retour limite: {self.date_limite_retour} | "
+            f"Caution: {self.caution} ({self.statut_caution}) | "
+            f"Signatures - Chauffeur: {'✔' if self.signature_chauffeur else '✘'}, "
+            f"Client: {'✔' if self.signature_client else '✘'}, "
+            f"Transitaire: {'✔' if self.signature_transitaire else '✘'}"
+        )
+
+
 class Cautions(models.Model):
     pk_caution = models.CharField(max_length=250, primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.SET_NULL, blank=True, null=True)
