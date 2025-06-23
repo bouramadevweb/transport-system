@@ -57,7 +57,10 @@ class Entreprise(models.Model):
     statut = models.CharField(max_length=10, choices=STATUT_ENTREPRISE_CHOICES, default='active')
 
     def __str__(self):
-        return f"{self.pk_entreprise}, {self.nom}, {self.secteur_activite}, {self.email_contact}, {self.telephone_contact}, {self.date_creation}, {self.statut}"
+        return (f"{self.pk_entreprise}" 
+                f"{self.nom}, {self.secteur_activite}"
+                f" {self.email_contact}, {self.telephone_contact}"
+                f" {self.date_creation}, {self.statut}")
 
 
 class Utilisateur(models.Model):
@@ -71,7 +74,10 @@ class Utilisateur(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.pk_utilisateur}, {self.entreprise}, {self.nom_utilisateur}, {self.email}, {self.mot_de_passe_hash}, {self.role}, {self.date_creation}"
+        return (f"{self.pk_utilisateur}"
+                f"{self.entreprise}, {self.nom_utilisateur}"
+                f" {self.email}, {self.mot_de_passe_hash}"
+                f" {self.role}, {self.date_creation}")
 
 class Chauffeur(models.Model):
     pk_chauffeur = models.CharField(max_length=250, primary_key=True)
@@ -95,7 +101,10 @@ class UtilisateurChauffeur(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.pk_utilisateur_chauffeur},{self.entreprise}, {self.chauffeur}, {self.email}, {self.mot_de_passe_hash}, {self.actif}, {self.date_creation}"
+        return (f"{self.pk_utilisateur_chauffeur},{self.entreprise}"
+                f"{self.chauffeur}, {self.email}" 
+                f"{self.mot_de_passe_hash}, {self.actif}"
+                f" {self.date_creation}")
 
 
 class Camion(models.Model):
@@ -247,7 +256,12 @@ class Mission(models.Model):
     statut = models.CharField(max_length=10, choices=STATUT_MISSION_CHOICES, default='en cours')
 
     def __str__(self):
-        return f"{self.pk_mission}, {self.camion}, {self.chauffeur}, {self.date_depart}, {self.date_retour}, {self.origine}, {self.origine}, {self.destination}, {self.prix_unitaire_par_tonne},{self.frais_trajet}, {self.contrat}, {self.statut}"
+        return (f"{self.pk_mission}, {self.camion}"
+                f" {self.chauffeur}, {self.date_depart}"
+                f"{self.date_retour}, {self.origine}"
+                f" {self.origine}, {self.destination}"
+                f" {self.prix_unitaire_par_tonne}"
+                f"{self.frais_trajet}, {self.contrat}, {self.statut}" )
 
 
 class MissionConteneur(models.Model):
@@ -331,5 +345,9 @@ class PaiementMission(models.Model):
     observation = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.pk_paiement} , {self.mission} , {self.montant_total},{self.montant_avance} ,{self.montant_solde}, {self.commission_transitaire},{self.caution_retiree}, {self.caution_remboursee}, {self.date_paiement}, {self.mode_paiement}, {self.observation}"
+        return (f"{self.pk_paiement} , {self.mission}"
+                f" {self.montant_total},{self.montant_avance}" 
+                f"{self.montant_solde}, {self.commission_transitaire}"
+                f"{self.caution_retiree}, {self.caution_remboursee}"
+                f" {self.date_paiement}, {self.mode_paiement}, {self.observation}")
 
