@@ -93,22 +93,6 @@ class Camion(models.Model):
     capacite_tonnes = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
 
-class Mecanicien(models.Model):
-    pk_mecanicien = models.CharField(max_length=250, primary_key=True)
-    nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-
-
-class Fournisseur(models.Model):
-    pk_fournisseur = models.CharField(max_length=250, primary_key=True)
-    nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
-    adresse = models.TextField(blank=True, null=True)
-    fiabilite = models.CharField(max_length=10, choices=FIABILITE_CHOICES, default='bon')
-    commentaire = models.TextField(blank=True, null=True)
-
 
 class Transitaire(models.Model):
     pk_transitaire = models.CharField(max_length=250, primary_key=True)
@@ -144,6 +128,7 @@ class Conteneur(models.Model):
     transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
 
 
+    
 class ContratTransport(models.Model):
     pk_contrat = models.CharField(max_length=250, primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
@@ -161,6 +146,18 @@ class ContratTransport(models.Model):
     signature_client = models.BooleanField(default=False)
     signature_transitaire = models.BooleanField(default=False)
 
+class Cautions(models.Model):
+    pk_caution = models.CharField(max_length=250, primary_key=True)
+    conteneur = models.ForeignKey(Conteneur, on_delete=models.SET_NULL, blank=True, null=True)
+    contrat = models.ForeignKey(ContratTransport, on_delete=models.SET_NULL, blank=True, null=True)
+    transiteur = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
+    client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
+    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.SET_NULL, blank=True, null=True)
+    camion = models.ForeignKey(Camion, on_delete=models.SET_NULL, blank=True, null=True)
+    montant = models.IntegerField()
+    non_rembourser = models.BooleanField(default=False)
+    est_rembourser = models.BooleanField(default=True)
+    montant_rembourser =models.IntegerField()
 
 class Affectation(models.Model):
     pk_affectation = models.CharField(max_length=250, primary_key=True)
@@ -201,7 +198,22 @@ class MissionConteneur(models.Model):
 
     class Meta:
         unique_together = ('mission', 'conteneur')
+        
+class Mecanicien(models.Model):
+    pk_mecanicien = models.CharField(max_length=250, primary_key=True)
+    nom = models.CharField(max_length=100)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
 
+
+class Fournisseur(models.Model):
+    pk_fournisseur = models.CharField(max_length=250, primary_key=True)
+    nom = models.CharField(max_length=100)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    adresse = models.TextField(blank=True, null=True)
+    fiabilite = models.CharField(max_length=10, choices=FIABILITE_CHOICES, default='bon')
+    commentaire = models.TextField(blank=True, null=True)
 
 class Reparation(models.Model):
     pk_reparation = models.CharField(max_length=250, primary_key=True)
