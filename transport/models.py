@@ -87,6 +87,7 @@ class UtilisateurChauffeur(models.Model):
 
 class Camion(models.Model):
     pk_camion = models.CharField(max_length=250, primary_key=True)
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
     immatriculation = models.CharField(max_length=20, unique=True)
     modele = models.CharField(max_length=50, blank=True, null=True)
     capacite_tonnes = models.DecimalField(max_digits=5, decimal_places=2, default=0)
@@ -129,10 +130,14 @@ class Client(models.Model):
     etat_paiement = models.CharField(max_length=10, choices=ETAT_PAIEMENT_CHOICES, default='bon')
     commentaire = models.TextField(blank=True, null=True)
 
+class CompagnieConteneur(models.Model):
+    pk_compagnie = models.CharField(max_length=250, primary_key=True)
+    nom = models.CharField(max_length=250, blank=True, null=True )
 
 class Conteneur(models.Model):
     pk_conteneur = models.CharField(max_length=250, primary_key=True)
     numero_conteneur = models.CharField(max_length=30, unique=True)
+    compagnie = models.ForeignKey(CompagnieConteneur, on_delete=models.CASCADE)
     type_conteneur = models.CharField(max_length=50, blank=True, null=True)
     poids = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
@@ -144,7 +149,9 @@ class ContratTransport(models.Model):
     conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
     transitaire = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
-    id_transporteur = models.IntegerField()
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
+    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
     date_debut = models.DateField()
     date_limite_retour = models.DateField()
     caution = models.DecimalField(max_digits=10, decimal_places=2)
