@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils.timezone import now
+from django.utils.text import slugify
 # =======================
 # ENUMS – Constantes pour les choix
 # =======================
@@ -50,19 +52,28 @@ STATUT_MISSION_CHOICES = [
 # =======================
 
 class Entreprise(models.Model):
-    pk_entreprise = models.CharField(max_length=250, primary_key=True)
+    pk_entreprise = models.CharField(max_length=250, primary_key=True, editable=False)
     nom = models.CharField(max_length=100)
     secteur_activite = models.CharField(max_length=100, blank=True, null=True)
     email_contact = models.EmailField(max_length=100, blank=True, null=True)
     telephone_contact = models.CharField(max_length=20, blank=True, null=True)
-    date_creation = models.DateField(auto_now_add=True)
+    date_creation = models.DateField(default=now)
     statut = models.CharField(max_length=10, choices=STATUT_ENTREPRISE_CHOICES, default='active')
 
+    def save(self, *args, **kwargs):
+        if not self.pk_entreprise:
+            base = f"{self.nom}_{self.secteur_activite or ''}_{self.email_contact or ''}_{self.date_creation}"
+            self.pk_entreprise = slugify(base)[:250]  # s'assurer que ça tient dans 250 caractères
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('nom', 'secteur_activite', 'email_contact', 'date_creation')
+
     def __str__(self):
-        return (f"{self.pk_entreprise}" 
-                f"{self.nom}, {self.secteur_activite}"
-                f" {self.email_contact}, {self.telephone_contact}"
-                f" {self.date_creation}, {self.statut}")
+        return (f"{self.pk_entreprise} | "
+                f"{self.nom}, {self.secteur_activite or ''}, "
+                f"{self.email_contact or ''}, {self.telephone_contact or ''}, "
+                f"{self.date_creation}, {self.statut}")
 
 
 class Utilisateur(AbstractUser):
@@ -92,17 +103,24 @@ class Utilisateur(AbstractUser):
     #             f" {self.role}, {self.date_creation}")
 
 class Chauffeur(models.Model):
-    pk_chauffeur = models.CharField(max_length=250, primary_key=True)
+    pk_chauffeur = models.CharField(max_length=250, primary_key=True, editable=False)
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
     nom = models.CharField(max_length=50)
     prenom = models.CharField(max_length=50)
     telephone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
 
+    def save(self, *args, **kwargs):
+        if not self.pk_chauffeur:
+            base = f"{self.nom}_{self.prenom}_{self.email or ''}_{self.entreprise.pk_entreprise}"
+            self.pk_chauffeur = slugify(base)[:250]
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('nom', 'prenom', 'email', 'entreprise')
+
     def __str__(self):
         return f"{self.pk_chauffeur}, {self.entreprise}, {self.nom}, {self.prenom}, {self.telephone}, {self.email}"
-
-
 
 class Camion(models.Model):
     pk_camion = models.CharField(max_length=250, primary_key=True)
