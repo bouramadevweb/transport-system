@@ -289,6 +289,7 @@ class ContratTransport(models.Model):
 class PrestationDeTransports(models.Model):
     pk_presta_transport = models.CharField(max_length=250, primary_key=True)
     contrat_transport = models.ForeignKey(ContratTransport, on_delete=models.CASCADE)
+    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
 
@@ -300,12 +301,12 @@ class PrestationDeTransports(models.Model):
 
     def save(self,*args, **kwargs):
         if not self.pk_presta_transport:
-           base = f"{self.contrat_transport.pk_contrat}{self.client.pk_client}{self.transitaire.pk_transitaire}{self.date}"
+           base = f"{self.camion.immatriculation}{self.contrat_transport.pk_contrat}{self.client.pk_client}{self.transitaire.pk_transitaire}{self.date}"
            self.pk_presta_transport = slugify(base)[:250]
         super().save(*args,**kwargs)
     
     class meta:
-        unique_together = ("pk_presta_transport","contrat_transport","client","transitaire")
+        unique_together = ("camion","pk_presta_transport","contrat_transport","client","transitaire")
 
     def __str__(self):
         return (f"{self.pk_presta_transport}{self.prix_transport}{self.avance}{self.caution}{self.solde}{self.date}")
@@ -350,23 +351,20 @@ class FraisTrajet(models.Model):
 
 class Mission(models.Model):
     pk_mission = models.CharField(max_length=250, primary_key=True)
-    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
-    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
+    pestation_transport = models.ForeignKey(PrestationDeTransports, on_delete=models.CASCADE)
     date_depart = models.DateField()
     date_retour = models.DateField(blank=True, null=True)
     origine = models.CharField(max_length=50)
     destination = models.CharField(max_length=50)
-    prix_unitaire_par_tonne = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     frais_trajet = models.ForeignKey(FraisTrajet, on_delete=models.SET_NULL, blank=True, null=True)
     contrat = models.ForeignKey(ContratTransport, on_delete=models.CASCADE)
     statut = models.CharField(max_length=10, choices=STATUT_MISSION_CHOICES, default='en cours')
 
     def __str__(self):
-        return (f"{self.pk_mission}, {self.camion}"
-                f" {self.chauffeur}, {self.date_depart}"
+        return (f"{self.pk_mission}"
+                f" {self.date_depart}"
                 f"{self.date_retour}, {self.origine}"
                 f" {self.origine}, {self.destination}"
-                f" {self.prix_unitaire_par_tonne}"
                 f"{self.frais_trajet}, {self.contrat}, {self.statut}" )
 
 
