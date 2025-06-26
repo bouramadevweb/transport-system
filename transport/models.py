@@ -62,7 +62,7 @@ class Entreprise(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk_entreprise:
-            base = f"{self.nom}_{self.secteur_activite or ''}_{self.email_contact or ''}_{self.date_creation}"
+            base = f"{self.nom}{self.secteur_activite or ''}{self.email_contact or ''}{self.date_creation}"
             self.pk_entreprise = slugify(base)[:250]  # s'assurer que ça tient dans 250 caractères
         super().save(*args, **kwargs)
 
@@ -112,7 +112,7 @@ class Chauffeur(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk_chauffeur:
-            base = f"{self.nom}_{self.prenom}_{self.email or ''}_{self.entreprise.pk_entreprise}"
+            base = f"{self.nom}{self.prenom}{self.email or ''}{self.entreprise.pk_entreprise}"
             self.pk_chauffeur = slugify(base)[:250]
         super().save(*args, **kwargs)
 
@@ -131,7 +131,7 @@ class Camion(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk_camion:
-            base = f"{self.immatriculation}_{self.modele}_{self.entreprise.pk_entreprise}"
+            base = f"{self.immatriculation}{self.modele}{self.entreprise.pk_entreprise}"
             self.pk_camion = slugify(base)[:250]
         super().save(*args, **kwargs)
 
@@ -151,7 +151,14 @@ class Transitaire(models.Model):
     score_fidelite = models.IntegerField(default=100)
     etat_paiement = models.CharField(max_length=10, choices=ETAT_PAIEMENT_CHOICES, default='bon')
     commentaire = models.TextField(blank=True, null=True)
-
+    
+    def save(self, *arg, **kwargs):
+        if not self.pk_transitaire:
+            base = f"{self.nom}{self.telephone}"
+            self.pk_transitaire = slugify(base)[:250]
+        super().save(*arg, **kwargs)
+    class Meta:
+        unique_together = ('nom', 'telephone')
     def __str__(self):
         return f"{self.pk_transitaire}, {self.nom}, {self.telephone}, {self.email}, {self.score_fidelite}, {self.etat_paiement}, {self.commentaire}"
 
