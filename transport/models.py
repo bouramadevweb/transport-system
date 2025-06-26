@@ -85,11 +85,11 @@ class Utilisateur(AbstractUser):
         return f"{self.email} ({self.role})"
     
 
-    def __str__(self):
-        return (f"{self.pk_utilisateur}"
-                f"{self.entreprise}, {self.nom_utilisateur}"
-                f" {self.email}, {self.mot_de_passe_hash}"
-                f" {self.role}, {self.date_creation}")
+    # def __str__(self):
+    #     return (f"{self.pk_utilisateur}"
+    #             f"{self.entreprise}, {self.nom_utilisateur}"
+    #             f" {self.email}"
+    #             f" {self.role}, {self.date_creation}")
 
 class Chauffeur(models.Model):
     pk_chauffeur = models.CharField(max_length=250, primary_key=True)
@@ -102,23 +102,6 @@ class Chauffeur(models.Model):
     def __str__(self):
         return f"{self.pk_chauffeur}, {self.entreprise}, {self.nom}, {self.prenom}, {self.telephone}, {self.email}"
 
-
-class UtilisateurChauffeur(models.Model):
-    pk_utilisateur_chauffeur = models.CharField(max_length=250, primary_key=True)
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
-    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
-    email = models.EmailField(unique=True)
-    #mot_de_passe_hash = models.CharField(max_length=255)
-    actif = models.BooleanField(default=True)
-    date_creation = models.DateTimeField(auto_now_add=True)
-
-    
-
-    def __str__(self):
-        return (f"{self.pk_utilisateur_chauffeur},{self.entreprise}"
-                f"{self.chauffeur}, {self.email}" 
-                f"{self.mot_de_passe_hash}, {self.actif}"
-                f" {self.date_creation}")
 
 
 class Camion(models.Model):
