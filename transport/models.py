@@ -141,6 +141,24 @@ class Camion(models.Model):
     def __str__(self):
         return f"{self.pk_camion}, {self.entreprise}, {self.immatriculation}, {self.modele}, {self.capacite_tonnes}"
 
+class Affectation(models.Model):
+    pk_affectation = models.CharField(max_length=250, primary_key=True, editable=False)
+    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
+    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
+    date_affectation = models.DateField(default=now)
+    date_fin_affectation = models.DateField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk_affectation:
+            base = f"{self.chauffeur.pk_chauffeur}_{self.camion.pk_camion}_{self.date_affectation}"
+            self.pk_affectation = slugify(base)[:250]
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('chauffeur', 'camion', 'date_affectation')
+
+    def __str__(self):
+        return f"{self.pk_affectation}, {self.chauffeur}, {self.camion}, {self.date_affectation}, {self.date_fin_affectation}"
 
 
 class Transitaire(models.Model):
@@ -292,7 +310,6 @@ class PrestationDeTransports(models.Model):
     def __str__(self):
         return (f"{self.pk_presta_transport}{self.prix_transport}{self.avance}{self.caution}{self.solde}{self.date}")
 
-# A faire pour key composite
 class Cautions(models.Model):
     pk_caution = models.CharField(max_length=250, primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.SET_NULL, blank=True, null=True)
@@ -315,16 +332,6 @@ class Cautions(models.Model):
 
     def __str__(self):
         return f"{self.pk_caution}, {self.conteneur}, {self.contrat}, {self.transiteur} {self.client}, {self.chauffeur}, {self.camion}, {self.montant}, {self.non_rembourser}, {self.est_rembourser}, {self.montant_rembourser}"
-
-class Affectation(models.Model):
-    pk_affectation = models.CharField(max_length=250, primary_key=True)
-    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
-    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
-    date_affectation = models.DateField(auto_now_add=True)
-    date_fin_affectation = models.DateField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.pk_affectation}, {self.chauffeur}, {self.camion}, {self.date_affectation}, {self.date_fin_affectation}"
 
 
 class FraisTrajet(models.Model):
