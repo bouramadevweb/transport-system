@@ -401,6 +401,7 @@ class MissionConteneur(models.Model):
 
     def __str__(self):
         return f"{self.mission}, {self.conteneur}"
+    
 
 class Mecanicien(models.Model):
     pk_mecanicien = models.CharField(max_length=250, primary_key=True)
