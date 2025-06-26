@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import AbstractUser
 # =======================
 # ENUMS – Constantes pour les choix
 # =======================
@@ -12,6 +13,7 @@ ROLE_UTILISATEUR_CHOICES = [
     ('admin', 'Admin'),
     ('manager', 'Manager'),
     ('utilisateur', 'Utilisateur'),
+    ('chauffeur', 'Chauffeur')
 ]
 
 FIABILITE_CHOICES = [
@@ -63,15 +65,25 @@ class Entreprise(models.Model):
                 f" {self.date_creation}, {self.statut}")
 
 
-class Utilisateur(models.Model):
+class Utilisateur(AbstractUser):
     pk_utilisateur = models.CharField(max_length=250, primary_key=True)
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
     nom_utilisateur = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    mot_de_passe_hash = models.CharField(max_length=255)
     role = models.CharField(max_length=10, choices=ROLE_UTILISATEUR_CHOICES, default='utilisateur')
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = []
+
+    class Meta:
+        db_table = 'utilisateur'
+        swappable = 'AUTH_USER_MODEL'
+
+    def __str__(self):
+        return f"{self.email} ({self.role})"
+    
 
     def __str__(self):
         return (f"{self.pk_utilisateur}"
@@ -96,9 +108,11 @@ class UtilisateurChauffeur(models.Model):
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
     email = models.EmailField(unique=True)
-    mot_de_passe_hash = models.CharField(max_length=255)
+    #mot_de_passe_hash = models.CharField(max_length=255)
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
+
+    
 
     def __str__(self):
         return (f"{self.pk_utilisateur_chauffeur},{self.entreprise}"
