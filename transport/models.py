@@ -129,6 +129,15 @@ class Camion(models.Model):
     modele = models.CharField(max_length=50, blank=True, null=True)
     capacite_tonnes = models.DecimalField(max_digits=5, decimal_places=2, default=0)
 
+    def save(self, *args, **kwargs):
+        if not self.pk_camion:
+            base = f"{self.immatriculation}_{self.modele}_{self.entreprise.pk_entreprise}"
+            self.pk_camion = slugify(base)[:250]
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('immatriculation', 'modele', 'email', 'entreprise')
+
     def __str__(self):
         return f"{self.pk_camion}, {self.entreprise}, {self.immatriculation}, {self.modele}, {self.capacite_tonnes}"
 
@@ -137,7 +146,7 @@ class Camion(models.Model):
 class Transitaire(models.Model):
     pk_transitaire = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True, unique=True)
     email = models.EmailField(blank=True, null=True)
     score_fidelite = models.IntegerField(default=100)
     etat_paiement = models.CharField(max_length=10, choices=ETAT_PAIEMENT_CHOICES, default='bon')
