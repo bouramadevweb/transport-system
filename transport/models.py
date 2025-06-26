@@ -193,7 +193,8 @@ class CompagnieConteneur(models.Model):
             base = f"{self.nom}"
             self.pk_compagnie = slugify(base)[:250]
         super().save(*args, **kwargs)   
-    class meta:
+
+    class Meta:
         unique_together = ("nom")     
     
     def __str__(self):
@@ -267,6 +268,30 @@ class ContratTransport(models.Model):
             f"Transitaire: {'✔' if self.signature_transitaire else '✘'}"
         )
 
+class PrestationDeTransports(models.Model):
+    pk_presta_transport = models.CharField(max_length=250, primary_key=True)
+    contrat_transport = models.ForeignKey(ContratTransport, on_delete=models.CASCADE)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
+
+    prix_transport = models.DecimalField(max_digits=10, decimal_places=2,default=0)
+    avance = models.DecimalField(max_digits=10, decimal_places=2,default=0)
+    caution = models.DecimalField(max_digits=10, decimal_places=2,default=0)
+    solde = models.DecimalField(max_digits=10, decimal_places=2,default=0)
+    date = models.DateTimeField()
+
+    def save(self,*args, **kwargs):
+        if not self.pk_presta_transport:
+           base = f"{self.contrat_transport.pk_contrat}{self.client.pk_client}{self.transitaire.pk_transitaire}{self.date}"
+           self.pk_presta_transport = slugify(base)[:250]
+        super().save(*args,**kwargs)
+    
+    class meta:
+        unique_together = ("pk_presta_transport","contrat_transport","client","transitaire")
+
+    def __str__(self):
+        return (f"{self.pk_presta_transport}{self.prix_transport}{self.avance}{self.caution}{self.solde}{self.date}")
+
 # A faire pour key composite
 class Cautions(models.Model):
     pk_caution = models.CharField(max_length=250, primary_key=True)
@@ -280,6 +305,13 @@ class Cautions(models.Model):
     non_rembourser = models.BooleanField(default=False)
     est_rembourser = models.BooleanField(default=True)
     montant_rembourser = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def save(self, *args, **kwargs):
+        if not self.pk_caution:
+           base = f"{self.conteneur.pk_conteneur if self.conteneur else ''}{self.contrat.pk_contrat if self.contrat else ''}"
+           self.pk_caution = slugify(base)[:250]
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.pk_caution}, {self.conteneur}, {self.contrat}, {self.transiteur} {self.client}, {self.chauffeur}, {self.camion}, {self.montant}, {self.non_rembourser}, {self.est_rembourser}, {self.montant_rembourser}"
