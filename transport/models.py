@@ -173,12 +173,28 @@ class Client(models.Model):
     etat_paiement = models.CharField(max_length=10, choices=ETAT_PAIEMENT_CHOICES, default='bon')
     commentaire = models.TextField(blank=True, null=True)
 
+    def save(self,*args, **kwargs):
+        if not self.pk_client:
+            base = f"{self.nom}{self.type_client}{self.telephone}"
+            self.pk_client =slugify(base)[:250]
+        super().save(*args, **kwargs) 
+
+    class Meta:
+          unique_together = ("nom","type_client","telephone") 
+
     def __str__(self):
         return f"{self.pk_client}, {self.nom}, {self.type_client}, {self.telephone}, {self.email}, {self.score_fidelite}, {self.commentaire}"
 
 class CompagnieConteneur(models.Model):
     pk_compagnie = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=250, blank=True, null=True )
+    def save(self,*args, **kwargs):
+        if not self.pk_compagnie:
+            base = f"{self.nom}"
+            self.pk_compagnie = slugify(base)[:250]
+        super().save(*args, **kwargs)   
+    class meta:
+        unique_together = ("nom")     
     
     def __str__(self):
         return f"{self.pk_compagnie}, {self.nom}"
@@ -192,13 +208,21 @@ class Conteneur(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
 
+    def save(self, *args, **kwargs):
+        if not self.pk_conteneur:
+            base = f"{self.numero_conteneur}{self.compagnie.nom}{self.compagnie.pk_compagnie}{self.client.nom}{self.client.pk_client}"
+            self.pk_conteneur = slugify(base)[:250]
+        super().save(*args, **kwargs)
+    class Meta:
+        unique_together = ("numero_conteneur","compagnie","client")    
+
     def __str__(self):
         return f"{self.pk_conteneur}, {self.numero_conteneur}, {self.compagnie}, {self.type_conteneur}, {self.poids}, {self.client}, {self.transitaire}"
 
 
     
 class ContratTransport(models.Model):
-    pk_contrat = models.CharField(max_length=250, primary_key=True)
+    pk_contrat = models.CharField(max_length=3250, primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
     transitaire = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
@@ -213,6 +237,18 @@ class ContratTransport(models.Model):
     signature_chauffeur = models.BooleanField(default=False)
     signature_client = models.BooleanField(default=False)
     signature_transitaire = models.BooleanField(default=False)
+
+
+    def save(self, *args, kwargs):
+        if not self.pk_contrat:
+            base = (f"{self.conteneur.pk_conteneur}{self.client.pk_client}{self.transitaire.pk_transitaire}"
+                   f"{self.entreprise.pk_entreprise}{self.camion.immatriculation}{self.chauffeur.pk_chauffeur}"
+                   f"{self.date_debut}{self.date_limite_retour}")
+            self.pk_contrat = slugify(base)[:3250]
+        super().save(*args, **kwargs)
+
+        class Meta:
+            unique_together = ("conteneur","client","transitaire","entreprise","camion","chauffeur","date_debut","date_limite_retour")
 
     def __str__(self):
         return (
@@ -231,7 +267,7 @@ class ContratTransport(models.Model):
             f"Transitaire: {'✔' if self.signature_transitaire else '✘'}"
         )
 
-
+# A faire pour key composite
 class Cautions(models.Model):
     pk_caution = models.CharField(max_length=250, primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.SET_NULL, blank=True, null=True)
