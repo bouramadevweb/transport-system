@@ -350,8 +350,8 @@ class FraisTrajet(models.Model):
 
 
 class Mission(models.Model):
-    pk_mission = models.CharField(max_length=250, primary_key=True)
-    pestation_transport = models.ForeignKey(PrestationDeTransports, on_delete=models.CASCADE)
+    pk_mission = models.CharField(max_length=250, primary_key=True, editable=False)
+    prestation_transport = models.ForeignKey(PrestationDeTransports, on_delete=models.CASCADE)
     date_depart = models.DateField()
     date_retour = models.DateField(blank=True, null=True)
     origine = models.CharField(max_length=50)
@@ -360,12 +360,30 @@ class Mission(models.Model):
     contrat = models.ForeignKey(ContratTransport, on_delete=models.CASCADE)
     statut = models.CharField(max_length=10, choices=STATUT_MISSION_CHOICES, default='en cours')
 
+    def save(self, *args, **kwargs):
+        if not self.pk_mission:
+            base = (
+                f"{self.prestation_transport.pk_presta_transport}_"
+                f"{self.contrat.pk_contrat}_"
+                f"{self.origine}_{self.destination}_"
+                f"{self.date_depart}"
+            )
+            self.pk_mission = slugify(base)[:250]
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = (
+            'prestation_transport',
+            'contrat',
+            'origine',
+            'destination',
+            'date_depart',
+        )
+
     def __str__(self):
-        return (f"{self.pk_mission}"
-                f" {self.date_depart}"
-                f"{self.date_retour}, {self.origine}"
-                f" {self.origine}, {self.destination}"
-                f"{self.frais_trajet}, {self.contrat}, {self.statut}" )
+        return (f"{self.pk_mission}, {self.date_depart}, {self.date_retour}, "
+                f"{self.origine}, {self.destination}, {self.frais_trajet}, "
+                f"{self.contrat}, {self.statut}")
 
 
 class MissionConteneur(models.Model):
@@ -373,7 +391,13 @@ class MissionConteneur(models.Model):
     conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
 
     class Meta:
+        # Supprime l'ID auto
+        managed = True
         unique_together = ('mission', 'conteneur')
+        # Ou, en Django 4.1+, tu peux utiliser constraints :
+        # constraints = [
+        #     models.UniqueConstraint(fields=['mission', 'conteneur'], name='unique_mission_conteneur')
+        # ]
 
     def __str__(self):
         return f"{self.mission}, {self.conteneur}"
