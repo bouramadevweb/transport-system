@@ -141,7 +141,7 @@ class Camion(models.Model):
         super().save(*args, **kwargs)
 
     class Meta:
-        unique_together = ('immatriculation', 'modele', 'email', 'entreprise')
+        unique_together = ('immatriculation', 'modele', 'entreprise')
 
     def __str__(self):
         return f"{self.pk_camion}, {self.entreprise}, {self.immatriculation}, {self.modele}, {self.capacite_tonnes}"
@@ -176,12 +176,12 @@ class Transitaire(models.Model):
     etat_paiement = models.CharField(max_length=10, choices=ETAT_PAIEMENT_CHOICES, default='bon')
     commentaire = models.TextField(blank=True, null=True)
     
-    def save(self, *arg, **kwargs):
+    def save(self, *args, **kwargs):
         if not self.pk_transitaire:
             base = f"{self.nom}{self.telephone}"
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_transitaire = slugify(base)[:250]
-        super().save(*arg, **kwargs)
+        super().save(*args, **kwargs)
     class Meta:
         unique_together = ('nom', 'telephone')
     def __str__(self):
@@ -221,9 +221,8 @@ class CompagnieConteneur(models.Model):
             self.pk_compagnie = slugify(base)[:250]
         super().save(*args, **kwargs)   
 
-    class Meta:
-        unique_together = ("nom")     
-    
+    class Meta:   
+            unique_together = (("nom",),)    
     def __str__(self):
         return f"{self.pk_compagnie}, {self.nom}"
 
@@ -268,7 +267,7 @@ class ContratTransport(models.Model):
     signature_transitaire = models.BooleanField(default=False)
 
 
-    def save(self, *args, kwargs):
+    def save(self, *args, **kwargs):
         if not self.pk_contrat:
             base = (f"{self.conteneur.pk_conteneur}{self.client.pk_client}{self.transitaire.pk_transitaire}"
                    f"{self.entreprise.pk_entreprise}{self.camion.immatriculation}{self.chauffeur.pk_chauffeur}"
