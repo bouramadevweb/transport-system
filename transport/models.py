@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.timezone import now
 from django.utils.text import slugify
+from uuid import uuid4
+
 # =======================
 # ENUMS – Constantes pour les choix
 # =======================
@@ -455,45 +457,43 @@ class PaiementMission(models.Model):
 class Mecanicien(models.Model):
     pk_mecanicien = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, blank=True, null=False, unique= True)
+    telephone = models.CharField(max_length=20, unique=True)
     email = models.EmailField(blank=True, null=True, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         if not self.pk_mecanicien:
-            base = f"{self.nom}{self.telephone}"
-            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
-            self.pk_mecanicien = slugify(base)[:250]
+            base = f"{self.nom}{self.telephone}".replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
+            slug = slugify(base)[:240]
+            self.pk_mecanicien = f"{slug}-{uuid4().hex[:8]}"
         super().save(*args, **kwargs)
-    class Meta:
-        unique_together = ("nom","telephone")    
 
     def __str__(self):
-        return f"{self.pk_mecanicien}, {self.nom}, {self.telephone}, {self.email}"
+        return f"{self.nom} - {self.telephone}"
 
 
 class Fournisseur(models.Model):
     pk_fournisseur = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, blank=True, null=True, unique=True)
+    telephone = models.CharField(max_length=20, unique=True, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     adresse = models.TextField(blank=True, null=True)
     fiabilite = models.CharField(max_length=10, choices=FIABILITE_CHOICES, default='bon')
     commentaire = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         if not self.pk_fournisseur:
-            base = f"{self.nom}{self.telephone}"
-            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
-            self.pk_fournisseur = slugify(base)[:250]
+            base = f"{self.nom}{self.telephone or ''}".replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
+            slug = slugify(base)[:240]
+            self.pk_fournisseur = f"{slug}-{uuid4().hex[:8]}"
         super().save(*args, **kwargs)
 
-    class Meta:
-        unique_together =("nom","telephone")
-
-
-
     def __str__(self):
-        return f"{self.pk_fournisseur}, {self.nom}, {self.telephone}, {self.email}, {self.adresse}, {self.fiabilite}, {self.commentaire}"
+        return f"{self.nom} - {self.telephone or 'N/A'}"
+
 
 class Reparation(models.Model):
     pk_reparation = models.CharField(max_length=250, primary_key=True)
@@ -502,9 +502,18 @@ class Reparation(models.Model):
     date_reparation = models.DateField()
     cout = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk_reparation:
+            base = f"{self.camion_id or ''}{self.chauffeur_id or ''}{self.date_reparation}".replace('-', '')
+            slug = slugify(base)[:240]
+            self.pk_reparation = f"{slug}-{uuid4().hex[:8]}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.pk_reparation}, {self.camion}, {self.chauffeur}, {self.date_reparation}, {self.cout}, {self.description}"
+        return f"Réparation {self.pk_reparation} - {self.camion}"
 
 
 class ReparationMecanicien(models.Model):
@@ -513,17 +522,30 @@ class ReparationMecanicien(models.Model):
 
     class Meta:
         unique_together = ('reparation', 'mecanicien')
-    
+
     def __str__(self):
-        return f"{self.reparation}, {self.mecanicien}"
-    
+        return f"{self.reparation} - {self.mecanicien}"
+
+
 class PieceReparee(models.Model):
     pk_piece = models.CharField(max_length=250, primary_key=True)
     reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
     nom_piece = models.CharField(max_length=100)
     quantite = models.PositiveIntegerField(default=1)
     cout_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
-    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE)
+    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk_piece:
+            base = f"{self.nom_piece}{self.reparation.pk_reparation}{self.fournisseur or ''}".replace('-', '')
+            slug = slugify(base)[:240]
+            self.pk_piece = f"{slug}-{uuid4().hex[:8]}"
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ("nom_piece", "reparation")
 
     def __str__(self):
-        return f"{self.pk_piece}, {self.reparation}, {self.nom_piece},{self.quantite}, {self.cout_unitaire}, {self.fournisseur}"
+        return f"{self.nom_piece} x{self.quantite} ({self.reparation})"
