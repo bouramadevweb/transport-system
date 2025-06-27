@@ -458,8 +458,8 @@ class PaiementMission(models.Model):
     def __str__(self):
         return (
             f"{self.mission}, {self.caution}, {self.montant_total}, "
-            f"{self.commission_transitaire}, {self.caution_retiree}, "
-            f"{self.caution_remboursee}, {self.date_paiement}, {self.mode_paiement}, {self.observation}"
+            f"{self.commission_transitaire} "
+            f"{self.date_paiement}, {self.mode_paiement}, {self.observation}"
         )
 
 
