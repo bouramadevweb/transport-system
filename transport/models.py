@@ -277,8 +277,8 @@ class ContratTransport(models.Model):
             self.pk_contrat = slugify(base)[:3250]
         super().save(*args, **kwargs)
 
-        class Meta:
-            unique_together = ("conteneur","client","transitaire","entreprise","camion","chauffeur","date_debut","date_limite_retour")
+    class Meta:
+          unique_together = ("conteneur","client","transitaire","entreprise","camion","chauffeur","date_debut","date_limite_retour")
 
     def __str__(self):
         return (
