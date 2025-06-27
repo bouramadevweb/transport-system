@@ -416,17 +416,6 @@ class MissionConteneur(models.Model):
     
 
 
-class PieceReparee(models.Model):
-    pk_piece = models.CharField(max_length=250, primary_key=True)
-    reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
-    nom_piece = models.CharField(max_length=100)
-    quantite = models.PositiveIntegerField(default=1)
-    cout_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
-    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.pk_piece}, {self.reparation}, {self.nom_piece},{self.quantite}, {self.cout_unitaire}, {self.fournisseur}"
-
 
 class PaiementMission(models.Model):
     pk_paiement = models.CharField(max_length=250,primary_key=True)
@@ -506,3 +495,14 @@ class ReparationMecanicien(models.Model):
     
     def __str__(self):
         return f"{self.reparation}, {self.mecanicien}"
+    
+class PieceReparee(models.Model):
+    pk_piece = models.CharField(max_length=250, primary_key=True)
+    reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
+    nom_piece = models.CharField(max_length=100)
+    quantite = models.PositiveIntegerField(default=1)
+    cout_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
+    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.pk_piece}, {self.reparation}, {self.nom_piece},{self.quantite}, {self.cout_unitaire}, {self.fournisseur}"
