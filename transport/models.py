@@ -207,9 +207,13 @@ class Client(models.Model):
         return f"{self.pk_client}, {self.nom}, {self.type_client}, {self.telephone}, {self.email}, {self.score_fidelite}, {self.commentaire}"
 
 class CompagnieConteneur(models.Model):
+    """
+    les compagnies de contneur """
     pk_compagnie = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=250, blank=True, null=True )
     def save(self,*args, **kwargs):
+        """
+        creation de clée composite"""
         if not self.pk_compagnie:
             base = f"{self.nom}"
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
@@ -245,6 +249,8 @@ class Conteneur(models.Model):
 
     
 class ContratTransport(models.Model):
+    """
+    contrat de transport et la signature """
     pk_contrat = models.CharField(max_length=3250, primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
@@ -263,6 +269,8 @@ class ContratTransport(models.Model):
 
 
     def save(self, *args, **kwargs):
+        """
+        pour le pk composite """
         if not self.pk_contrat:
             base = (f"{self.conteneur.pk_conteneur}{self.client.pk_client}{self.transitaire.pk_transitaire}"
                    f"{self.entreprise.pk_entreprise}{self.camion.immatriculation}{self.chauffeur.pk_chauffeur}"
