@@ -406,7 +406,7 @@ class MissionConteneur(models.Model):
 class Mecanicien(models.Model):
     pk_mecanicien = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=False, unique= True)
     email = models.EmailField(blank=True, null=True)
 
     def __str__(self):
@@ -416,7 +416,7 @@ class Mecanicien(models.Model):
 class Fournisseur(models.Model):
     pk_fournisseur = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True, unique=True)
     email = models.EmailField(blank=True, null=True)
     adresse = models.TextField(blank=True, null=True)
     fiabilite = models.CharField(max_length=10, choices=FIABILITE_CHOICES, default='bon')
@@ -464,8 +464,6 @@ class PaiementMission(models.Model):
     pk_paiement = models.CharField(max_length=250, primary_key=True)
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
     montant_total = models.DecimalField(max_digits=10, decimal_places=2)
-    montant_avance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    montant_solde = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     commission_transitaire = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     caution_retiree = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     caution_remboursee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -475,8 +473,8 @@ class PaiementMission(models.Model):
 
     def __str__(self):
         return (f"{self.pk_paiement} , {self.mission}"
-                f" {self.montant_total},{self.montant_avance}" 
-                f"{self.montant_solde}, {self.commission_transitaire}"
+                f" {self.montant_total}" 
+                f" {self.commission_transitaire}"
                 f"{self.caution_retiree}, {self.caution_remboursee}"
                 f" {self.date_paiement}, {self.mode_paiement}, {self.observation}")
 
