@@ -317,7 +317,7 @@ class PrestationDeTransports(models.Model):
            self.pk_presta_transport = slugify(base)[:250]
         super().save(*args,**kwargs)
     
-    class meta:
+    class Meta:
         unique_together = ("camion","pk_presta_transport","contrat_transport","client","transitaire")
 
     def __str__(self):
