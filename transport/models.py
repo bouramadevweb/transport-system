@@ -456,7 +456,16 @@ class Mecanicien(models.Model):
     pk_mecanicien = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=100)
     telephone = models.CharField(max_length=20, blank=True, null=False, unique= True)
-    email = models.EmailField(blank=True, null=True)
+    email = models.EmailField(blank=True, null=True, unique=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk_mecanicien:
+            base = f"{self.nom}{self.telephone}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
+            self.pk_mecanicien = slugify(base)[:250]
+        super().save(*args, **kwargs)
+    class Meta:
+        unique_together = ("nom","telephone")    
 
     def __str__(self):
         return f"{self.pk_mecanicien}, {self.nom}, {self.telephone}, {self.email}"
@@ -470,6 +479,18 @@ class Fournisseur(models.Model):
     adresse = models.TextField(blank=True, null=True)
     fiabilite = models.CharField(max_length=10, choices=FIABILITE_CHOICES, default='bon')
     commentaire = models.TextField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk_fournisseur:
+            base = f"{self.nom}{self.telephone}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
+            self.pk_fournisseur = slugify(base)[:250]
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together =("nom","telephone")
+
+
 
     def __str__(self):
         return f"{self.pk_fournisseur}, {self.nom}, {self.telephone}, {self.email}, {self.adresse}, {self.fiabilite}, {self.commentaire}"
