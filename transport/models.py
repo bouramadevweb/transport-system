@@ -415,6 +415,54 @@ class MissionConteneur(models.Model):
         return f"{self.mission}, {self.conteneur}"
     
 
+
+class PieceReparee(models.Model):
+    pk_piece = models.CharField(max_length=250, primary_key=True)
+    reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
+    nom_piece = models.CharField(max_length=100)
+    quantite = models.PositiveIntegerField(default=1)
+    cout_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
+    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.pk_piece}, {self.reparation}, {self.nom_piece},{self.quantite}, {self.cout_unitaire}, {self.fournisseur}"
+
+
+class PaiementMission(models.Model):
+    pk_paiement = models.CharField(max_length=250,primary_key=True)
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
+    caution = models.ForeignKey(Cautions, on_delete=models.CASCADE)
+    prestation = models.ForeignKey(PrestationDeTransports, on_delete=models.CASCADE)
+     
+    montant_total = models.DecimalField(max_digits=10, decimal_places=2)
+    commission_transitaire = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    caution_est_retiree = models.BooleanField(default=False)
+
+    date_paiement = models.DateField(auto_now_add=True)
+    mode_paiement = models.CharField(max_length=50, blank=True, null=True)
+    observation = models.TextField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk_paiement:
+            base = f"{self.mission}{self.caution}{self.prestation}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
+
+            self.pk_paiement = slugify(base)[:250]
+        super().save(*args, **kwargs)
+
+
+    class Meta:
+        unique_together = ('mission', 'caution',"prestation")  # Simule une clé composite
+        # constraints = [models.UniqueConstraint(fields=['mission', 'caution'], name='unique_mission_caution')]  # Alternative
+
+    def __str__(self):
+        return (
+            f"{self.mission}, {self.caution}, {self.montant_total}, "
+            f"{self.commission_transitaire}, {self.caution_retiree}, "
+            f"{self.caution_remboursee}, {self.date_paiement}, {self.mode_paiement}, {self.observation}"
+        )
+
+
 class Mecanicien(models.Model):
     pk_mecanicien = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=100)
@@ -458,40 +506,3 @@ class ReparationMecanicien(models.Model):
     
     def __str__(self):
         return f"{self.reparation}, {self.mecanicien}"
-
-
-class PieceReparee(models.Model):
-    pk_piece = models.CharField(max_length=250, primary_key=True)
-    reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
-    nom_piece = models.CharField(max_length=100)
-    quantite = models.PositiveIntegerField(default=1)
-    cout_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
-    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.pk_piece}, {self.reparation}, {self.nom_piece},{self.quantite}, {self.cout_unitaire}, {self.fournisseur}"
-
-
-class PaiementMission(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
-    caution = models.ForeignKey(Cautions, on_delete=models.CASCADE)
-    
-    montant_total = models.DecimalField(max_digits=10, decimal_places=2)
-    commission_transitaire = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    caution_retiree = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    caution_remboursee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-
-    date_paiement = models.DateField(auto_now_add=True)
-    mode_paiement = models.CharField(max_length=50, blank=True, null=True)
-    observation = models.TextField(blank=True, null=True)
-
-    class Meta:
-        unique_together = ('mission', 'caution')  # Simule une clé composite
-        # constraints = [models.UniqueConstraint(fields=['mission', 'caution'], name='unique_mission_caution')]  # Alternative
-
-    def __str__(self):
-        return (
-            f"{self.mission}, {self.caution}, {self.montant_total}, "
-            f"{self.commission_transitaire}, {self.caution_retiree}, "
-            f"{self.caution_remboursee}, {self.date_paiement}, {self.mode_paiement}, {self.observation}"
-        )
