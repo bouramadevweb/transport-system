@@ -99,12 +99,7 @@ class Utilisateur(AbstractUser):
         return f"{self.email} ({self.role})"
     
 
-    # def __str__(self):
-    #     return (f"{self.pk_utilisateur}"
-    #             f"{self.entreprise}, {self.nom_utilisateur}"
-    #             f" {self.email}"
-    #             f" {self.role}, {self.date_creation}")
-
+   
 class Chauffeur(models.Model):
     pk_chauffeur = models.CharField(max_length=250, primary_key=True, editable=False)
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
@@ -527,9 +522,24 @@ class ReparationMecanicien(models.Model):
 
 
 class PieceReparee(models.Model):
+
+    CATEGORIES = [
+        ('moteur', 'Moteur'),
+        ('transmission', 'Transmission'),
+        ('suspension', 'Suspension & Direction'),
+        ('freinage', 'Freinage'),
+        ('electrique', 'Éléments électriques'),
+        ('eclairage', 'Éclairage & Signalisation'),
+        ('auxiliaire', 'Systèmes auxiliaires'),
+        ('carrosserie', 'Carrosserie & Structure'),
+        ('pneumatique', 'Pneumatiques & Roues'),
+        ('alimentation', "Système d'alimentation"),
+    ]
     pk_piece = models.CharField(max_length=250, primary_key=True)
     reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
     nom_piece = models.CharField(max_length=100)
+    categorie = models.CharField(max_length=20, choices=CATEGORIES)
+    reference = models.CharField(max_length=50, blank=True, null=True, help_text="Référence fabricant")
     quantite = models.PositiveIntegerField(default=1)
     cout_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
     fournisseur = models.ForeignKey(Fournisseur, on_delete=models.SET_NULL, null=True, blank=True)
