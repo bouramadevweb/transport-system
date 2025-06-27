@@ -55,7 +55,7 @@ class Entreprise(models.Model):
     pk_entreprise = models.CharField(max_length=250, primary_key=True, editable=False)
     nom = models.CharField(max_length=100)
     secteur_activite = models.CharField(max_length=100, blank=True, null=True)
-    email_contact = models.EmailField(max_length=100, blank=True, null=True)
+    email_contact = models.EmailField(max_length=100, blank=True, null=True, unique=True)
     telephone_contact = models.CharField(max_length=20, blank=True, null=True)
     date_creation = models.DateField(default=now)
     statut = models.CharField(max_length=10, choices=STATUT_ENTREPRISE_CHOICES, default='active')
@@ -114,6 +114,7 @@ class Chauffeur(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk_chauffeur:
             base = f"{self.nom}{self.prenom}{self.email or ''}{self.entreprise.pk_entreprise}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_chauffeur = slugify(base)[:250]
         super().save(*args, **kwargs)
 
@@ -133,6 +134,7 @@ class Camion(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk_camion:
             base = f"{self.immatriculation}{self.modele}{self.entreprise.pk_entreprise}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_camion = slugify(base)[:250]
         super().save(*args, **kwargs)
 
@@ -152,6 +154,7 @@ class Affectation(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk_affectation:
             base = f"{self.chauffeur.pk_chauffeur}_{self.camion.pk_camion}_{self.date_affectation}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_affectation = slugify(base)[:250]
         super().save(*args, **kwargs)
 
@@ -174,6 +177,7 @@ class Transitaire(models.Model):
     def save(self, *arg, **kwargs):
         if not self.pk_transitaire:
             base = f"{self.nom}{self.telephone}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_transitaire = slugify(base)[:250]
         super().save(*arg, **kwargs)
     class Meta:
@@ -195,6 +199,7 @@ class Client(models.Model):
     def save(self,*args, **kwargs):
         if not self.pk_client:
             base = f"{self.nom}{self.type_client}{self.telephone}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_client =slugify(base)[:250]
         super().save(*args, **kwargs) 
 
@@ -210,6 +215,7 @@ class CompagnieConteneur(models.Model):
     def save(self,*args, **kwargs):
         if not self.pk_compagnie:
             base = f"{self.nom}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_compagnie = slugify(base)[:250]
         super().save(*args, **kwargs)   
 
@@ -231,6 +237,7 @@ class Conteneur(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk_conteneur:
             base = f"{self.numero_conteneur}{self.compagnie.nom}{self.compagnie.pk_compagnie}{self.client.nom}{self.client.pk_client}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_conteneur = slugify(base)[:250]
         super().save(*args, **kwargs)
     class Meta:
@@ -264,6 +271,7 @@ class ContratTransport(models.Model):
             base = (f"{self.conteneur.pk_conteneur}{self.client.pk_client}{self.transitaire.pk_transitaire}"
                    f"{self.entreprise.pk_entreprise}{self.camion.immatriculation}{self.chauffeur.pk_chauffeur}"
                    f"{self.date_debut}{self.date_limite_retour}")
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_contrat = slugify(base)[:3250]
         super().save(*args, **kwargs)
 
@@ -303,6 +311,7 @@ class PrestationDeTransports(models.Model):
     def save(self,*args, **kwargs):
         if not self.pk_presta_transport:
            base = f"{self.camion.immatriculation}{self.contrat_transport.pk_contrat}{self.client.pk_client}{self.transitaire.pk_transitaire}{self.date}"
+           base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
            self.pk_presta_transport = slugify(base)[:250]
         super().save(*args,**kwargs)
     
@@ -328,6 +337,7 @@ class Cautions(models.Model):
     def save(self, *args, **kwargs):
         if not self.pk_caution:
            base = f"{self.conteneur.pk_conteneur if self.conteneur else ''}{self.contrat.pk_contrat if self.contrat else ''}"
+           base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
            self.pk_caution = slugify(base)[:250]
         super().save(*args, **kwargs)
 
@@ -369,6 +379,7 @@ class Mission(models.Model):
                 f"{self.origine}_{self.destination}_"
                 f"{self.date_depart}"
             )
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_mission = slugify(base)[:250]
         super().save(*args, **kwargs)
 
@@ -462,20 +473,25 @@ class PieceReparee(models.Model):
 
 
 class PaiementMission(models.Model):
-    pk_paiement = models.CharField(max_length=250, primary_key=True)
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
+    caution = models.ForeignKey(Cautions, on_delete=models.CASCADE)
+    
     montant_total = models.DecimalField(max_digits=10, decimal_places=2)
     commission_transitaire = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     caution_retiree = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     caution_remboursee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
     date_paiement = models.DateField(auto_now_add=True)
     mode_paiement = models.CharField(max_length=50, blank=True, null=True)
     observation = models.TextField(blank=True, null=True)
 
-    def __str__(self):
-        return (f"{self.pk_paiement} , {self.mission}"
-                f" {self.montant_total}" 
-                f" {self.commission_transitaire}"
-                f"{self.caution_retiree}, {self.caution_remboursee}"
-                f" {self.date_paiement}, {self.mode_paiement}, {self.observation}")
+    class Meta:
+        unique_together = ('mission', 'caution')  # Simule une clé composite
+        # constraints = [models.UniqueConstraint(fields=['mission', 'caution'], name='unique_mission_caution')]  # Alternative
 
+    def __str__(self):
+        return (
+            f"{self.mission}, {self.caution}, {self.montant_total}, "
+            f"{self.commission_transitaire}, {self.caution_retiree}, "
+            f"{self.caution_remboursee}, {self.date_paiement}, {self.mode_paiement}, {self.observation}"
+        )
