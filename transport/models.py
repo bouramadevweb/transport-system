@@ -62,8 +62,9 @@ class Entreprise(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.pk_entreprise:
-            base = f"{self.nom}{self.secteur_activite or ''}{self.email_contact or ''}{self.date_creation}"
-            self.pk_entreprise = slugify(base)[:250]  # s'assurer que ça tient dans 250 caractères
+           base = f"{self.nom}{self.secteur_activite or ''}{self.email_contact or ''}{self.date_creation}"
+           base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
+           self.pk_entreprise = slugify(base)[:250]  # s'assurer que ça tient dans 250 caractères
         super().save(*args, **kwargs)
 
     class Meta:
