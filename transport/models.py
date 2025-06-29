@@ -81,10 +81,10 @@ class Entreprise(models.Model):
 
 class Utilisateur(AbstractUser):
     pk_utilisateur = models.CharField(max_length=250, primary_key=True)
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE,null=True, blank=True)
     nom_utilisateur = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    role = models.CharField(max_length=10, choices=ROLE_UTILISATEUR_CHOICES, default='utilisateur')
+    role = models.CharField(max_length=50, choices=ROLE_UTILISATEUR_CHOICES, default='utilisateur')
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
@@ -92,7 +92,7 @@ class Utilisateur(AbstractUser):
     REQUIRED_FIELDS = []
 
     class Meta:
-        db_table = 'utilisateur'
+        db_table = 'Utilisateur'
         swappable = 'AUTH_USER_MODEL'
 
     def __str__(self):
@@ -186,7 +186,7 @@ class Transitaire(models.Model):
 class Client(models.Model):
     pk_client = models.CharField(max_length=250, primary_key=True)
     nom = models.CharField(max_length=100)
-    type_client = models.CharField(max_length=10, choices=TYPE_CLIENT_CHOICES)
+    type_client = models.CharField(max_length=50, choices=TYPE_CLIENT_CHOICES)
     telephone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     score_fidelite = models.IntegerField(default=100)
