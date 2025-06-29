@@ -558,7 +558,7 @@ class PieceReparee(models.Model):
         if not self.pk_piece:
             base = f"{self.nom_piece}{self.reparation.pk_reparation}{self.fournisseur or ''}".replace('-', '')
             slug = slugify(base)[:240]
-            self.pk_piece = f"{slug}-{uuid4().hex[:8]}"
+            self.pk_piece = f"{slug}{uuid4().hex[:8]}"
         super().save(*args, **kwargs)
 
     class Meta:
