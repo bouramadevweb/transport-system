@@ -251,7 +251,7 @@ class Conteneur(models.Model):
 class ContratTransport(models.Model):
     """
     contrat de transport et la signature """
-    pk_contrat = models.CharField(max_length=3250, primary_key=True)
+    pk_contrat = models.CharField(max_length=250, primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
     transitaire = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
@@ -276,7 +276,7 @@ class ContratTransport(models.Model):
                    f"{self.entreprise.pk_entreprise}{self.camion.immatriculation}{self.chauffeur.pk_chauffeur}"
                    f"{self.date_debut}{self.date_limite_retour}")
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
-            self.pk_contrat = slugify(base)[:3250]
+            self.pk_contrat = slugify(base)[:250]
         super().save(*args, **kwargs)
 
     class Meta:
