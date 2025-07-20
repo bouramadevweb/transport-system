@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.utils.timezone import now
 from django.utils.text import slugify
 from uuid import uuid4
+from django.contrib.auth.models import BaseUserManager
 
 # =======================
 # ENUMS – Constantes pour les choix
@@ -53,6 +54,35 @@ STATUT_MISSION_CHOICES = [
 # Modèles
 # =======================
 
+class UtilisateurManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('L’email est obligatoire')
+        
+        email = self.normalize_email(email)
+
+        # Génération automatique du pk_utilisateur si non fourni
+        if not extra_fields.get('pk_utilisateur'):
+            base = slugify(email.split('@')[0])
+            extra_fields['pk_utilisateur'] = f"{base}-{uuid4().hex[:8]}"
+
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('actif', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Le superutilisateur doit avoir is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Le superutilisateur doit avoir is_superuser=True.')
+
+        return self.create_user(email, password, **extra_fields)
+
 class Entreprise(models.Model):
     pk_entreprise = models.CharField(max_length=250, primary_key=True, editable=False)
     nom = models.CharField(max_length=100)
@@ -88,8 +118,14 @@ class Utilisateur(AbstractUser):
     actif = models.BooleanField(default=True)
     date_creation = models.DateTimeField(auto_now_add=True)
 
+    username = None  # Supprimer les champs non utilisés
+    first_name = None
+    last_name = None
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
+
+    objects = UtilisateurManager()
 
     class Meta:
         db_table = 'Utilisateur'
