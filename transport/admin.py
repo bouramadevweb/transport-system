@@ -157,7 +157,7 @@ class CautionsAdmin(admin.ModelAdmin):
         'pk_caution',
         'conteneur',
         'contrat',
-        'transiteur',
+        'transitaire',
         'client',
         'chauffeur',
         'camion',
@@ -169,7 +169,7 @@ class CautionsAdmin(admin.ModelAdmin):
     list_filter = (
         'non_rembourser',
         'est_rembourser',
-        'transiteur',
+        'transitaire',
         'client',
     )
     search_fields = (

@@ -99,8 +99,16 @@ class Entreprise(models.Model):
            self.pk_entreprise = slugify(base)[:250]  # s'assurer que ça tient dans 250 caractères
         super().save(*args, **kwargs)
 
+    # class Meta:
+    #     unique_together = ('nom', 'secteur_activite', 'email_contact', 'date_creation')
+
     class Meta:
-        unique_together = ('nom', 'secteur_activite', 'email_contact', 'date_creation')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nom', 'secteur_activite', 'email_contact', 'date_creation'],
+                name='unique_entreprise'
+            )
+        ]    
 
     def __str__(self):
         return (f"{self.pk_entreprise} | "
@@ -142,7 +150,7 @@ class Chauffeur(models.Model):
     nom = models.CharField(max_length=50)
     prenom = models.CharField(max_length=50)
     telephone = models.CharField(max_length=20, blank=True, null=True)
-    email = models.EmailField(blank=True, null=True)
+    email = models.EmailField(blank=True, null=False)
 
     def save(self, *args, **kwargs):
         if not self.pk_chauffeur:
@@ -152,7 +160,12 @@ class Chauffeur(models.Model):
         super().save(*args, **kwargs)
 
     class Meta:
-        unique_together = ('nom', 'prenom', 'email', 'entreprise')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nom', 'prenom', 'email', 'entreprise'],
+                name='unique_chauffeur'
+            )
+        ]
 
     def __str__(self):
         return f"{self.pk_chauffeur}, {self.entreprise}, {self.nom}, {self.prenom}, {self.telephone}, {self.email}"
@@ -171,8 +184,16 @@ class Camion(models.Model):
             self.pk_camion = slugify(base)[:250]
         super().save(*args, **kwargs)
 
+    # class Meta:
+    #     unique_together = ('immatriculation', 'modele', 'entreprise')
+
     class Meta:
-        unique_together = ('immatriculation', 'modele', 'entreprise')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['immatriculation', 'modele', 'entreprise'],
+                name='unique_camion'
+            )
+        ]    
 
     def __str__(self):
         return f"{self.pk_camion}, {self.entreprise}, {self.immatriculation}, {self.modele}, {self.capacite_tonnes}"
@@ -191,8 +212,16 @@ class Affectation(models.Model):
             self.pk_affectation = slugify(base)[:250]
         super().save(*args, **kwargs)
 
+    # class Meta:
+    #     unique_together = ('chauffeur', 'camion', 'date_affectation')
     class Meta:
-        unique_together = ('chauffeur', 'camion', 'date_affectation')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['chauffeur', 'camion', 'date_affectation'],
+                name='unique_affectation'
+            )
+        ]
+
 
     def __str__(self):
         return f"{self.pk_affectation}, {self.chauffeur}, {self.camion}, {self.date_affectation}, {self.date_fin_affectation}"
@@ -213,8 +242,17 @@ class Transitaire(models.Model):
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_transitaire = slugify(base)[:250]
         super().save(*args, **kwargs)
+    # class Meta:
+    #     unique_together = ('nom', 'telephone')
+
     class Meta:
-        unique_together = ('nom', 'telephone')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nom', 'telephone'],
+                name='unique_transitaire'
+            )
+        ]
+
     def __str__(self):
         return f"{self.pk_transitaire}, {self.nom}, {self.telephone}, {self.email}, {self.score_fidelite}, {self.etat_paiement}, {self.commentaire}"
 
@@ -236,8 +274,16 @@ class Client(models.Model):
             self.pk_client =slugify(base)[:250]
         super().save(*args, **kwargs) 
 
+    # class Meta:
+    #       unique_together = ("nom","type_client","telephone") 
+
     class Meta:
-          unique_together = ("nom","type_client","telephone") 
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nom', 'type_client', 'telephone'],
+                name='unique_client'
+            )
+        ]
 
     def __str__(self):
         return f"{self.pk_client}, {self.nom}, {self.type_client}, {self.telephone}, {self.email}, {self.score_fidelite}, {self.commentaire}"
@@ -256,8 +302,17 @@ class CompagnieConteneur(models.Model):
             self.pk_compagnie = slugify(base)[:250]
         super().save(*args, **kwargs)   
 
-    class Meta:   
-            unique_together = (("nom",),)    
+    # class Meta:   
+    #         unique_together = (("nom",),)  
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nom'],
+                name='unique_compagnie'
+            )
+        ]
+
     def __str__(self):
         return f"{self.pk_compagnie}, {self.nom}"
 
@@ -276,8 +331,17 @@ class Conteneur(models.Model):
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_conteneur = slugify(base)[:250]
         super().save(*args, **kwargs)
+
+    # class Meta:
+    #     unique_together = ("numero_conteneur","compagnie","client")  
+
     class Meta:
-        unique_together = ("numero_conteneur","compagnie","client")    
+        constraints = [
+            models.UniqueConstraint(
+                fields=['numero_conteneur', 'compagnie', 'client'],
+                name='unique_conteneur'
+            )
+        ]  
 
     def __str__(self):
         return f"{self.pk_conteneur}, {self.numero_conteneur}, {self.compagnie}, {self.type_conteneur}, {self.poids}, {self.client}, {self.transitaire}"
@@ -315,8 +379,16 @@ class ContratTransport(models.Model):
             self.pk_contrat = slugify(base)[:250]
         super().save(*args, **kwargs)
 
+    # class Meta:
+    #       unique_together = ("conteneur","client","transitaire","entreprise","camion","chauffeur","date_debut","date_limite_retour")
+
     class Meta:
-          unique_together = ("conteneur","client","transitaire","entreprise","camion","chauffeur","date_debut","date_limite_retour")
+        constraints = [
+            models.UniqueConstraint(
+                fields=['conteneur','client','transitaire','entreprise','camion','chauffeur','date_debut','date_limite_retour'],
+                name='unique_contrat'
+            )
+        ]
 
     def __str__(self):
         return (
@@ -355,8 +427,15 @@ class PrestationDeTransports(models.Model):
            self.pk_presta_transport = slugify(base)[:250]
         super().save(*args,**kwargs)
     
+    # class Meta:
+    #     unique_together = ("camion","pk_presta_transport","contrat_transport","client","transitaire")
     class Meta:
-        unique_together = ("camion","pk_presta_transport","contrat_transport","client","transitaire")
+        constraints = [
+            models.UniqueConstraint(
+                fields=['camion','pk_presta_transport','contrat_transport','client','transitaire'],
+                name='unique_presta_transport'
+            )
+        ]
 
     def __str__(self):
         return (f"{self.pk_presta_transport}{self.prix_transport}{self.avance}{self.caution}{self.solde}{self.date}")
@@ -365,7 +444,7 @@ class Cautions(models.Model):
     pk_caution = models.CharField(max_length=250, primary_key=True)
     conteneur = models.ForeignKey(Conteneur, on_delete=models.SET_NULL, blank=True, null=True)
     contrat = models.ForeignKey(ContratTransport, on_delete=models.SET_NULL, blank=True, null=True)
-    transiteur = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
+    transitaire = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.SET_NULL, blank=True, null=True)
     camion = models.ForeignKey(Camion, on_delete=models.SET_NULL, blank=True, null=True)
@@ -383,8 +462,7 @@ class Cautions(models.Model):
 
 
     def __str__(self):
-        return f"{self.pk_caution}, {self.conteneur}, {self.contrat}, {self.transiteur} {self.client}, {self.chauffeur}, {self.camion}, {self.montant}, {self.non_rembourser}, {self.est_rembourser}, {self.montant_rembourser}"
-
+        return f"{self.pk_caution}, {self.conteneur}, {self.contrat}, {self.transitaire} {self.client}, {self.chauffeur}, {self.camion}, {self.montant}, {self.non_rembourser}, {self.est_rembourser}, {self.montant_rembourser}"
 
 class FraisTrajet(models.Model):
     pk_frais = models.CharField(max_length=250, primary_key=True)
@@ -393,8 +471,16 @@ class FraisTrajet(models.Model):
     frais_route = models.DecimalField(max_digits=10, decimal_places=2)
     frais_carburant = models.DecimalField(max_digits=10, decimal_places=2)
 
+    # class Meta:
+    #     unique_together = ('origine', 'destination')
+
     class Meta:
-        unique_together = ('origine', 'destination')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['origine','destination'],
+                name='unique_frais_trajet'
+            )
+        ]    
 
     def __str__(self):
         return f"{self.pk_frais}, {self.origine}, {self.destination}, {self.frais_route}, {self.frais_carburant}"
@@ -423,20 +509,28 @@ class Mission(models.Model):
             self.pk_mission = slugify(base)[:250]
         super().save(*args, **kwargs)
 
+    # class Meta:
+    #     unique_together = (
+    #         'prestation_transport',
+    #         'contrat',
+    #         'origine',
+    #         'destination',
+    #         'date_depart',
+    #     )
     class Meta:
-        unique_together = (
-            'prestation_transport',
-            'contrat',
-            'origine',
-            'destination',
-            'date_depart',
-        )
+        constraints = [
+            models.UniqueConstraint(
+                fields=['prestation_transport','contrat','origine','destination','date_depart'],
+                name='unique_mission'
+            )
+        ]
 
     def __str__(self):
         return (f"{self.pk_mission}, {self.date_depart}, {self.date_retour}, "
                 f"{self.origine}, {self.destination}, {self.frais_trajet}, "
                 f"{self.contrat}, {self.statut}")
 
+# ici nest pas encore faite
 
 class MissionConteneur(models.Model):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
@@ -445,12 +539,12 @@ class MissionConteneur(models.Model):
     class Meta:
         # Supprime l'ID auto
         managed = True
-        unique_together = ('mission', 'conteneur')
+        #unique_together = ('mission', 'conteneur')
         # Ou, en Django 4.1+, tu peux utiliser constraints :
-        # constraints = [
-        #     models.UniqueConstraint(fields=['mission', 'conteneur'], name='unique_mission_conteneur')
-        # ]
-
+        constraints = [
+            models.UniqueConstraint(fields=['mission', 'conteneur'], name='unique_mission_conteneur')
+        ]
+    
     def __str__(self):
         return f"{self.mission}, {self.conteneur}"
     
@@ -481,8 +575,9 @@ class PaiementMission(models.Model):
 
 
     class Meta:
-        unique_together = ('mission', 'caution',"prestation")  # Simule une clé composite
-        # constraints = [models.UniqueConstraint(fields=['mission', 'caution'], name='unique_mission_caution')]  # Alternative
+         #unique_together = ('mission', 'caution',"prestation") 
+         # Simule une clé composite
+        constraints = [models.UniqueConstraint(fields=['mission', 'caution','prestation'], name='unique_mission_caution')]  # Alternative
 
     def __str__(self):
         return (
@@ -558,8 +653,16 @@ class ReparationMecanicien(models.Model):
     reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
     mecanicien = models.ForeignKey(Mecanicien, on_delete=models.CASCADE)
 
+    # class Meta:
+    #     unique_together = ('reparation', 'mecanicien')
+
     class Meta:
-        unique_together = ('reparation', 'mecanicien')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['reparation','mecanicien'],
+                name='unique_reparation_mecanicien'
+            )
+        ]
 
     def __str__(self):
         return f"{self.reparation} - {self.mecanicien}"
@@ -597,8 +700,16 @@ class PieceReparee(models.Model):
             self.pk_piece = f"{slug}{uuid4().hex[:8]}"
         super().save(*args, **kwargs)
 
+    # class Meta:
+    #     unique_together = ("nom_piece", "reparation")
+
     class Meta:
-        unique_together = ("nom_piece", "reparation")
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nom_piece','reparation'],
+                name='unique_piece_reparee'
+            )
+        ]
 
     def __str__(self):
         return f"{self.nom_piece} x{self.quantite} ({self.reparation})"

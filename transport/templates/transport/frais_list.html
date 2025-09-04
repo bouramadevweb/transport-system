@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <h2 class="mb-4">{{ title }}</h2>
+    <a href="{% url 'create_frais' %}" class="btn btn-success mb-3">Ajouter un frais</a>
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Origine</th>
+                <th>Destination</th>
+                <th>Frais Route</th>
+                <th>Frais Carburant</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for f in frais %}
+            <tr>
+                <td>{{ f.origine }}</td>
+                <td>{{ f.destination }}</td>
+                <td>{{ f.frais_route }}</td>
+                <td>{{ f.frais_carburant }}</td>
+                <td>
+                    <a href="{% url 'update_frais' f.pk_frais %}" class="btn btn-sm btn-primary">Modifier</a>
+                    <a href="{% url 'delete_frais' f.pk_frais %}" class="btn btn-sm btn-danger">Supprimer</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center">Aucun frais trouvé</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
