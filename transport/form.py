@@ -1,6 +1,6 @@
 from django import forms 
 from django.contrib.auth.forms import UserCreationForm
-from .models import Entreprise, Utilisateur,Chauffeur,Camion,Affectation,Transitaire,Client,CompagnieConteneur,Conteneur,ContratTransport,PrestationDeTransports,Cautions,FraisTrajet,Mission
+from .models import Entreprise, Utilisateur,Chauffeur,Camion,Affectation,Transitaire,Client,CompagnieConteneur,Conteneur,ContratTransport,PrestationDeTransports,Cautions,FraisTrajet,Mission,MissionConteneur,PaiementMission,Mecanicien,Fournisseur, Reparation,ReparationMecanicien,PieceReparee
 
 
 class EntrepriseForm(forms.ModelForm):
@@ -221,6 +221,7 @@ class CautionsForm(forms.ModelForm):
             'est_rembourser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'montant_rembourser': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+
 class FraisTrajetForm(forms.ModelForm):
     class Meta:
         model = FraisTrajet
@@ -245,6 +246,104 @@ class MissionForm(forms.ModelForm):
             # Pour les checkbox (ex: BooleanField)
             if isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs['class'] = 'form-check-input'  
+
+
+class MissionConteneurForm(forms.ModelForm):
+    class Meta:
+        model = MissionConteneur
+        fields = ['mission', 'conteneur']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})  
+
+class PaiementMissionForm(forms.ModelForm):
+    class Meta:
+        model = PaiementMission
+        fields = [
+            'mission',
+            'caution',
+            'prestation',
+            'montant_total',
+            'commission_transitaire',
+            'caution_est_retiree',
+            'mode_paiement',
+            'observation',
+        ]
+        widgets = {
+            'mission': forms.Select(attrs={'class': 'form-select'}),
+            'caution': forms.Select(attrs={'class': 'form-select'}),
+            'prestation': forms.Select(attrs={'class': 'form-select'}),
+            'montant_total': forms.NumberInput(attrs={'class': 'form-control'}),
+            'commission_transitaire': forms.NumberInput(attrs={'class': 'form-control'}),
+            'caution_est_retiree': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
+            'observation': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }    
+
+class MecanicienForm(forms.ModelForm):
+    class Meta:
+        model = Mecanicien
+        fields = ['nom', 'telephone', 'email']
+        widgets = {
+            'nom': forms.TextInput(attrs={'class': 'form-control'}),
+            'telephone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+        }
+
+
+class FournisseurForm(forms.ModelForm):
+    class Meta:
+        model = Fournisseur
+        fields = ['nom', 'telephone', 'email', 'adresse', 'fiabilite', 'commentaire']
+        widgets = {
+            'nom': forms.TextInput(attrs={'class': 'form-control'}),
+            'telephone': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'adresse': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'fiabilite': forms.Select(attrs={'class': 'form-select'}),
+            'commentaire': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+class ReparationForm(forms.ModelForm):
+    class Meta:
+        model = Reparation
+        fields = ['camion', 'chauffeur', 'date_reparation', 'cout', 'description']
+        widgets = {
+            'camion': forms.Select(attrs={'class': 'form-select'}),
+            'chauffeur': forms.Select(attrs={'class': 'form-select'}),
+            'date_reparation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'cout': forms.NumberInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+
+class ReparationMecanicienForm(forms.ModelForm):
+    class Meta:
+        model = ReparationMecanicien
+        fields = ['reparation', 'mecanicien']
+        widgets = {
+            'reparation': forms.Select(attrs={'class': 'form-select'}),
+            'mecanicien': forms.Select(attrs={'class': 'form-select'}),
+        }    
+
+class PieceRepareeForm(forms.ModelForm):
+    class Meta:
+        model = PieceReparee
+        fields = [
+            'reparation', 'nom_piece', 'categorie', 'reference', 
+            'quantite', 'cout_unitaire', 'fournisseur'
+        ]
+        widgets = {
+            'reparation': forms.Select(attrs={'class': 'form-select'}),
+            'nom_piece': forms.TextInput(attrs={'class': 'form-control'}),
+            'categorie': forms.Select(attrs={'class': 'form-select'}),
+            'reference': forms.TextInput(attrs={'class': 'form-control'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control'}),
+            'cout_unitaire': forms.NumberInput(attrs={'class': 'form-control'}),
+            'fournisseur': forms.Select(attrs={'class': 'form-select'}),
+        }            
 
 class ConnexionForm(forms.Form):
     email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={'class': 'form-control'}))
