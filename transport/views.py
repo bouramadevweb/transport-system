@@ -5,6 +5,9 @@ from django.shortcuts import render, redirect,get_object_or_404
 from django.db import IntegrityError
 from django.contrib import messages
 from .models import Chauffeur, Entreprise,Camion,Affectation,Transitaire,Client,CompagnieConteneur,Conteneur,ContratTransport,PrestationDeTransports,Cautions,FraisTrajet,Mission,MissionConteneur,PaiementMission,Mecanicien,Fournisseur,Reparation,ReparationMecanicien,PieceReparee
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncMonth
+from datetime import datetime
 
 def ajouter_entreprise(request):
     form = EntrepriseForm(request.POST or None)
@@ -781,3 +784,42 @@ def connexion_utilisateur(request):
                 form.add_error(None, "Email ou mot de passe invalide.")
 
     return render(request, 'transport/connexion.html', {'form': form})
+
+#tableau de bord
+
+
+
+from django.shortcuts import render
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncMonth
+
+def dashboard(request):
+    from .models import Chauffeur, Camion, Mission, Reparation, PaiementMission
+
+    stats = {
+        "chauffeurs": Chauffeur.objects.count(),
+        "camions": Camion.objects.count(),
+        "missions": Mission.objects.count(),
+        "reparations": Reparation.objects.count(),
+        "paiements": PaiementMission.objects.aggregate(total=Sum("montant_total"))["total"] or 0,
+    }
+
+    mission_par_statut = Mission.objects.values("statut").annotate(total=Count("statut"))
+
+    paiements_mensuels = (
+        PaiementMission.objects
+        .annotate(mois=TruncMonth("date_paiement"))
+        .values("mois")
+        .annotate(total=Sum("montant_total"))
+        .order_by("mois")
+    )
+
+    mois_labels = [p["mois"].strftime("%b %Y") for p in paiements_mensuels]
+    montant_values = [float(p["total"]) for p in paiements_mensuels]
+
+    return render(request, "transport/dashboard.html", {
+        "stats": stats,
+        "mission_par_statut": list(mission_par_statut),
+        "paiements_mois_labels": mois_labels,
+        "paiements_mois_values": montant_values,
+    })

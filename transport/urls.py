@@ -100,6 +100,11 @@ urlpatterns = [
     path('pieces-reparees/create/', views.create_piece_reparee, name='create_piece_reparee'),
     path('pieces-reparees/<str:pk>/update/', views.update_piece_reparee, name='update_piece_reparee'),
     path('pieces-reparees/<str:pk>/delete/', views.delete_piece_reparee, name='delete_piece_reparee'),
+
+    path("", views.dashboard, name="dashboard"),
+    path('dashboard/', views.dashboard, name='dashboard'),
+
+
 ]
 
 
