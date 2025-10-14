@@ -9,7 +9,7 @@ urlpatterns = [
     path("chauffeurs/", views.chauffeur_list, name="chauffeur_list"),
     path("chauffeurs/create/", views.create_chauffeur, name="chauffeur_create"),
     path("chauffeurs/<str:pk>/update/", views.update_chauffeur, name="chauffeur_update"),
-    path("chauffeurs/<str:pk>/delete/", views.delete_chauffeur, name="chauffeur_delete"),
+    path("chauffeurs/<str:pk>/delete/", views.chauffeur_delete, name="chauffeur_delete"),
 
     path('camions/', views.camion_list, name='camion_list'),
     path('camions/create/', views.create_camion, name='create_camion'),

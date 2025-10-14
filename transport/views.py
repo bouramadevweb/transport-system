@@ -59,11 +59,13 @@ def update_chauffeur(request, pk):
 
     return render(request, "transport/chauffeurs/chauffeur_form.html", {"form": form, "title": "Modifier un chauffeur"})
 
-def delete_chauffeur(request, pk):
+def chauffeur_delete(request, pk):
     chauffeur = get_object_or_404(Chauffeur, pk=pk)
-    chauffeur.delete()
-    messages.success(request, "🗑️ Chauffeur supprimé avec succès.")
-    return redirect("transport/chauffeurs/chauffeur_list")
+    if request.method == "POST":
+       chauffeur.delete()
+       messages.success(request, "🗑️ Chauffeur supprimé avec succès.")
+       return redirect("chauffeur_list")
+    return render(request, "transport/chauffeurs/chauffeur_confirm_delete.html", {"chauffeur": chauffeur})
 
 # Liste des camions
 def camion_list(request):
@@ -100,6 +102,7 @@ def delete_camion(request, pk):
         camion.delete()
         return redirect('camion_list')
     return render(request, "transport/camions/camion_confirm_delete.html", {"camion": camion, "title": "Supprimer le camion"})
+
 
 # Liste des affectations
 def affectation_list(request):
@@ -424,7 +427,7 @@ def delete_frais(request, pk):
 # Liste des missions
 def mission_list(request):
     missions = Mission.objects.all()
-    return render(request, 'transport/mission_list.html', {
+    return render(request, 'transport/missions/mission_list.html', {
         'missions': missions,
         'title': 'Liste des missions'
     })
@@ -462,7 +465,7 @@ def delete_mission(request, pk):
 # LIST
 def mission_conteneur_list(request):
     mission_conteneurs = MissionConteneur.objects.all()
-    return render(request, 'transport/mission_conteneur_list.html', {
+    return render(request, 'transport/missions/mission_conteneur_list.html', {
         'title': 'Liste des Missions - Conteneurs',
         'mission_conteneurs': mission_conteneurs
     })
@@ -786,12 +789,6 @@ def connexion_utilisateur(request):
     return render(request, 'transport/connexion.html', {'form': form})
 
 #tableau de bord
-
-
-
-from django.shortcuts import render
-from django.db.models import Count, Sum
-from django.db.models.functions import TruncMonth
 
 def dashboard(request):
     from .models import Chauffeur, Camion, Mission, Reparation, PaiementMission

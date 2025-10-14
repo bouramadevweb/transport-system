@@ -34,8 +34,7 @@
                     <td>{{ chauffeur.entreprise.nom }}</td>
                     <td>
                         <a href="{% url 'chauffeur_update' chauffeur.pk_chauffeur %}" class="btn btn-sm btn-warning">Modifier</a>
-                        <a href="{% url 'chauffeur_delete' chauffeur.pk_chauffeur %}" class="btn btn-sm btn-danger"
-                           onclick="return confirm('Voulez-vous vraiment supprimer ce chauffeur ?');">Supprimer</a>
+                        <a href="{% url 'chauffeur_delete' chauffeur.pk_chauffeur %}" class="btn btn-sm btn-danger">Supprimer</a>
                     </td>
                 </tr>
                 {% empty %}

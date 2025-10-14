@@ -111,10 +111,8 @@ class Entreprise(models.Model):
         ]    
 
     def __str__(self):
-        return (f"{self.pk_entreprise} | "
-                f"{self.nom}, {self.secteur_activite or ''}, "
-                f"{self.email_contact or ''}, {self.telephone_contact or ''}, "
-                f"{self.date_creation}, {self.statut}")
+        return (f"{self.nom}, {self.secteur_activite or ''}")
+                
 
 
 class Utilisateur(AbstractUser):
@@ -168,7 +166,7 @@ class Chauffeur(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.pk_chauffeur}, {self.entreprise}, {self.nom}, {self.prenom}, {self.telephone}, {self.email}"
+        return f"{self.nom} {self.prenom}  {self.email}"
 
 class Camion(models.Model):
     pk_camion = models.CharField(max_length=250, primary_key=True)
@@ -176,6 +174,7 @@ class Camion(models.Model):
     immatriculation = models.CharField(max_length=20, unique=True)
     modele = models.CharField(max_length=50, blank=True, null=True)
     capacite_tonnes = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    est_affecter = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.pk_camion:
@@ -196,7 +195,7 @@ class Camion(models.Model):
         ]    
 
     def __str__(self):
-        return f"{self.pk_camion}, {self.entreprise}, {self.immatriculation}, {self.modele}, {self.capacite_tonnes}"
+        return f"{self.immatriculation}  {self.modele}"
 
 class Affectation(models.Model):
     pk_affectation = models.CharField(max_length=250, primary_key=True, editable=False)
