@@ -8,6 +8,7 @@ from .models import Chauffeur, Entreprise,Camion,Affectation,Transitaire,Client,
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from datetime import datetime
+from django.contrib.auth.views import LogoutView
 
 def ajouter_entreprise(request):
     form = EntrepriseForm(request.POST or None)

@@ -1,0 +1,271 @@
+{% load static %}
+{% load django_bootstrap5 %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestion Transport | Tableau de bord</title>
+
+  {% bootstrap_css %}
+  {% bootstrap_javascript %}
+  <script src="https://kit.fontawesome.com/bf80631bb4.js" crossorigin="anonymous"></script>
+
+  
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <i class="fas fa-truck"></i>&nbsp; <span class="brand"></span>
+      </div>
+      <div class="menu">
+       <a href="{% url 'dashboard' %}" class="active"><i class="fas fa-tachometer-alt"></i><span>Tableau de bord</span></a>
+        <a href="{% url 'chauffeur_list' %}"><i class="fas fa-id-card"></i><span>Chauffeurs</span></a>
+        <a href="{% url 'camion_list' %}"><i class="fas fa-truck"></i><span>Camions</span></a>
+        <a href="{% url 'affectation_list' %}"><i class="fas fa-link"></i><span>Affectations</span></a>
+        <a href="{% url 'transitaire_list' %}"><i class="fas fa-ship"></i><span>Transitaires</span></a>
+        <a href="{% url 'client_list' %}"><i class="fas fa-users"></i><span>Clients</span></a>
+        <a href="{% url 'compagnie_list' %}"><i class="fas fa-building"></i><span>Compagnies</span></a>
+        <a href="{% url 'conteneur_list' %}"><i class="fas fa-box"></i><span>Conteneurs</span></a>
+        <a href="{% url 'contrat_list' %}"><i class="fas fa-file-signature"></i><span>Contrats</span></a>
+        <a href="{% url 'presta_transport_list' %}"><i class="fas fa-file-invoice-dollar"></i><span>Prestations</span></a>
+        <a href="{% url 'cautions_list' %}"><i class="fas fa-shield-alt"></i><span>Cautions</span></a>
+        <a href="{% url 'frais_list' %}"><i class="fas fa-road"></i><span>Frais de trajet</span></a>
+        <a href="{% url 'mission_list' %}"><i class="fas fa-map-marked-alt"></i><span>Missions</span></a>
+        <a href="{% url 'paiement_mission_list' %}"><i class="fas fa-money-bill-wave"></i><span>Paiements</span></a>
+        <a href="{% url 'mecanicien_list' %}"><i class="fas fa-user-cog"></i><span>Mécaniciens</span></a>
+        <a href="{% url 'fournisseur_list' %}"><i class="fas fa-warehouse"></i><span>Fournisseurs</span></a>
+        <a href="{% url 'reparation_list' %}"><i class="fas fa-tools"></i><span>Réparations</span></a>
+        <a href="{% url 'piece_reparee_list' %}"><i class="fas fa-cogs"></i><span>Pièces réparées</span></a>
+        <a href="{% url 'inscription_utilisateur' %}"><i class="fas fa-user-plus"></i><span>Utilisateurs</span></a>
+        <a href="{% url 'logout' %}" class="logout"><i class="fas fa-sign-out-alt"></i><span>Déconnexion</span></a>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main>
+      <header>
+        <button id="toggleSidebar" class="menu-btn"><i class="fas fa-bars"></i></button>
+        <h1 class="h6 mb-0 fw-semibold">Gestion des transports</h1>
+        <div class="header-right">
+          <i class="fas fa-search text-muted"></i>
+          <img src="{% static 'images/avatar.png' %}" alt="Avatar utilisateur">
+        </div>
+      </header>
+
+      <div class="page-title">{% block title %}Tableau de bord{% endblock %}</div>
+      <div class="content">
+        {% block content %}
+        {% endblock %}
+      </div>
+    </main>
+  </div>
+
+  
+</body>
+</html>
+
+<script>
+    const sidebar = document.getElementById("sidebar");
+    const toggleBtn = document.getElementById("toggleSidebar");
+
+    toggleBtn.addEventListener("click", () => {
+      if (window.innerWidth <= 992) {
+        sidebar.classList.toggle("active");
+      } else {
+        sidebar.classList.toggle("collapsed");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (window.innerWidth <= 992 &&
+          !sidebar.contains(e.target) &&
+          !toggleBtn.contains(e.target)) {
+        sidebar.classList.remove("active");
+      }
+    });
+  </script>
+
+<style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f9fafb;
+      --sidebar: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --hover: #f3f4f6;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: "Inter", "Poppins", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ========= LAYOUT ========= */
+    .app-container {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ========= SIDEBAR ========= */
+    .sidebar {
+      width: 250px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s ease;
+      z-index: 10;
+    }
+
+    .sidebar.collapsed {
+      width: 70px;
+    }
+
+    .sidebar-header {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 1.1rem;
+      background: var(--primary);
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+
+    .menu {
+      flex: 1;
+      padding-top: 10px;
+    }
+
+    .menu a {
+      display: flex;
+      align-items: center;
+      padding: 10px 20px;
+      color: var(--text);
+      text-decoration: none;
+      transition: all 0.3s;
+      font-weight: 500;
+      font-size: 0.95rem;
+      border-left: 3px solid transparent;
+    }
+
+    .menu a i {
+      margin-right: 12px;
+      width: 20px;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .menu a:hover,
+    .menu a.active {
+      background: var(--hover);
+      border-left: 3px solid var(--primary);
+      color: var(--primary);
+    }
+
+    .sidebar.collapsed .menu a span {
+      display: none;
+    }
+
+    .sidebar.collapsed .menu a i {
+      margin: 0 auto;
+      font-size: 1.3rem;
+    }
+
+    /* ========= HEADER ========= */
+    header {
+      height: 60px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+    }
+
+    .menu-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .header-right img {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      object-fit: cover;
+    }
+
+    /* ========= MAIN CONTENT ========= */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .page-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin: 20px 25px 10px;
+      color: var(--text);
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg);
+      padding: 0 25px 25px;
+    }
+
+    /* ========= RESPONSIVE ========= */
+    @media (max-width: 992px) {
+      .sidebar {
+        position: fixed;
+        left: -250px;
+        height: 100%;
+      }
+
+      .sidebar.active {
+        left: 0;
+        box-shadow: 3px 0 15px rgba(0,0,0,0.15);
+      }
+
+      .sidebar.collapsed {
+        width: 250px;
+      }
+
+      .menu-btn {
+        font-size: 1.4rem;
+      }
+    }
+  </style>
