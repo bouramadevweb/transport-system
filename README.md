@@ -1,8 +1,8 @@
 # transport-system
 
-# 📘 Spécification technique – Identifiants sécurisés personnalisés
+#  Spécification technique – Identifiants sécurisés personnalisés
 
-## 🎯 Objectif
+##  Objectif
 
 Ce document décrit la logique utilisée pour la **génération des identifiants primaires (`pk_*`)** dans le projet de gestion d’entreprise de transport.  
 Contrairement aux modèles Django par défaut, **aucune clé auto-incrémentée (`id`) n’est utilisée**.  

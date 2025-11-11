@@ -106,7 +106,7 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path('dashboard/', views.dashboard, name='dashboard'),
 
-    path('logout/', LogoutView.as_view(next_page='/'), name='logout')
+    path('logout/', views.logout_utilisateur, name='logout'),
 
 
 ]

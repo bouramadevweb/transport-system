@@ -9,6 +9,8 @@ from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from datetime import datetime
 from django.contrib.auth.views import LogoutView
+from django.contrib.auth import logout
+from django.shortcuts import redirect
 
 def ajouter_entreprise(request):
     form = EntrepriseForm(request.POST or None)
@@ -771,7 +773,7 @@ def delete_piece_reparee(request, pk):
         'title': 'Supprimer une pièce réparée'
     })
 
-
+# Connexion 
 def connexion_utilisateur(request):
     form = ConnexionForm(request.POST or None)
     
@@ -821,3 +823,8 @@ def dashboard(request):
         "paiements_mois_labels": mois_labels,
         "paiements_mois_values": montant_values,
     })
+
+# deconnexion 
+def logout_utilisateur(request):
+    logout(request)
+    return redirect('connexion')
