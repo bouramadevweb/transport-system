@@ -49,6 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'transport.middleware.LoginRequiredMiddleware',
 ]
 
 ROOT_URLCONF = 'transport_system.urls'
@@ -123,3 +124,13 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Redirige tout utilisateur non connecté vers la page de connexion
+LOGIN_URL = 'connexion'
+
+# Où rediriger après connexion réussie
+LOGIN_REDIRECT_URL = 'dashboard'
+
+# Où rediriger après déconnexion
+LOGOUT_REDIRECT_URL = 'connexion'

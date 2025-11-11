@@ -824,6 +824,17 @@ def dashboard(request):
         "paiements_mois_values": montant_values,
     })
 
+# gestion url redirection si pas bon url vers la connexion
+def rediriger_vers_connexion(request, exception=None):
+    return redirect('connexion')
+
+handler404 = rediriger_vers_connexion
+# gestion probleme server si la connexion n'est pas bon 
+def rediriger_erreur_serveur(request):
+    return redirect('connexion')
+
+handler500 = rediriger_erreur_serveur
+
 # deconnexion 
 def logout_utilisateur(request):
     logout(request)
