@@ -1,12 +1,20 @@
 from django.urls import path
 from . import views
 from django.contrib.auth.views import LogoutView
-
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('inscription_utilisateur/', views.inscription_utilisateur, name='inscription_utilisateur'),
     path('connexion/', views.connexion_utilisateur, name='connexion'),
-    path('ajouter_entreprise/', views.ajouter_entreprise, name='ajouter_entreprise'),
+    # path('ajouter_entreprise/', views.ajouter_entreprise, name='ajouter_entreprise'),
+
+
+    path('liste_entreprises/', views.liste_entreprises, name='liste_entreprises'),
+    path('entreprises/ajouter/', views.ajouter_entreprise, name='ajouter_entreprise'),
+    path('entreprises/modifier/<str:pk>/', views.modifier_entreprise, name='modifier_entreprise'),
+    path('entreprises/supprimer/<str:pk>/', views.supprimer_entreprise, name='supprimer_entreprise'),
+
 
     path("chauffeurs/", views.chauffeur_list, name="chauffeur_list"),
     path("chauffeurs/create/", views.create_chauffeur, name="chauffeur_create"),
@@ -47,6 +55,7 @@ urlpatterns = [
     path('contrats/create/', views.create_contrat, name='create_contrat'),
     path('contrats/<str:pk>/update/', views.update_contrat, name='update_contrat'),
     path('contrats/<str:pk>/delete/', views.delete_contrat, name='delete_contrat'),
+    path("contrat/pdf/<str:pk>/", views.pdf_contrat, name="pdf_contrat"),
 
     path('prestations/', views.presta_transport_list, name='presta_transport_list'),
     path('prestations/create/', views.create_presta_transport, name='create_presta_transport'),
@@ -109,8 +118,7 @@ urlpatterns = [
     path('logout/', views.logout_utilisateur, name='logout'),
 
 
-]
-
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
 

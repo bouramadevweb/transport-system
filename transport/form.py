@@ -167,27 +167,43 @@ class ContratTransportForm(forms.ModelForm):
     class Meta:
         model = ContratTransport
         fields = [
-            'conteneur', 'client', 'transitaire', 'entreprise', 
-            'camion', 'chauffeur', 'date_debut', 'date_limite_retour',
-            'caution', 'statut_caution', 'commentaire',
-            'signature_chauffeur', 'signature_client', 'signature_transitaire'
+            "numero_bl", "destinataire",
+            "conteneur", "client", "transitaire", "entreprise",
+            "camion", "chauffeur",
+            "montant_total", "avance_transport", "reliquat_transport", "caution",
+            "statut_caution",
+            "date_debut", "date_limite_retour",
+            "commentaire",
+            "signature_chauffeur", "signature_client", "signature_transitaire",
         ]
+
         widgets = {
+            'numero_bl': forms.TextInput(attrs={'class': 'form-control'}),
+            'destinataire': forms.TextInput(attrs={'class': 'form-control'}),
+
             'conteneur': forms.Select(attrs={'class': 'form-select'}),
             'client': forms.Select(attrs={'class': 'form-select'}),
             'transitaire': forms.Select(attrs={'class': 'form-select'}),
             'entreprise': forms.Select(attrs={'class': 'form-select'}),
             'camion': forms.Select(attrs={'class': 'form-select'}),
             'chauffeur': forms.Select(attrs={'class': 'form-select'}),
-            'date_debut': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_limite_retour': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+
+            'montant_total': forms.NumberInput(attrs={'class': 'form-control'}),
+            'avance_transport': forms.NumberInput(attrs={'class': 'form-control'}),
+            'reliquat_transport': forms.NumberInput(attrs={'class': 'form-control', 'readonly': True}),
             'caution': forms.NumberInput(attrs={'class': 'form-control'}),
             'statut_caution': forms.Select(attrs={'class': 'form-select'}),
+
+            'date_debut': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_limite_retour': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+
             'commentaire': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+
             'signature_chauffeur': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'signature_client': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'signature_transitaire': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }   
+        }
+
 
 class PrestationDeTransportsForm(forms.ModelForm):
     class Meta:

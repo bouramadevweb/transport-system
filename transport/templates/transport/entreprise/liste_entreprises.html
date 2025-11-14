@@ -1,0 +1,42 @@
+{% extends "admin.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <h2>{{ title }}</h2>
+
+    <a href="{% url 'ajouter_entreprise' %}" class="btn btn-success mb-3">Ajouter une entreprise</a>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Nom</th>
+                <th>Secteur</th>
+                <th>Email</th>
+                <th>Téléphone</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for e in entreprises %}
+            <tr>
+                <td>{{ e.nom }}</td>
+                <td>{{ e.secteur_activite }}</td>
+                <td>{{ e.email_contact }}</td>
+                <td>{{ e.telephone_contact }}</td>
+                <td>{{ e.statut }}</td>
+
+                <td>
+                    <a href="{% url 'modifier_entreprise' e.pk_entreprise %}" class="btn btn-sm btn-primary">Modifier</a>
+                    <a href="{% url 'supprimer_entreprise' e.pk_entreprise %}" class="btn btn-sm btn-danger">Supprimer</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center">Aucune entreprise trouvée</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

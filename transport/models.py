@@ -4,6 +4,7 @@ from django.utils.timezone import now
 from django.utils.text import slugify
 from uuid import uuid4
 from django.contrib.auth.models import BaseUserManager
+from decimal import Decimal
 
 # =======================
 # ENUMS – Constantes pour les choix
@@ -253,7 +254,7 @@ class Transitaire(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.pk_transitaire}, {self.nom}, {self.telephone}, {self.email}, {self.score_fidelite}, {self.etat_paiement}, {self.commentaire}"
+        return f"{self.nom}"
 
 
 class Client(models.Model):
@@ -285,7 +286,7 @@ class Client(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.pk_client}, {self.nom}, {self.type_client}, {self.telephone}, {self.email}, {self.score_fidelite}, {self.commentaire}"
+        return f"{self.nom}"
 
 class CompagnieConteneur(models.Model):
     """
@@ -313,7 +314,7 @@ class CompagnieConteneur(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.pk_compagnie}, {self.nom}"
+        return f"{self.nom}"
 
 class Conteneur(models.Model):
     pk_conteneur = models.CharField(max_length=250, primary_key=True)
@@ -343,68 +344,68 @@ class Conteneur(models.Model):
         ]  
 
     def __str__(self):
-        return f"{self.pk_conteneur}, {self.numero_conteneur}, {self.compagnie}, {self.type_conteneur}, {self.poids}, {self.client}, {self.transitaire}"
+        return f"{self.numero_conteneur} | {self.compagnie}"
 
 
     
 class ContratTransport(models.Model):
-    """
-    contrat de transport et la signature """
-    pk_contrat = models.CharField(max_length=250, primary_key=True)
-    conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
-    client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
-    transitaire = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
-    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
-    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
+    pk_contrat = models.CharField(max_length=250, primary_key=True, editable=False)
+
+    conteneur = models.ForeignKey("Conteneur", on_delete=models.CASCADE)
+    client = models.ForeignKey("Client", on_delete=models.SET_NULL, null=True, blank=True)
+    transitaire = models.ForeignKey("Transitaire", on_delete=models.SET_NULL, null=True, blank=True)
+    entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE)
+
+    camion = models.ForeignKey("Camion", on_delete=models.CASCADE)
+    chauffeur = models.ForeignKey("Chauffeur", on_delete=models.CASCADE)
+
+    numero_bl = models.CharField(max_length=100)
+    destinataire = models.CharField(max_length=200)
+
+    montant_total = models.DecimalField(max_digits=12, decimal_places=2)
+    avance_transport = models.DecimalField(max_digits=12, decimal_places=2)
+    reliquat_transport = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    caution = models.DecimalField(max_digits=12, decimal_places=2)
+    statut_caution = models.CharField(max_length=10, choices=STATUT_CAUTION_CHOICES, default='bloquee')
+
     date_debut = models.DateField()
     date_limite_retour = models.DateField()
-    caution = models.DecimalField(max_digits=10, decimal_places=2)
-    statut_caution = models.CharField(max_length=10, choices=STATUT_CAUTION_CHOICES, default='bloquée')
+
     commentaire = models.TextField(blank=True, null=True)
+
     signature_chauffeur = models.BooleanField(default=False)
     signature_client = models.BooleanField(default=False)
     signature_transitaire = models.BooleanField(default=False)
-
-
-    def save(self, *args, **kwargs):
-        """
-        pour le pk composite """
-        if not self.pk_contrat:
-            base = (f"{self.conteneur.pk_conteneur}{self.client.pk_client}{self.transitaire.pk_transitaire}"
-                   f"{self.entreprise.pk_entreprise}{self.camion.immatriculation}{self.chauffeur.pk_chauffeur}"
-                   f"{self.date_debut}{self.date_limite_retour}")
-            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
-            self.pk_contrat = slugify(base)[:250]
-        super().save(*args, **kwargs)
-
-    # class Meta:
-    #       unique_together = ("conteneur","client","transitaire","entreprise","camion","chauffeur","date_debut","date_limite_retour")
-
+    pdf_file = models.FileField(upload_to='contrats/', null=True, blank=True)
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['conteneur','client','transitaire','entreprise','camion','chauffeur','date_debut','date_limite_retour'],
-                name='unique_contrat'
+                fields=['conteneur','client','transitaire','entreprise','camion','chauffeur','numero_bl','date_debut'],
+                name='unique_contrat_transport'
             )
         ]
 
+    def save(self, *args, **kwargs):
+        if not self.pk_contrat:
+            base = (
+                f"{self.conteneur.pk_conteneur}"
+                f"{self.client.pk_client if self.client else ''}"
+                f"{self.transitaire.pk_transitaire if self.transitaire else ''}"
+                f"{self.camion.immatriculation}"
+                f"{self.chauffeur.pk_chauffeur}"
+                f"{self.numero_bl}"
+                f"{self.date_debut}"
+            )
+            base = base.replace(" ", "").replace("-", "")
+            self.pk_contrat = slugify(base)[:250]
+
+        self.reliquat_transport = Decimal(self.montant_total) - Decimal(self.avance_transport)
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return (
-            f"Contrat {self.pk_contrat} | "
-            f"Conteneur: {self.conteneur.numero_conteneur} | "
-            f"Client: {self.client.nom if self.client else 'N/A'} | "
-            f"Transitaire: {self.transitaire.nom if self.transitaire else 'N/A'} | "
-            f"Entreprise: {self.entreprise.nom} | "
-            f"Camion: {self.camion.immatriculation} | "
-            f"Chauffeur: {self.chauffeur.nom} {self.chauffeur.prenom} | "
-            f"Début: {self.date_debut} | "
-            f"Retour limite: {self.date_limite_retour} | "
-            f"Caution: {self.caution} ({self.statut_caution}) | "
-            f"Signatures - Chauffeur: {'✔' if self.signature_chauffeur else '✘'}, "
-            f"Client: {'✔' if self.signature_client else '✘'}, "
-            f"Transitaire: {'✔' if self.signature_transitaire else '✘'}"
-        )
+        return f"Contrat {self.pk_contrat} | BL: {self.numero_bl}"
+    
 
 class PrestationDeTransports(models.Model):
     pk_presta_transport = models.CharField(max_length=250, primary_key=True)

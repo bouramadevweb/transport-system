@@ -1,61 +1,103 @@
 {% extends "admin.html" %}
 {% block content %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ title }}</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
+
 <div class="container mt-5">
     <h2 class="mb-4">{{ title }}</h2>
-    <a href="{% url 'create_contrat' %}" class="btn btn-success mb-3">Ajouter un contrat</a>
-    <table class="table table-striped table-bordered">
-        <thead class="table-dark">
-            <tr>
-                <th>Conteneur</th>
-                <th>Client</th>
-                <th>Transitaire</th>
-                <th>Entreprise</th>
-                <th>Camion</th>
-                <th>Chauffeur</th>
-                <th>Début</th>
-                <th>Retour limite</th>
-                <th>Caution</th>
-                <th>Signatures</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for c in contrats %}
-            <tr>
-                <td>{{ c.conteneur.numero_conteneur }}</td>
-                <td>{% if c.client %}{{ c.client.nom }}{% else %}N/A{% endif %}</td>
-                <td>{% if c.transitaire %}{{ c.transitaire.nom }}{% else %}N/A{% endif %}</td>
-                <td>{{ c.entreprise.nom }}</td>
-                <td>{{ c.camion.immatriculation }}</td>
-                <td>{{ c.chauffeur.nom }} {{ c.chauffeur.prenom }}</td>
-                <td>{{ c.date_debut }}</td>
-                <td>{{ c.date_limite_retour }}</td>
-                <td>{{ c.caution }} ({{ c.statut_caution }})</td>
-                <td>
-                    Chauffeur: {% if c.signature_chauffeur %}✔{% else %}✘{% endif %}<br>
-                    Client: {% if c.signature_client %}✔{% else %}✘{% endif %}<br>
-                    Transitaire: {% if c.signature_transitaire %}✔{% else %}✘{% endif %}
-                </td>
-                <td>
-                    <a href="{% url 'update_contrat' c.pk_contrat %}" class="btn btn-sm btn-primary">Modifier</a>
-                    <a href="{% url 'delete_contrat' c.pk_contrat %}" class="btn btn-sm btn-danger">Supprimer</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="11" class="text-center">Aucun contrat trouvé</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+    <a href="{% url 'create_contrat' %}" class="btn btn-success mb-3">
+        Ajouter un contrat
+    </a>
+
+    <div class="card shadow">
+        <table class="table table-striped table-bordered mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Conteneur</th>
+                    <th>Client</th>
+                    <th>Transitaire</th>
+                    <th>Entreprise</th>
+                    <th>Camion</th>
+                    <th>Chauffeur</th>
+                    <th>Début</th>
+                    <th>Retour limite</th>
+                    <th>Caution</th>
+                    <th>Signatures</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for c in contrats %}
+                <tr>
+                    <td>{{ c.conteneur.numero_conteneur }}</td>
+
+                    <td>
+                        {% if c.client %}
+                            {{ c.client.nom }}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if c.transitaire %}
+                            {{ c.transitaire.nom }}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+
+                    <td>{{ c.entreprise.nom }}</td>
+                    <td>{{ c.camion.immatriculation }}</td>
+                    <td>{{ c.chauffeur.nom }} {{ c.chauffeur.prenom }}</td>
+                    <td>{{ c.date_debut }}</td>
+                    <td>{{ c.date_limite_retour }}</td>
+
+                    <td>
+                        {{ c.caution }} FCFA
+                        <br>
+                        <span class="badge bg-info">
+                            {{ c.statut_caution|title }}
+                        </span>
+                    </td>
+
+                    <td>
+                        Chauffeur:
+                        {% if c.signature_chauffeur %} ✔ {% else %} ✘ {% endif %}
+                        <br>
+                        Client:
+                        {% if c.signature_client %} ✔ {% else %} ✘ {% endif %}
+                        <br>
+                        Transitaire:
+                        {% if c.signature_transitaire %} ✔ {% else %} ✘ {% endif %}
+                    </td>
+
+                    <td>
+                        <a href="{% url 'update_contrat' c.pk_contrat %}" class="btn btn-sm btn-primary">
+                            Modifier
+                        </a>
+
+                        <a href="{% url 'delete_contrat' c.pk_contrat %}" class="btn btn-sm btn-danger">
+                            Supprimer
+                        </a>
+
+                        <a href="{% url 'pdf_contrat' c.pk_contrat %}" 
+                           class="btn btn-sm btn-secondary mt-1" 
+                           target="_blank">
+                            PDF
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="11" class="text-center text-muted py-3">
+                        Aucun contrat trouvé
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
-</body>
-</html>
+
 {% endblock %}
