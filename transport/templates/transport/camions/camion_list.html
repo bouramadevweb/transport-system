@@ -1,49 +1,144 @@
-
 {% extends "admin.html" %}
+
+{% block page_title %}Liste des Camions | Gestion Transport{% endblock %}
+
+{% block title %}Liste des Camions{% endblock %}
+
 {% block content %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ title }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-5">
-    <h2 class="mb-4">{{ title }}</h2>
-    <a href="{% url 'create_camion' %}" class="btn btn-success mb-3">Ajouter un camion</a>
-    <table class="table table-striped table-bordered">
-        <thead class="table-light">
-            <tr>
-                <th>Immatriculation</th>
-                <th>Modèle</th>
-                <th>Entreprise</th>
-                <th>Capacité (Tonnes)</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for camion in camions %}
-            <tr>
-                <td>{{ camion.immatriculation }}</td>
-                <td>{{ camion.modele }}</td>
-                <td>{{ camion.entreprise.nom }}</td>
-                <td>{{ camion.capacite_tonnes }}</td>
-                <td>
-                    <a href="{% url 'update_camion' camion.pk_camion %}" class="btn btn-sm btn-primary">Modifier</a>
-                    <a href="{% url 'delete_camion' camion.pk_camion %}" class="btn btn-sm btn-danger">Supprimer</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="text-center">Aucun camion trouvé</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="container-fluid">
+    <!-- Header with Breadcrumb -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+                    <li class="breadcrumb-item active">Camions</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0"><i class="fas fa-truck text-primary me-2"></i>{{ title }}</h2>
+        </div>
+        <a href="{% url 'create_camion' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Ajouter un camion
+        </a>
+    </div>
+
+    {% if camions %}
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-truck fa-2x text-success"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Total Camions</p>
+                            <h3 class="mb-0 fw-bold">{{ camions|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Export -->
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text"
+                               class="form-control table-search"
+                               id="searchCamions"
+                               data-table="camionTable"
+                               placeholder="Rechercher par immatriculation, modèle, entreprise...">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-outline-success w-100" onclick="exportTableToExcel('camionTable', 'camions')">
+                        <i class="fas fa-file-excel me-2"></i>Exporter Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="camionTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="sortable" onclick="sortTable(0, 'camionTable')">
+                                <i class="fas fa-id-badge me-1"></i>Immatriculation <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable" onclick="sortTable(1, 'camionTable')">
+                                <i class="fas fa-car me-1"></i>Modèle <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable" onclick="sortTable(2, 'camionTable')">
+                                <i class="fas fa-building me-1"></i>Entreprise <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable" onclick="sortTable(3, 'camionTable')">
+                                <i class="fas fa-weight me-1"></i>Capacité (Tonnes) <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for camion in camions %}
+                        <tr>
+                            <td class="fw-medium">{{ camion.immatriculation }}</td>
+                            <td>{{ camion.modele }}</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ camion.entreprise.nom }}</span>
+                            </td>
+                            <td>{{ camion.capacite_tonnes }}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'update_camion' camion.pk_camion %}"
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'delete_camion' camion.pk_camion %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white border-top-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <span id="rowCount">{{ camions|length }}</span> camion(s) affiché(s)
+                </small>
+                <small class="text-muted">
+                    <i class="fas fa-keyboard me-1"></i>Astuce: Appuyez sur <kbd>Ctrl</kbd> + <kbd>K</kbd> pour rechercher
+                </small>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <i class="fas fa-truck-monster"></i>
+        <h4>Aucun camion enregistré</h4>
+        <p>Commencez par ajouter votre premier camion pour gérer votre flotte de véhicules.</p>
+        <a href="{% url 'create_camion' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Ajouter le premier camion
+        </a>
+    </div>
+    {% endif %}
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
 {% endblock %}

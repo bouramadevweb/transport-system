@@ -1,40 +1,61 @@
-{% extends "admin.html" %}
-{% block content %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>{{ title }}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-5">
-  <h2 class="mb-4">{{ title }}</h2>
-  <a href="{% url 'create_reparation_mecanicien' %}" class="btn btn-success mb-3">Nouvelle association</a>
-  <table class="table table-striped table-bordered">
-    <thead class="table-dark">
-      <tr>
-        <th>Réparation</th>
-        <th>Mécanicien</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for rel in relations %}
-      <tr>
-        <td>{{ rel.reparation }}</td>
-        <td>{{ rel.mecanicien }}</td>
-        <td>
-          <a href="{% url 'update_reparation_mecanicien' rel.id %}" class="btn btn-sm btn-primary">Modifier</a>
-          <a href="{% url 'delete_reparation_mecanicien' rel.id %}" class="btn btn-sm btn-danger">Supprimer</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="3" class="text-center">Aucune association trouvée</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{%extends "admin.html" %}
+
+{%block page_title %}Liste des Réparations-Mécaniciens | Gestion Transport{%endblock %}
+
+{%block title %}Liste des Réparations-Mécaniciens{%endblock %}
+
+{%block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-user-cog text-primary me-2"></i>{{title}}</h2>
+        <a href="{%url 'create_reparation_mecanicien' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Ajouter réparation-mécanicien
+        </a>
+    </div>
+
+    {%if reparation_mecaniciens %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="fas fa-wrench me-2"></i>Réparation</th>
+                            <th><i class="fas fa-tools me-2"></i>Mécanicien</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {%for rm in reparation_mecaniciens %}
+                        <tr>
+                            <td>{{ rm.reparation.pk_reparation }}</td>
+                            <td>{{ rm.mecanicien.nom }}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{%url 'update_reparation_mecanicien' rm.id %}"
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{%url 'delete_reparation_mecanicien' rm.id %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {%endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {%else %}
+    <div class="alert alert-info shadow-sm">
+        <i class="fas fa-info-circle me-2"></i>
+        Aucun(e) réparation-mécanicien enregistré(e). <a href="{%url 'create_reparation_mecanicien' %}" class="alert-link">Ajouter le/la premier(ère)</a>
+    </div>
+    {%endif %}
 </div>
-</body>
-</html>
-{% endblock %}
+{%endblock %}

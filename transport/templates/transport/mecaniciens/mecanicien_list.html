@@ -1,44 +1,65 @@
-{% extends "admin.html" %}
-{% block content %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>{{ title }}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-5">
-  <h2 class="mb-4">{{ title }}</h2>
-  <a href="{% url 'create_mecanicien' %}" class="btn btn-success mb-3">Ajouter un mécanicien</a>
-  <table class="table table-striped table-bordered">
-    <thead class="table-dark">
-      <tr>
-        <th>Nom</th>
-        <th>Téléphone</th>
-        <th>Email</th>
-        <th>Date création</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for m in mecaniciens %}
-      <tr>
-        <td>{{ m.nom }}</td>
-        <td>{{ m.telephone }}</td>
-        <td>{{ m.email|default:"N/A" }}</td>
-        <td>{{ m.created_at|date:"d/m/Y H:i" }}</td>
-        <td>
-          <a href="{% url 'update_mecanicien' m.pk_mecanicien %}" class="btn btn-sm btn-primary">Modifier</a>
-          <a href="{% url 'delete_mecanicien' m.pk_mecanicien %}" class="btn btn-sm btn-danger">Supprimer</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="5" class="text-center">Aucun mécanicien trouvé</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+{%extends "admin.html" %}
+
+{%block page_title %}Liste des Mécaniciens | Gestion Transport{%endblock %}
+
+{%block title %}Liste des Mécaniciens{%endblock %}
+
+{%block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-tools text-primary me-2"></i>{{title}}</h2>
+        <a href="{%url 'create_mecanicien' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Ajouter mécanicien
+        </a>
+    </div>
+
+    {%if mecaniciens %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="fas fa-user me-2"></i>Nom</th>
+                            <th><i class="fas fa-phone me-2"></i>Téléphone</th>
+                            <th><i class="fas fa-envelope me-2"></i>Email</th>
+                            <th><i class="fas fa-map-marker me-2"></i>Adresse</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {%for m in mecaniciens %}
+                        <tr>
+                            <td>{{ m.nom }}</td>
+                            <td>{{ m.telephone }}</td>
+                            <td>{{ m.email }}</td>
+                            <td>{{ m.adresse }}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{%url 'update_mecanicien' m.pk_mecanicien %}"
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{%url 'delete_mecanicien' m.pk_mecanicien %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {%endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {%else %}
+    <div class="alert alert-info shadow-sm">
+        <i class="fas fa-info-circle me-2"></i>
+        Aucun(e) mécanicien enregistré(e). <a href="{%url 'create_mecanicien' %}" class="alert-link">Ajouter le/la premier(ère)</a>
+    </div>
+    {%endif %}
 </div>
-</body>
-</html>
-{% endblock %}
+{%endblock %}

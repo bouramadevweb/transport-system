@@ -1,5 +1,6 @@
-
 {% extends "admin.html" %}
+
+{% block page_title %}Tableau de bord | Gestion Transport{% endblock %}
 
 {% block title %}Tableau de bord{% endblock %}
 
@@ -10,79 +11,313 @@
     <i class="fas fa-tachometer-alt"></i> Tableau de bord
   </h2>
 
-  <!-- Statistiques globales -->
+  <!-- Alertes -->
+  {% if missions_en_retard > 0 %}
+  <div class="alert alert-warning border-0 shadow-sm mb-4" role="alert">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+      <div>
+        <h5 class="alert-heading mb-1">Attention !</h5>
+        <p class="mb-0">Vous avez <strong>{{ missions_en_retard }}</strong> mission(s) en retard qui nécessite(nt) votre attention.</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Statistiques principales -->
   <div class="row g-3 mb-4">
-    <div class="col-6 col-md-2">
-      <div class="card shadow-sm border-0 text-center bg-primary text-white">
-        <div class="card-body">
-          <h6 class="text-uppercase small mb-1">Chauffeurs</h6>
-          <h4 class="fw-bold">{{ stats.chauffeurs|default:"0" }}</h4>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card shadow-sm border-0 h-100 stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-body text-white text-center">
+          <i class="fas fa-users fa-2x mb-2 opacity-75"></i>
+          <h6 class="text-uppercase small mb-1 opacity-90">Chauffeurs</h6>
+          <h3 class="fw-bold mb-0">{{ stats.chauffeurs|default:"0" }}</h3>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-2">
-      <div class="card shadow-sm border-0 text-center bg-success text-white">
-        <div class="card-body">
-          <h6 class="text-uppercase small mb-1">Camions</h6>
-          <h4 class="fw-bold">{{ stats.camions|default:"0" }}</h4>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card shadow-sm border-0 h-100 stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+        <div class="card-body text-white text-center">
+          <i class="fas fa-truck fa-2x mb-2 opacity-75"></i>
+          <h6 class="text-uppercase small mb-1 opacity-90">Camions</h6>
+          <h3 class="fw-bold mb-0">{{ stats.camions|default:"0" }}</h3>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-2">
-      <div class="card shadow-sm border-0 text-center bg-warning text-dark">
-        <div class="card-body">
-          <h6 class="text-uppercase small mb-1">Missions</h6>
-          <h4 class="fw-bold">{{ stats.missions|default:"0" }}</h4>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card shadow-sm border-0 h-100 stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+        <div class="card-body text-white text-center">
+          <i class="fas fa-tasks fa-2x mb-2 opacity-75"></i>
+          <h6 class="text-uppercase small mb-1 opacity-90">Missions</h6>
+          <h3 class="fw-bold mb-0">{{ stats.missions|default:"0" }}</h3>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-2">
-      <div class="card shadow-sm border-0 text-center bg-danger text-white">
-        <div class="card-body">
-          <h6 class="text-uppercase small mb-1">Réparations</h6>
-          <h4 class="fw-bold">{{ stats.reparations|default:"0" }}</h4>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card shadow-sm border-0 h-100 stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+        <div class="card-body text-white text-center">
+          <i class="fas fa-spinner fa-2x mb-2 opacity-75"></i>
+          <h6 class="text-uppercase small mb-1 opacity-90">En cours</h6>
+          <h3 class="fw-bold mb-0">{{ stats.missions_en_cours|default:"0" }}</h3>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-2">
-      <div class="card shadow-sm border-0 text-center bg-info text-white">
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card shadow-sm border-0 h-100 stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+        <div class="card-body text-white text-center">
+          <i class="fas fa-tools fa-2x mb-2 opacity-75"></i>
+          <h6 class="text-uppercase small mb-1 opacity-90">Réparations</h6>
+          <h3 class="fw-bold mb-0">{{ stats.reparations|default:"0" }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card shadow-sm border-0 h-100 stat-card" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+        <div class="card-body text-white text-center">
+          <i class="fas fa-user-tie fa-2x mb-2 opacity-75"></i>
+          <h6 class="text-uppercase small mb-1 opacity-90">Clients</h6>
+          <h3 class="fw-bold mb-0">{{ stats.clients|default:"0" }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenus du mois -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
-          <h6 class="text-uppercase small mb-1">Paiements ({{ devise|default:"€" }})</h6>
-          <h4 class="fw-bold">{{ stats.paiements|default:"0" }}</h4>
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-muted mb-1 small">Revenus du mois</p>
+              <h2 class="fw-bold mb-0 text-success">{{ revenus_mois_actuel|floatformat:2 }} €</h2>
+            </div>
+            <div class="bg-success bg-opacity-10 rounded-3 p-3">
+              <i class="fas fa-euro-sign fa-3x text-success"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <p class="text-muted mb-1 small">Total paiements</p>
+              <h2 class="fw-bold mb-0 text-primary">{{ stats.paiements|floatformat:2 }} €</h2>
+            </div>
+            <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+              <i class="fas fa-money-bill-wave fa-3x text-primary"></i>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Graphiques -->
-  <div class="row g-4">
+  <div class="row g-4 mb-4">
     <!-- Missions par statut -->
-    <div class="col-md-6">
-      <div class="card shadow-sm border-0">
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
           <h5 class="card-title mb-3">
             <i class="fas fa-chart-pie text-primary me-2"></i>Missions par statut
           </h5>
           {% if mission_par_statut %}
-            <canvas id="missionsChart"></canvas>
+            <div style="height: 250px;">
+              <canvas id="missionsChart"></canvas>
+            </div>
           {% else %}
-            <p class="text-muted mb-0">Pas encore de données de mission.</p>
+            <p class="text-muted mb-0 text-center py-5">Pas encore de données de mission.</p>
           {% endif %}
         </div>
       </div>
     </div>
 
     <!-- Paiements par mois -->
-    <div class="col-md-6">
-      <div class="card shadow-sm border-0">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
           <h5 class="card-title mb-3">
-            <i class="fas fa-chart-line text-success me-2"></i>Évolution des paiements par mois
+            <i class="fas fa-chart-line text-success me-2"></i>Évolution des paiements
           </h5>
           {% if paiements_mois_labels and paiements_mois_values %}
-            <canvas id="paiementsChart"></canvas>
+            <div style="height: 250px;">
+              <canvas id="paiementsChart"></canvas>
+            </div>
           {% else %}
-            <p class="text-muted mb-0">Pas encore de paiements enregistrés.</p>
+            <p class="text-muted mb-0 text-center py-5">Pas encore de paiements enregistrés.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Widgets - Activités récentes -->
+  <div class="row g-4 mb-4">
+    <!-- Missions actives -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-bottom">
+          <h5 class="mb-0">
+            <i class="fas fa-route text-warning me-2"></i>Missions en cours
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          {% if missions_actives %}
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="small">Origine</th>
+                    <th class="small">Destination</th>
+                    <th class="small">Date départ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for mission in missions_actives %}
+                  <tr>
+                    <td class="small fw-medium">{{ mission.origine }}</td>
+                    <td class="small fw-medium">{{ mission.destination }}</td>
+                    <td class="small">{{ mission.date_depart }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="card-footer bg-light text-center">
+              <a href="{% url 'mission_list' %}" class="text-decoration-none small">
+                Voir toutes les missions <i class="fas fa-arrow-right ms-1"></i>
+              </a>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-inbox fa-3x text-muted opacity-25 mb-3"></i>
+              <p class="text-muted mb-0">Aucune mission en cours</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Derniers paiements -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-bottom">
+          <h5 class="mb-0">
+            <i class="fas fa-receipt text-success me-2"></i>Derniers paiements
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          {% if derniers_paiements %}
+            <div class="list-group list-group-flush">
+              {% for paiement in derniers_paiements %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-1 small fw-medium">Mission #{{ paiement.mission.pk_mission }}</h6>
+                    <p class="mb-0 text-muted small">{{ paiement.date_paiement }}</p>
+                  </div>
+                  <span class="badge bg-success fs-6">{{ paiement.montant_total|floatformat:2 }} €</span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="card-footer bg-light text-center">
+              <a href="{% url 'paiement_mission_list' %}" class="text-decoration-none small">
+                Voir tous les paiements <i class="fas fa-arrow-right ms-1"></i>
+              </a>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-wallet fa-3x text-muted opacity-25 mb-3"></i>
+              <p class="text-muted mb-0">Aucun paiement récent</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Réparations récentes et Entreprises -->
+  <div class="row g-4 mb-4">
+    <!-- Réparations récentes -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-bottom">
+          <h5 class="mb-0">
+            <i class="fas fa-wrench text-danger me-2"></i>Réparations récentes
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          {% if reparations_recentes %}
+            <div class="list-group list-group-flush">
+              {% for reparation in reparations_recentes %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-1 small fw-medium">{{ reparation.camion.immatriculation }}</h6>
+                    <p class="mb-0 text-muted small">{{ reparation.date_reparation }}</p>
+                  </div>
+                  <span class="badge bg-danger">{{ reparation.type_reparation }}</span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="card-footer bg-light text-center">
+              <a href="{% url 'reparation_list' %}" class="text-decoration-none small">
+                Voir toutes les réparations <i class="fas fa-arrow-right ms-1"></i>
+              </a>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-tools fa-3x text-muted opacity-25 mb-3"></i>
+              <p class="text-muted mb-0">Aucune réparation récente</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistiques par entreprise -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white border-bottom">
+          <h5 class="mb-0">
+            <i class="fas fa-building text-info me-2"></i>Statistiques par entreprise
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          {% if entreprises_stats %}
+            <div class="list-group list-group-flush">
+              {% for entreprise in entreprises_stats %}
+              <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h6 class="mb-1 small fw-medium">{{ entreprise.nom }}</h6>
+                  <div>
+                    <span class="badge bg-primary me-1">
+                      <i class="fas fa-user me-1"></i>{{ entreprise.chauffeurs }}
+                    </span>
+                    <span class="badge bg-success">
+                      <i class="fas fa-truck me-1"></i>{{ entreprise.camions }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="card-footer bg-light text-center">
+              <a href="{% url 'liste_entreprises' %}" class="text-decoration-none small">
+                Gérer les entreprises <i class="fas fa-arrow-right ms-1"></i>
+              </a>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="fas fa-building fa-3x text-muted opacity-25 mb-3"></i>
+              <p class="text-muted mb-0">Aucune entreprise enregistrée</p>
+            </div>
           {% endif %}
         </div>
       </div>
@@ -90,66 +325,235 @@
   </div>
 
   <!-- Accès rapides -->
-  <div class="mt-4">
-    <h5 class="fw-semibold mb-3">Accès rapide</h5>
-    <div class="d-flex flex-wrap gap-2">
-      <a href="{% url 'chauffeur_list' %}" class="btn btn-outline-primary"><i class="fas fa-id-card me-1"></i> Chauffeurs</a>
-      <a href="{% url 'camion_list' %}" class="btn btn-outline-success"><i class="fas fa-truck me-1"></i> Camions</a>
-      <a href="{% url 'mission_list' %}" class="btn btn-outline-warning"><i class="fas fa-map-marked-alt me-1"></i> Missions</a>
-      <a href="{% url 'reparation_list' %}" class="btn btn-outline-danger"><i class="fas fa-tools me-1"></i> Réparations</a>
-      <a href="{% url 'paiement_mission_list' %}" class="btn btn-outline-info"><i class="fas fa-money-bill-wave me-1"></i> Paiements</a>
+  <div class="card shadow-sm border-0">
+    <div class="card-body">
+      <h5 class="fw-semibold mb-3"><i class="fas fa-bolt text-warning me-2"></i>Accès rapide</h5>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'chauffeur_list' %}" class="btn btn-outline-primary">
+          <i class="fas fa-id-card me-1"></i> Chauffeurs
+        </a>
+        <a href="{% url 'camion_list' %}" class="btn btn-outline-success">
+          <i class="fas fa-truck me-1"></i> Camions
+        </a>
+        <a href="{% url 'mission_list' %}" class="btn btn-outline-warning">
+          <i class="fas fa-map-marked-alt me-1"></i> Missions
+        </a>
+        <a href="{% url 'reparation_list' %}" class="btn btn-outline-danger">
+          <i class="fas fa-tools me-1"></i> Réparations
+        </a>
+        <a href="{% url 'paiement_mission_list' %}" class="btn btn-outline-info">
+          <i class="fas fa-money-bill-wave me-1"></i> Paiements
+        </a>
+        <a href="{% url 'client_list' %}" class="btn btn-outline-secondary">
+          <i class="fas fa-users me-1"></i> Clients
+        </a>
+      </div>
     </div>
   </div>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
 
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+  // Configuration globale Chart.js
+  Chart.defaults.font.family = '"Inter", "Poppins", sans-serif';
+  Chart.defaults.color = '#64748b';
+
   {% if mission_par_statut %}
     const ctxMissions = document.getElementById('missionsChart').getContext('2d');
     const missionData = {{ mission_par_statut|safe }};
+
+    // Couleurs basées sur le statut
+    const getStatusColors = (statut) => {
+      const colorMap = {
+        'En cours': '#3b82f6',
+        'Terminée': '#10b981',
+        'Terminee': '#10b981',
+        'En attente': '#f59e0b',
+        'Annulée': '#ef4444',
+        'Annulee': '#ef4444'
+      };
+      return colorMap[statut] || '#6b7280';
+    };
+
     new Chart(ctxMissions, {
       type: 'doughnut',
       data: {
         labels: missionData.map(item => item.statut),
         datasets: [{
           data: missionData.map(item => item.total),
-          backgroundColor: ['#2563eb', '#22c55e', '#facc15', '#ef4444']
+          backgroundColor: missionData.map(item => getStatusColors(item.statut)),
+          borderWidth: 3,
+          borderColor: '#ffffff',
+          hoverBorderWidth: 4,
+          hoverOffset: 15
         }]
       },
       options: {
-        plugins: { legend: { position: 'bottom' } },
         responsive: true,
-        maintainAspectRatio: false
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 15,
+              usePointStyle: true,
+              font: {
+                size: 12,
+                weight: '500'
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            padding: 12,
+            cornerRadius: 8,
+            titleFont: {
+              size: 14,
+              weight: 'bold'
+            },
+            bodyFont: {
+              size: 13
+            },
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${label}: ${value} missions (${percentage}%)`;
+              }
+            }
+          }
+        },
+        animation: {
+          animateRotate: true,
+          animateScale: true,
+          duration: 1500,
+          easing: 'easeInOutQuart'
+        }
       }
     });
   {% endif %}
 
   {% if paiements_mois_labels and paiements_mois_values %}
     const ctxPaiements = document.getElementById('paiementsChart').getContext('2d');
+
+    // Créer un gradient
+    const gradient = ctxPaiements.createLinearGradient(0, 0, 0, 250);
+    gradient.addColorStop(0, 'rgba(37, 99, 235, 0.3)');
+    gradient.addColorStop(0.5, 'rgba(37, 99, 235, 0.15)');
+    gradient.addColorStop(1, 'rgba(37, 99, 235, 0.05)');
+
     new Chart(ctxPaiements, {
       type: 'line',
       data: {
         labels: {{ paiements_mois_labels|safe }},
         datasets: [{
-          label: 'Montant total ({{ devise|default:"€" }})',
+          label: 'Montant total (€)',
           data: {{ paiements_mois_values|safe }},
           fill: true,
           borderColor: '#2563eb',
-          backgroundColor: 'rgba(37, 99, 235, 0.1)',
-          tension: 0.3,
-          pointRadius: 4,
-          pointBackgroundColor: '#2563eb'
+          backgroundColor: gradient,
+          tension: 0.4,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          pointBackgroundColor: '#2563eb',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointHoverBackgroundColor: '#2563eb',
+          pointHoverBorderColor: '#ffffff',
+          pointHoverBorderWidth: 3,
+          borderWidth: 3
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: { y: { beginAtZero: true } }
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: {
+              usePointStyle: true,
+              padding: 15,
+              font: {
+                size: 12,
+                weight: '500'
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            padding: 12,
+            cornerRadius: 8,
+            titleFont: {
+              size: 14,
+              weight: 'bold'
+            },
+            bodyFont: {
+              size: 13
+            },
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                label += new Intl.NumberFormat('fr-FR', {
+                  style: 'currency',
+                  currency: 'EUR'
+                }).format(context.parsed.y);
+                return label;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: {
+                size: 11
+              }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)',
+              borderDash: [5, 5]
+            },
+            ticks: {
+              font: {
+                size: 11
+              },
+              callback: function(value) {
+                return new Intl.NumberFormat('fr-FR', {
+                  style: 'currency',
+                  currency: 'EUR',
+                  minimumFractionDigits: 0
+                }).format(value);
+              }
+            }
+          }
+        },
+        animation: {
+          duration: 2000,
+          easing: 'easeInOutQuart'
+        }
       }
     });
   {% endif %}
 </script>
-
 {% endblock %}

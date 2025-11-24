@@ -1,52 +1,164 @@
-{% extends "admin.html" %}
+{%extends "admin.html" %}
+
+{%block page_title %}Liste des Paiements Mission | Gestion Transport{%endblock %}
+
+{%block title %}Liste des Paiements Mission{%endblock %}
+
 {% block content %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>{{ title }}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-5">
-  <h2 class="mb-4">{{ title }}</h2>
-  <a href="{% url 'create_paiement_mission' %}" class="btn btn-success mb-3">Ajouter un paiement</a>
-  <table class="table table-striped table-bordered">
-    <thead class="table-dark">
-      <tr>
-        <th>Mission</th>
-        <th>Caution</th>
-        <th>Prestation</th>
-        <th>Montant total</th>
-        <th>Commission transitaire</th>
-        <th>Caution retirée</th>
-        <th>Date paiement</th>
-        <th>Mode</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for p in paiements %}
-      <tr>
-        <td>{{ p.mission.pk_mission }}</td>
-        <td>{{ p.caution.pk_caution }}</td>
-        <td>{{ p.prestation.pk_presta_transport }}</td>
-        <td>{{ p.montant_total }}</td>
-        <td>{{ p.commission_transitaire }}</td>
-        <td>{% if p.caution_est_retiree %}✔{% else %}✘{% endif %}</td>
-        <td>{{ p.date_paiement }}</td>
-        <td>{{ p.get_mode_paiement_display }}</td>
-        <td>
-          <a href="{% url 'update_paiement_mission' p.pk_paiement %}" class="btn btn-sm btn-primary">Modifier</a>
-          <a href="{% url 'delete_paiement_mission' p.pk_paiement %}" class="btn btn-sm btn-danger">Supprimer</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="9" class="text-center">Aucun paiement trouvé</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="container-fluid">
+    <!-- Header with Breadcrumb -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+                    <li class="breadcrumb-item active">Paiements</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0"><i class="fas fa-money-check text-primary me-2"></i>{{ title }}</h2>
+        </div>
+        <a href="{% url 'create_paiement_mission' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Ajouter un paiement
+        </a>
+    </div>
+
+    {% if paiements %}
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-receipt fa-2x text-success"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Total Paiements</p>
+                            <h3 class="mb-0 fw-bold">{{ paiements|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Export -->
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text"
+                               class="form-control table-search"
+                               id="searchPaiements"
+                               data-table="paiementTable"
+                               placeholder="Rechercher par mission, montant, date, mode de paiement...">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-outline-success w-100" onclick="exportTableToExcel('paiementTable', 'paiements')">
+                        <i class="fas fa-file-excel me-2"></i>Exporter Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="paiementTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="sortable" onclick="sortTable(0, 'paiementTable')">
+                                <i class="fas fa-tasks me-1"></i>Mission <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable" onclick="sortTable(1, 'paiementTable')">
+                                <i class="fas fa-money-bill me-1"></i>Montant <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable" onclick="sortTable(2, 'paiementTable')">
+                                <i class="fas fa-calendar me-1"></i>Date <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable" onclick="sortTable(3, 'paiementTable')">
+                                <i class="fas fa-credit-card me-1"></i>Mode <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in paiements %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-primary">Mission #{{ p.mission.pk_mission }}</span>
+                            </td>
+                            <td class="fw-bold text-success">{{ p.montant_total|default:p.montant|floatformat:2 }} €</td>
+                            <td>{{ p.date_paiement }}</td>
+                            <td>
+                                {% if p.mode_paiement == "Espèces" or p.mode_paiement == "Especes" %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-money-bill-wave me-1"></i>{{ p.mode_paiement }}
+                                    </span>
+                                {% elif p.mode_paiement == "Carte bancaire" or p.mode_paiement == "CB" %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-credit-card me-1"></i>{{ p.mode_paiement }}
+                                    </span>
+                                {% elif p.mode_paiement == "Virement" %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-exchange-alt me-1"></i>{{ p.mode_paiement }}
+                                    </span>
+                                {% elif p.mode_paiement == "Chèque" or p.mode_paiement == "Cheque" %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-money-check me-1"></i>{{ p.mode_paiement }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ p.mode_paiement }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'update_paiement_mission' p.pk_paiement_mission %}"
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'delete_paiement_mission' p.pk_paiement_mission %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white border-top-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <span id="rowCount">{{ paiements|length }}</span> paiement(s) affiché(s)
+                </small>
+                <small class="text-muted">
+                    <i class="fas fa-keyboard me-1"></i>Astuce: Appuyez sur <kbd>Ctrl</kbd> + <kbd>K</kbd> pour rechercher
+                </small>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <i class="fas fa-wallet"></i>
+        <h4>Aucun paiement enregistré</h4>
+        <p>Commencez par enregistrer votre premier paiement pour suivre vos transactions.</p>
+        <a href="{% url 'create_paiement_mission' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Ajouter le premier paiement
+        </a>
+    </div>
+    {% endif %}
 </div>
-</body>
-</html>
 {% endblock %}

@@ -1,50 +1,63 @@
 {% extends "admin.html" %}
-{% load static %}
+
+{% block page_title %}Liste des Affectations | Gestion Transport{% endblock %}
+
+{% block title %}Liste des Affectations{% endblock %}
 
 {% block content %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>{{ title }}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-5">
-  <h2 class="mb-4">{{ title }}</h2>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-link text-primary me-2"></i>{{ title }}</h2>
+        <a href="{% url 'create_affectation' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Nouvelle affectation
+        </a>
+    </div>
 
-  <a href="{% url 'create_affectation' %}" class="btn btn-primary mb-3">+ Nouvelle affectation</a>
-
-  <table class="table table-striped table-bordered">
-    <thead class="table-dark">
-      <tr>
-        <!-- <th>ID</th> -->
-        <th>Chauffeur</th>
-        <th>Camion</th>
-        <th>Date d’affectation</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for affectation in affectations %}
-        <tr>
-          <!-- <td>{{ affectation.pk }}</td> -->
-          <td>{{ affectation.chauffeur }}</td>
-          <td>{{ affectation.camion }}</td>
-          <td>{{ affectation.date_affectation }}</td>
-          <td>
-            <a href="{% url 'update_affectation' affectation.pk %}" class="btn btn-sm btn-warning">Modifier</a>
-            <a href="{% url 'delete_affectation' affectation.pk %}" class="btn btn-sm btn-danger">Supprimer</a>
-          </td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="5" class="text-center text-muted">Aucune affectation trouvée</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    {% if affectations %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="fas fa-user me-2"></i>Chauffeur</th>
+                            <th><i class="fas fa-truck me-2"></i>Camion</th>
+                            <th><i class="fas fa-calendar me-2"></i>Date d'affectation</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for affectation in affectations %}
+                        <tr>
+                            <td>{{ affectation.chauffeur }}</td>
+                            <td>{{ affectation.camion }}</td>
+                            <td>{{ affectation.date_affectation }}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'update_affectation' affectation.pk %}"
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'delete_affectation' affectation.pk %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info shadow-sm">
+        <i class="fas fa-info-circle me-2"></i>
+        Aucune affectation enregistrée. <a href="{% url 'create_affectation' %}" class="alert-link">Ajouter la première</a>
+    </div>
+    {% endif %}
 </div>
-</body>
-</html>
 {% endblock %}

@@ -45,6 +45,7 @@ def ajouter_entreprise(request):
     form = EntrepriseForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         form.save()
+        messages.success(request, "✅ Entreprise ajoutée avec succès!")
         return redirect('liste_entreprises')
     return render(request, 'transport/entreprise/ajouter_entreprise.html', {'form': form, 'title': 'Créer une entreprise'})
 
@@ -55,6 +56,7 @@ def modifier_entreprise(request, pk):
 
     if request.method == 'POST' and form.is_valid():
         form.save()
+        messages.success(request, "✅ Entreprise mise à jour avec succès!")
         return redirect('liste_entreprises')
 
     return render(request, 'transport/entreprise/ajouter_entreprise.html', {
@@ -68,6 +70,7 @@ def supprimer_entreprise(request, pk):
 
     if request.method == 'POST':
         entreprise.delete()
+        messages.success(request, "🗑️ Entreprise supprimée avec succès!")
         return redirect('liste_entreprises')
 
     return render(request, 'transport/entreprise/confirmer_suppression.html', {
@@ -139,6 +142,7 @@ def create_camion(request):
         form = CamionForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "✅ Camion ajouté avec succès!")
             return redirect('camion_list')
     else:
         form = CamionForm()
@@ -151,6 +155,7 @@ def update_camion(request, pk):
         form = CamionForm(request.POST, instance=camion)
         if form.is_valid():
             form.save()
+            messages.success(request, "✅ Camion mis à jour avec succès!")
             return redirect('camion_list')
     else:
         form = CamionForm(instance=camion)
@@ -161,6 +166,7 @@ def delete_camion(request, pk):
     camion = get_object_or_404(Camion, pk=pk)
     if request.method == "POST":
         camion.delete()
+        messages.success(request, "🗑️ Camion supprimé avec succès!")
         return redirect('camion_list')
     return render(request, "transport/camions/camion_confirm_delete.html", {"camion": camion, "title": "Supprimer le camion"})
 
@@ -176,6 +182,7 @@ def create_affectation(request):
         form = AffectationForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "✅ Affectation ajoutée avec succès!")
             return redirect('affectation_list')
     else:
         form = AffectationForm()
@@ -188,6 +195,7 @@ def update_affectation(request, pk):
         form = AffectationForm(request.POST, instance=affectation)
         if form.is_valid():
             form.save()
+            messages.success(request, "✅ Affectation mise à jour avec succès!")
             return redirect('affectation_list')
     else:
         form = AffectationForm(instance=affectation)
@@ -198,6 +206,7 @@ def delete_affectation(request, pk):
     affectation = get_object_or_404(Affectation, pk=pk)
     if request.method == "POST":
         affectation.delete()
+        messages.success(request, "🗑️ Affectation supprimée avec succès!")
         return redirect('affectation_list')
     return render(request, "transport/affectations/affectation_confirm_delete.html", {"affectation": affectation, "title": "Supprimer l'affectation"})
 
@@ -211,6 +220,7 @@ def create_transitaire(request):
         form = TransitaireForm(request.POST)
         if form.is_valid():
             form.save()
+            messages.success(request, "✅ Transitaire ajouté avec succès!")
             return redirect('transitaire_list')
     else:
         form = TransitaireForm()
@@ -224,6 +234,7 @@ def update_transitaire(request, pk):
         form = TransitaireForm(request.POST, instance=transitaire)
         if form.is_valid():
             form.save()
+            messages.success(request, "✅ Transitaire mis à jour avec succès!")
             return redirect('transitaire_list')
     else:
         form = TransitaireForm(instance=transitaire)
@@ -234,6 +245,7 @@ def delete_transitaire(request, pk):
     transitaire = get_object_or_404(Transitaire, pk=pk)
     if request.method == "POST":
         transitaire.delete()
+        messages.success(request, "🗑️ Transitaire supprimé avec succès!")
         return redirect('transitaire_list')
     return render(request, "transport/transitaires/transitaire_confirm_delete.html", {"transitaire": transitaire, "title": "Supprimer le transitaire"})
 
@@ -877,18 +889,27 @@ def connexion_utilisateur(request):
 #tableau de bord
 
 def dashboard(request):
-    from .models import Chauffeur, Camion, Mission, Reparation, PaiementMission
+    from .models import Chauffeur, Camion, Mission, Reparation, PaiementMission, Affectation, Client
+    from datetime import timedelta
+    from django.utils import timezone
 
+    # Statistiques générales
     stats = {
         "chauffeurs": Chauffeur.objects.count(),
         "camions": Camion.objects.count(),
         "missions": Mission.objects.count(),
+        "missions_en_cours": Mission.objects.filter(statut="En cours").count(),
+        "missions_terminees": Mission.objects.filter(statut__in=["Terminée", "Terminee"]).count(),
         "reparations": Reparation.objects.count(),
         "paiements": PaiementMission.objects.aggregate(total=Sum("montant_total"))["total"] or 0,
+        "clients": Client.objects.count(),
+        "affectations": Affectation.objects.count(),
     }
 
+    # Missions par statut pour le graphique
     mission_par_statut = Mission.objects.values("statut").annotate(total=Count("statut"))
 
+    # Paiements mensuels
     paiements_mensuels = (
         PaiementMission.objects
         .annotate(mois=TruncMonth("date_paiement"))
@@ -900,11 +921,64 @@ def dashboard(request):
     mois_labels = [p["mois"].strftime("%b %Y") for p in paiements_mensuels]
     montant_values = [float(p["total"]) for p in paiements_mensuels]
 
+    # Dernières missions (5 plus récentes)
+    dernieres_missions = Mission.objects.select_related(
+        'prestation_transport', 'contrat'
+    ).order_by('-date_depart')[:5]
+
+    # Derniers paiements (5 plus récents)
+    derniers_paiements = PaiementMission.objects.select_related(
+        'mission'
+    ).order_by('-date_paiement')[:5]
+
+    # Missions en cours
+    missions_actives = Mission.objects.filter(
+        statut="En cours"
+    ).select_related('prestation_transport', 'contrat')[:5]
+
+    # Alertes - Missions qui devraient être terminées (date retour passée)
+    today = timezone.now().date()
+    missions_en_retard = Mission.objects.filter(
+        statut="En cours",
+        date_retour__lt=today
+    ).count() if Mission.objects.filter(statut="En cours").exists() else 0
+
+    # Réparations récentes
+    reparations_recentes = Reparation.objects.select_related(
+        'camion'
+    ).order_by('-date_reparation')[:5]
+
+    # Statistiques par entreprise
+    entreprises_stats = []
+    from .models import Entreprise
+    entreprises = Entreprise.objects.all()
+    for entreprise in entreprises:
+        entreprises_stats.append({
+            'nom': entreprise.nom,
+            'chauffeurs': Chauffeur.objects.filter(entreprise=entreprise).count(),
+            'camions': Camion.objects.filter(entreprise=entreprise).count(),
+        })
+
+    # Calcul des revenus du mois en cours
+    current_month = timezone.now().month
+    current_year = timezone.now().year
+    revenus_mois_actuel = PaiementMission.objects.filter(
+        date_paiement__month=current_month,
+        date_paiement__year=current_year
+    ).aggregate(total=Sum("montant_total"))["total"] or 0
+
     return render(request, "transport/dashboard.html", {
         "stats": stats,
         "mission_par_statut": list(mission_par_statut),
         "paiements_mois_labels": mois_labels,
         "paiements_mois_values": montant_values,
+        "dernieres_missions": dernieres_missions,
+        "derniers_paiements": derniers_paiements,
+        "missions_actives": missions_actives,
+        "missions_en_retard": missions_en_retard,
+        "reparations_recentes": reparations_recentes,
+        "entreprises_stats": entreprises_stats,
+        "revenus_mois_actuel": revenus_mois_actuel,
     })
 
 # gestion url redirection si pas bon url vers la connexion

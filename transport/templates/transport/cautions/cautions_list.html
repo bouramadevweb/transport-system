@@ -1,64 +1,89 @@
 {% extends "admin.html" %}
 
-{% block content %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ title }}</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-<div class="container mt-5">
-    <h2 class="mb-4">{{ title }}</h2>
-    <a href="{% url 'create_caution' %}" class="btn btn-success mb-3">Ajouter une caution</a>
+{% block page_title %}Liste des Cautions | Gestion Transport{% endblock %}
 
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered align-middle">
-            <thead class="table-dark text-center">
-                <tr>
-                    <th>Conteneur</th>
-                    <th>Contrat</th>
-                    <th>Transitaire</th>
-                    <th>Client</th>
-                    <th>Chauffeur</th>
-                    <th>Camion</th>
-                    <th>Montant</th>
-                    <th>Non remboursé</th>
-                    <th>Remboursé</th>
-                    <th>Montant remboursé</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in cautions %}
-                <tr>
-                    <td>{% if c.conteneur %}{{ c.conteneur.numero_conteneur }}{% else %}N/A{% endif %}</td>
-                    <td>{% if c.contrat %}{{ c.contrat.pk_contrat }}{% else %}N/A{% endif %}</td>
-                    <td>{% if c.transitaire %}{{ c.transitaire.nom }}{% else %}N/A{% endif %}</td>
-                    <td>{% if c.client %}{{ c.client.nom }}{% else %}N/A{% endif %}</td>
-                    <td>{% if c.chauffeur %}{{ c.chauffeur.nom }}{% else %}N/A{% endif %}</td>
-                    <td>{% if c.camion %}{{ c.camion.immatriculation }}{% else %}N/A{% endif %}</td>
-                    <td class="text-end">{{ c.montant }}</td>
-                    <td class="text-center">{% if c.non_rembourser %}✔{% else %}✘{% endif %}</td>
-                    <td class="text-center">{% if c.est_rembourser %}✔{% else %}✘{% endif %}</td>
-                    <td class="text-end">{{ c.montant_rembourser }}</td>
-                    <td class="text-center">
-                        <a href="{% url 'update_caution' c.pk_caution %}" class="btn btn-sm btn-primary mb-1">Modifier</a>
-                        <a href="{% url 'delete_caution' c.pk_caution %}" class="btn btn-sm btn-danger mb-1">Supprimer</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="11" class="text-center text-muted">Aucune caution trouvée</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+{% block title %}Liste des Cautions{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-shield-alt text-primary me-2"></i>{{ title }}</h2>
+        <a href="{% url 'create_caution' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Ajouter une caution
+        </a>
     </div>
+
+    {% if cautions %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th><i class="fas fa-box me-2"></i>Conteneur</th>
+                            <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
+                            <th><i class="fas fa-dolly me-2"></i>Transitaire</th>
+                            <th><i class="fas fa-user me-2"></i>Client</th>
+                            <th><i class="fas fa-id-card me-2"></i>Chauffeur</th>
+                            <th><i class="fas fa-truck me-2"></i>Camion</th>
+                            <th><i class="fas fa-money-bill me-2"></i>Montant</th>
+                            <th class="text-center"><i class="fas fa-ban me-2"></i>Non remboursé</th>
+                            <th class="text-center"><i class="fas fa-check me-2"></i>Remboursé</th>
+                            <th><i class="fas fa-dollar-sign me-2"></i>Montant remboursé</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in cautions %}
+                        <tr>
+                            <td>{% if c.conteneur %}{{ c.conteneur.numero_conteneur }}{% else %}N/A{% endif %}</td>
+                            <td>{% if c.contrat %}{{ c.contrat.pk_contrat }}{% else %}N/A{% endif %}</td>
+                            <td>{% if c.transitaire %}{{ c.transitaire.nom }}{% else %}N/A{% endif %}</td>
+                            <td>{% if c.client %}{{ c.client.nom }}{% else %}N/A{% endif %}</td>
+                            <td>{% if c.chauffeur %}{{ c.chauffeur.nom }}{% else %}N/A{% endif %}</td>
+                            <td>{% if c.camion %}{{ c.camion.immatriculation }}{% else %}N/A{% endif %}</td>
+                            <td>{{ c.montant }}</td>
+                            <td class="text-center">
+                                {% if c.non_rembourser %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                {% else %}
+                                    <i class="fas fa-times-circle text-danger"></i>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if c.est_rembourser %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                {% else %}
+                                    <i class="fas fa-times-circle text-danger"></i>
+                                {% endif %}
+                            </td>
+                            <td>{{ c.montant_rembourser }}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'update_caution' c.pk_caution %}"
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'delete_caution' c.pk_caution %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info shadow-sm">
+        <i class="fas fa-info-circle me-2"></i>
+        Aucune caution enregistrée. <a href="{% url 'create_caution' %}" class="alert-link">Ajouter la première</a>
+    </div>
+    {% endif %}
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
 {% endblock %}
