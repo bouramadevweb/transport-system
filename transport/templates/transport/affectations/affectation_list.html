@@ -228,7 +228,7 @@
                                     <td>{{ affectation.date_affectation|date:"d/m/Y" }}</td>
                                     <td>{{ affectation.date_fin_affectation|date:"d/m/Y" }}</td>
                                     <td>
-                                        {% widthratio affectation.date_fin_affectation|timesince:affectation.date_affectation 1 1 %} jours
+                                        {{ affectation.date_fin_affectation|timesince:affectation.date_affectation }}
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
@@ -279,6 +279,149 @@
 
     .table tbody tr:hover {
         background-color: #f8f9fa;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .nav-tabs .nav-link {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .card .card-body h3 {
+            font-size: 1.5rem;
+        }
+
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .btn-group .btn {
+            margin: 0;
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* En-têtes et titres */
+        h2 {
+            font-size: 1rem !important;
+        }
+
+        h3 {
+            font-size: 1.25rem !important;
+        }
+
+        /* Boutons et layout principal */
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: stretch !important;
+        }
+
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+            font-size: 0.9rem;
+        }
+
+        /* Navigation par onglets */
+        .nav-tabs {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-tabs .nav-link {
+            white-space: nowrap;
+            font-size: 0.8rem;
+            padding: 0.5rem 0.65rem;
+        }
+
+        /* Cartes de statistiques */
+        .row.mb-4 {
+            margin-bottom: 1rem !important;
+        }
+
+        .card-body {
+            padding: 1rem !important;
+        }
+
+        .card-body p {
+            font-size: 0.75rem !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* Tables */
+        .table {
+            font-size: 0.75rem !important;
+        }
+
+        .table th {
+            font-size: 0.7rem !important;
+            padding: 0.5rem 0.3rem !important;
+        }
+
+        .table td {
+            padding: 0.5rem 0.3rem !important;
+        }
+
+        .table th i,
+        .table td i {
+            font-size: 0.8rem;
+        }
+
+        /* Badges */
+        .badge {
+            font-size: 0.65rem !important;
+            padding: 0.25em 0.5em !important;
+        }
+
+        /* Groupes de boutons dans les tables */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            width: 100%;
+        }
+
+        .btn-group .btn {
+            margin: 0 !important;
+            width: 100%;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.4rem;
+        }
+
+        /* Textes dans les cellules */
+        .table strong {
+            font-size: 0.75rem;
+        }
+
+        .table small,
+        .text-muted {
+            font-size: 0.65rem !important;
+        }
+
+        /* Alertes */
+        .alert {
+            font-size: 0.8rem !important;
+            padding: 0.75rem !important;
+        }
+
+        /* Container */
+        .container-fluid {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
     }
 </style>
 {% endblock %}

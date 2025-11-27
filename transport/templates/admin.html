@@ -1395,26 +1395,115 @@
 
     @media (max-width: 576px) {
       header {
-        padding: 0 15px;
+        padding: 0 10px;
+        height: 60px;
       }
 
       .header-right {
-        gap: 8px;
+        gap: 6px;
       }
 
       .icon-btn {
-        padding: 8px;
-        font-size: 1.1rem;
+        padding: 6px;
+        font-size: 1rem;
       }
 
       .notification-dropdown {
-        min-width: 280px;
+        min-width: calc(100vw - 20px);
+        max-width: 320px;
         right: -10px;
       }
 
       .user-dropdown {
-        min-width: 220px;
+        min-width: calc(100vw - 20px);
+        max-width: 280px;
         right: -10px;
+      }
+
+      .page-title {
+        font-size: 1.1rem;
+        margin: 15px 15px 10px;
+      }
+
+      .content {
+        padding: 0 10px 15px;
+      }
+
+      .messages-container {
+        padding: 10px 15px;
+      }
+
+      /* Amélioration des alertes sur mobile */
+      .alert-modern {
+        padding: 12px 15px;
+        font-size: 0.85rem;
+      }
+
+      .alert-icon {
+        font-size: 1.1rem;
+      }
+
+      .alert-content strong {
+        font-size: 0.85rem;
+      }
+
+      .alert-content p {
+        font-size: 0.8rem;
+      }
+
+      /* Amélioration du menu sidebar sur mobile */
+      .sidebar {
+        width: 85vw;
+        max-width: 280px;
+        left: -85vw;
+      }
+
+      .sidebar.active {
+        left: 0;
+      }
+
+      .menu-section-title {
+        font-size: 0.7rem;
+        padding: 8px 20px 5px;
+      }
+
+      .menu-item {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+      }
+
+      .menu-item i {
+        font-size: 1.1rem;
+      }
+
+      /* Amélioration des dropdowns */
+      .dropdown-menu {
+        font-size: 0.85rem;
+      }
+
+      .dropdown-item {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+      }
+
+      .notification-item {
+        padding: 10px 12px;
+      }
+
+      .notification-content p {
+        font-size: 0.8rem;
+      }
+
+      .notification-content .text-muted {
+        font-size: 0.7rem;
+      }
+
+      .user-dropdown-header strong {
+        font-size: 0.85rem;
+      }
+
+      .user-dropdown-header .text-muted {
+        font-size: 0.7rem;
       }
     }
   </style>

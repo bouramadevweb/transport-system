@@ -4,6 +4,8 @@ from django.utils.timezone import now
 from django.utils.text import slugify
 from uuid import uuid4
 from django.contrib.auth.models import BaseUserManager
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 
 # =======================
@@ -149,7 +151,7 @@ class Chauffeur(models.Model):
     nom = models.CharField(max_length=50)
     prenom = models.CharField(max_length=50)
     telephone = models.CharField(max_length=20, blank=True, null=True)
-    email = models.EmailField(blank=True, null=False)
+    email = models.EmailField(blank=True, null=True)
     est_affecter = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
@@ -439,11 +441,28 @@ class ContratTransport(models.Model):
     numero_bl = models.CharField(max_length=100)
     destinataire = models.CharField(max_length=200)
 
-    montant_total = models.DecimalField(max_digits=12, decimal_places=2)
-    avance_transport = models.DecimalField(max_digits=12, decimal_places=2)
-    reliquat_transport = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    montant_total = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    avance_transport = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    reliquat_transport = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
 
-    caution = models.DecimalField(max_digits=12, decimal_places=2)
+    caution = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
     statut_caution = models.CharField(max_length=10, choices=STATUT_CAUTION_CHOICES, default='bloquee')
 
     date_debut = models.DateField()
@@ -455,6 +474,7 @@ class ContratTransport(models.Model):
     signature_client = models.BooleanField(default=False)
     signature_transitaire = models.BooleanField(default=False)
     pdf_file = models.FileField(upload_to='contrats/', null=True, blank=True)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -462,6 +482,31 @@ class ContratTransport(models.Model):
                 name='unique_contrat_transport'
             )
         ]
+
+    def clean(self):
+        """Validation personnalisée des montants"""
+        super().clean()
+
+        # Vérifier que l'avance ne dépasse pas le montant total
+        if self.avance_transport and self.montant_total:
+            if self.avance_transport > self.montant_total:
+                raise ValidationError({
+                    'avance_transport': 'L\'avance ne peut pas dépasser le montant total'
+                })
+
+        # Vérifier que la caution n'est pas trop élevée (max 50% du montant)
+        if self.caution and self.montant_total:
+            if self.caution > self.montant_total * Decimal('0.5'):
+                raise ValidationError({
+                    'caution': 'La caution ne peut pas dépasser 50% du montant total'
+                })
+
+        # Vérifier que la date de retour est après la date de début
+        if self.date_debut and self.date_limite_retour:
+            if self.date_limite_retour < self.date_debut:
+                raise ValidationError({
+                    'date_limite_retour': 'La date limite de retour doit être après la date de début'
+                })
 
     def save(self, *args, **kwargs):
         if not self.pk_contrat:
@@ -491,10 +536,30 @@ class PrestationDeTransports(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
 
-    prix_transport = models.DecimalField(max_digits=10, decimal_places=2,default=0)
-    avance = models.DecimalField(max_digits=10, decimal_places=2,default=0)
-    caution = models.DecimalField(max_digits=10, decimal_places=2,default=0)
-    solde = models.DecimalField(max_digits=10, decimal_places=2,default=0)
+    prix_transport = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    avance = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    caution = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    solde = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
     date = models.DateTimeField()
 
     def save(self,*args, **kwargs):
@@ -509,7 +574,7 @@ class PrestationDeTransports(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['camion','pk_presta_transport','contrat_transport','client','transitaire'],
+                fields=['camion', 'contrat_transport', 'client', 'transitaire', 'date'],
                 name='unique_presta_transport'
             )
         ]
@@ -525,16 +590,38 @@ class Cautions(models.Model):
     client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.SET_NULL, blank=True, null=True)
     camion = models.ForeignKey(Camion, on_delete=models.SET_NULL, blank=True, null=True)
-    montant =  models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    montant = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
     non_rembourser = models.BooleanField(default=False)
-    est_rembourser = models.BooleanField(default=True)
-    montant_rembourser = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    est_rembourser = models.BooleanField(default=False)
+    montant_rembourser = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+
+    def clean(self):
+        """Validation personnalisée pour les cautions"""
+        super().clean()
+
+        # Vérifier que le montant remboursé ne dépasse pas le montant de la caution
+        if self.montant_rembourser and self.montant:
+            if self.montant_rembourser > self.montant:
+                raise ValidationError({
+                    'montant_rembourser': 'Le montant remboursé ne peut pas dépasser le montant de la caution'
+                })
 
     def save(self, *args, **kwargs):
         if not self.pk_caution:
            base = f"{self.conteneur.pk_conteneur if self.conteneur else ''}{self.contrat.pk_contrat if self.contrat else ''}"
            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
-           self.pk_caution = slugify(base)[:250]
+           slug = slugify(base)[:220]
+           self.pk_caution = f"{slug}-{uuid4().hex[:8]}"
         super().save(*args, **kwargs)
 
 
@@ -545,8 +632,16 @@ class FraisTrajet(models.Model):
     pk_frais = models.CharField(max_length=250, primary_key=True)
     origine = models.CharField(max_length=50)
     destination = models.CharField(max_length=50)
-    frais_route = models.DecimalField(max_digits=10, decimal_places=2)
-    frais_carburant = models.DecimalField(max_digits=10, decimal_places=2)
+    frais_route = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    frais_carburant = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
 
     # class Meta:
     #     unique_together = ('origine', 'destination')
@@ -586,6 +681,17 @@ class Mission(models.Model):
             self.pk_mission = slugify(base)[:250]
         super().save(*args, **kwargs)
 
+    def terminer_mission(self, date_retour=None):
+        """Méthode pour terminer proprement une mission"""
+        from django.utils import timezone
+
+        if date_retour is None:
+            date_retour = timezone.now().date()
+
+        self.date_retour = date_retour
+        self.statut = 'terminée'
+        self.save()
+
     # class Meta:
     #     unique_together = (
     #         'prestation_transport',
@@ -603,9 +709,14 @@ class Mission(models.Model):
         ]
 
     def __str__(self):
-        return (f"{self.pk_mission}, {self.date_depart}, {self.date_retour}, "
-                f"{self.origine}, {self.destination}, {self.frais_trajet}, "
-                f"{self.contrat}, {self.statut}")
+        return (f"{self.pk_mission}"
+                 f"{self.date_depart}" 
+                 f" {self.date_retour}" 
+                f"{self.origine}"
+                 f"{self.destination}"
+                    f"{self.frais_trajet} "
+                f"{self.contrat}"
+                 f"{self.statut}")
 
 # ici nest pas encore faite
 
@@ -633,34 +744,91 @@ class PaiementMission(models.Model):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
     caution = models.ForeignKey(Cautions, on_delete=models.CASCADE)
     prestation = models.ForeignKey(PrestationDeTransports, on_delete=models.CASCADE)
-     
-    montant_total = models.DecimalField(max_digits=10, decimal_places=2)
-    commission_transitaire = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    montant_total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    commission_transitaire = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
     caution_est_retiree = models.BooleanField(default=False)
 
     date_paiement = models.DateField(auto_now_add=True)
     mode_paiement = models.CharField(max_length=50, blank=True, null=True)
     observation = models.TextField(blank=True, null=True)
 
+    # Nouveau champ pour valider le paiement
+    est_valide = models.BooleanField(default=False)
+    date_validation = models.DateTimeField(blank=True, null=True)
+
+    def clean(self):
+        """Validation avant sauvegarde - empêcher la validation si mission non terminée"""
+        super().clean()
+
+        # Si on essaie de valider le paiement
+        if self.est_valide and self.mission.statut != 'terminée':
+            raise ValidationError(
+                f"❌ Impossible de valider le paiement! "
+                f"La mission est actuellement '{self.mission.statut}'. "
+                f"Vous devez d'abord terminer la mission avant de valider le paiement."
+            )
+
+        # Vérifier que la commission ne dépasse pas le montant total
+        if self.commission_transitaire and self.montant_total:
+            if self.commission_transitaire > self.montant_total:
+                raise ValidationError({
+                    'commission_transitaire': 'La commission ne peut pas dépasser le montant total'
+                })
+
+        # Vérifier que la commission n'est pas trop élevée (max 30% du montant)
+        if self.commission_transitaire and self.montant_total:
+            if self.commission_transitaire > self.montant_total * Decimal('0.3'):
+                raise ValidationError({
+                    'commission_transitaire': 'La commission ne peut pas dépasser 30% du montant total'
+                })
+
+    def valider_paiement(self):
+        """Méthode pour valider le paiement"""
+        from django.utils import timezone
+        from django.core.exceptions import ValidationError
+
+        if self.mission.statut != 'terminée':
+            raise ValidationError(
+                f"❌ La mission n'est pas terminée (statut: {self.mission.statut}). "
+                f"Vous devez terminer la mission avant de valider le paiement."
+            )
+
+        self.est_valide = True
+        self.date_validation = timezone.now()
+        self.save()
+
     def save(self, *args, **kwargs):
         if not self.pk_paiement:
             base = f"{self.mission}{self.caution}{self.prestation}"
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
-
             self.pk_paiement = slugify(base)[:250]
+
+        # Valider avant de sauvegarder
+        self.full_clean()
+
         super().save(*args, **kwargs)
 
 
     class Meta:
-         #unique_together = ('mission', 'caution',"prestation") 
+         #unique_together = ('mission', 'caution',"prestation")
          # Simule une clé composite
         constraints = [models.UniqueConstraint(fields=['mission', 'caution','prestation'], name='unique_mission_caution')]  # Alternative
 
     def __str__(self):
+        statut_validation = "✅ Validé" if self.est_valide else "⏳ En attente"
         return (
-            f"{self.mission}, {self.caution}, {self.montant_total}, "
-            f"{self.commission_transitaire} "
-            f"{self.date_paiement}, {self.mode_paiement}, {self.observation}"
+            f"{self.mission.pk_mission} - {statut_validation} - "
+            f"{self.montant_total}€ ({self.mission.statut})"
         )
 
 

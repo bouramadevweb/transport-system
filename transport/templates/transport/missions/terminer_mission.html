@@ -1,0 +1,253 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Terminer la mission | Gestion Transport{% endblock %}
+
+{% block title %}Terminer la mission{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-flag-checkered me-2"></i>Confirmation - Terminer la mission
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+                        <i class="fas fa-info-circle fa-2x me-3"></i>
+                        <div>
+                            <strong>Information</strong><br>
+                            En terminant cette mission, vous pourrez ensuite valider le paiement associé.
+                        </div>
+                    </div>
+
+                    <!-- Informations Mission -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-3 text-muted">
+                                <i class="fas fa-route me-1"></i>Détails de la mission
+                            </h6>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-hashtag me-2 text-primary"></i>ID Mission :</strong><br>
+                                        <span class="ms-4">{{ mission.pk_mission }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-map-marker-alt me-2 text-danger"></i>Origine :</strong><br>
+                                        <span class="ms-4">{{ mission.origine }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-calendar-day me-2 text-info"></i>Date départ :</strong><br>
+                                        <span class="ms-4">{{ mission.date_depart|date:"d/m/Y" }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-info-circle me-2 text-warning"></i>Statut actuel :</strong><br>
+                                        <span class="ms-4 badge bg-warning">{{ mission.statut }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-flag me-2 text-success"></i>Destination :</strong><br>
+                                        <span class="ms-4">{{ mission.destination }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-file-contract me-2 text-secondary"></i>Contrat :</strong><br>
+                                        <span class="ms-4">{{ mission.contrat.numero_bl }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if mission.frais_trajet %}
+                            <div class="alert alert-secondary mb-0">
+                                <strong><i class="fas fa-dollar-sign me-2"></i>Frais de trajet :</strong>
+                                Route: {{ mission.frais_trajet.frais_route }}€ | Carburant: {{ mission.frais_trajet.frais_carburant }}€
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Informations Paiement Associé -->
+                    {% if paiement %}
+                    <div class="card border-primary mb-4">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-3 text-primary">
+                                <i class="fas fa-credit-card me-1"></i>Paiement associé
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>Montant total :</strong>
+                                        <span class="text-success fw-bold">{{ paiement.montant_total }}€</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Commission transitaire :</strong>
+                                        {{ paiement.commission_transitaire }}€
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>Statut :</strong>
+                                        {% if paiement.est_valide %}
+                                            <span class="badge bg-success">✅ Validé</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">⏳ En attente de validation</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% if not paiement.est_valide %}
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="fas fa-lightbulb me-2"></i>
+                                Après avoir terminé cette mission, vous pourrez valider ce paiement.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="alert alert-success d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-lg me-2"></i>
+                            <div>
+                                <strong>Action :</strong> La mission sera marquée comme "terminée" avec la date de retour d'aujourd'hui.
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'mission_list' %}" class="btn btn-secondary px-4">
+                                <i class="fas fa-times me-1"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-success px-4">
+                                <i class="fas fa-flag-checkered me-1"></i> Terminer la mission
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .card {
+            margin-bottom: 1rem;
+        }
+
+        .row .col-md-6 {
+            margin-bottom: 1rem;
+        }
+
+        .card-body {
+            padding: 1.5rem !important;
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* Container */
+        .container-fluid {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+        /* En-têtes */
+        h5 {
+            font-size: 0.95rem !important;
+        }
+
+        .card-header h5 {
+            font-size: 0.9rem !important;
+        }
+
+        h6 {
+            font-size: 0.85rem !important;
+        }
+
+        /* Colonnes */
+        .col-lg-10, .col-xl-8 {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        /* Cartes */
+        .card {
+            margin-bottom: 0.75rem !important;
+        }
+
+        .card-body {
+            padding: 1rem !important;
+        }
+
+        .card-header {
+            padding: 0.75rem 1rem !important;
+        }
+
+        /* Rangées dans les cartes */
+        .row .col-md-6 {
+            margin-bottom: 0.75rem;
+        }
+
+        .row .col-md-6 .mb-3,
+        .row .col-md-6 .mb-2 {
+            margin-bottom: 0.5rem !important;
+        }
+
+        /* Textes */
+        strong {
+            font-size: 0.8rem !important;
+        }
+
+        span, div {
+            font-size: 0.75rem !important;
+        }
+
+        small {
+            font-size: 0.7rem !important;
+        }
+
+        /* Boutons */
+        .d-flex.gap-2 {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+
+        .d-flex.gap-2 .btn {
+            width: 100%;
+            font-size: 0.85rem !important;
+            padding: 0.5rem !important;
+        }
+
+        /* Alertes */
+        .alert {
+            font-size: 0.75rem !important;
+            padding: 0.75rem !important;
+        }
+
+        .alert i {
+            font-size: 1rem !important;
+        }
+
+        /* Badges */
+        .badge {
+            font-size: 0.7rem !important;
+            padding: 0.25em 0.5em !important;
+        }
+
+        /* Icônes */
+        i {
+            font-size: 0.9rem;
+        }
+
+        .fa-2x {
+            font-size: 1.25em !important;
+        }
+    }
+</style>
+{% endblock %}

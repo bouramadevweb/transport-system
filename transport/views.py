@@ -573,9 +573,18 @@ def delete_frais(request, pk):
 
 # Liste des missions
 def mission_list(request):
-    missions = Mission.objects.all()
+    missions = Mission.objects.select_related('contrat', 'prestation_transport').order_by('-date_depart')
+
+    # Séparer par statut
+    missions_en_cours = missions.filter(statut='en cours')
+    missions_terminees = missions.filter(statut='terminée')
+    missions_annulees = missions.filter(statut='annulée')
+
     return render(request, 'transport/missions/mission_list.html', {
         'missions': missions,
+        'missions_en_cours': missions_en_cours,
+        'missions_terminees': missions_terminees,
+        'missions_annulees': missions_annulees,
         'title': 'Liste des missions'
     })
 # Créer une mission
@@ -608,6 +617,36 @@ def delete_mission(request, pk):
         mission.delete()
         return redirect('mission_list')
     return render(request, 'transport/missions/confirm_delete.html', {'object': mission, 'title': 'Supprimer une mission'})
+
+# Terminer une mission
+def terminer_mission(request, pk):
+    mission = get_object_or_404(Mission, pk_mission=pk)
+
+    # Vérifier que la mission n'est pas déjà terminée
+    if mission.statut == 'terminée':
+        messages.warning(request, "⚠️ Cette mission est déjà terminée.")
+        return redirect('mission_list')
+
+    if request.method == 'POST':
+        try:
+            mission.terminer_mission()
+            messages.success(request, f"✅ Mission terminée avec succès! Vous pouvez maintenant valider le paiement associé.")
+            return redirect('mission_list')
+        except Exception as e:
+            messages.error(request, f"❌ Erreur lors de la fin de la mission : {str(e)}")
+            return redirect('mission_list')
+
+    # Récupérer le paiement associé s'il existe
+    try:
+        paiement = PaiementMission.objects.get(mission=mission)
+    except PaiementMission.DoesNotExist:
+        paiement = None
+
+    return render(request, 'transport/missions/terminer_mission.html', {
+        'mission': mission,
+        'paiement': paiement,
+        'title': 'Terminer la mission'
+    })
 
 # LIST
 def mission_conteneur_list(request):
@@ -652,15 +691,25 @@ def delete_mission_conteneur(request, pk):
     if request.method == 'POST':
         mc.delete()
         return redirect('mission_conteneur_list')
-    return render(request, 'transport/mission_conteneur_confirm_delete.html', {
+    return render(request, 'transport/missions/mission_conteneur_confirm_delete.html', {
         'title': 'Supprimer un Mission-Conteneur',
         'mission_conteneur': mc
     })
 
 # Liste
 def paiement_mission_list(request):
-    paiements = PaiementMission.objects.all()
-    return render(request, 'transport/paiements-mission/paiement_mission_list.html', {'paiements': paiements, 'title': 'Liste des paiements'})
+    paiements = PaiementMission.objects.select_related('mission', 'caution', 'prestation').order_by('-date_paiement')
+
+    # Séparer validés et en attente
+    paiements_valides = paiements.filter(est_valide=True)
+    paiements_attente = paiements.filter(est_valide=False)
+
+    return render(request, 'transport/paiements-mission/paiement_mission_list.html', {
+        'paiements': paiements,
+        'paiements_valides': paiements_valides,
+        'paiements_attente': paiements_attente,
+        'title': 'Liste des paiements'
+    })
 
 # Création
 def create_paiement_mission(request):
@@ -693,6 +742,36 @@ def delete_paiement_mission(request, pk):
         return redirect('paiement_mission_list')
     return render(request, 'transport/paiements-mission/paiement_mission_confirm_delete.html', {'paiement': paiement, 'title': 'Supprimer un paiement'})
 
+# Valider un paiement
+def valider_paiement_mission(request, pk):
+    paiement = get_object_or_404(PaiementMission, pk=pk)
+
+    # Vérifier que le paiement n'est pas déjà validé
+    if paiement.est_valide:
+        messages.warning(request, "⚠️ Ce paiement a déjà été validé.")
+        return redirect('paiement_mission_list')
+
+    # Vérifier le statut de la mission
+    mission_terminee = paiement.mission.statut == 'terminée'
+
+    if request.method == 'POST':
+        if not mission_terminee:
+            messages.error(request, f"❌ Impossible de valider! La mission est '{paiement.mission.statut}'. Terminez d'abord la mission.")
+            return redirect('paiement_mission_list')
+
+        try:
+            paiement.valider_paiement()
+            messages.success(request, f"✅ Paiement validé avec succès! Montant: {paiement.montant_total}€")
+            return redirect('paiement_mission_list')
+        except Exception as e:
+            messages.error(request, f"❌ Erreur lors de la validation : {str(e)}")
+            return redirect('paiement_mission_list')
+
+    return render(request, 'transport/paiements-mission/valider_paiement.html', {
+        'paiement': paiement,
+        'mission_terminee': mission_terminee,
+        'title': 'Valider le paiement'
+    })
 
 # Liste
 def mecanicien_list(request):

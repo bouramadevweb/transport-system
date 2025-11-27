@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',  # Pour les filtres humanize (timesince, etc.)
     'transport',
     'django_bootstrap5'
 ]

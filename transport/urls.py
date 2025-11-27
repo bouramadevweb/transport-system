@@ -79,6 +79,7 @@ urlpatterns = [
     path('missions/create/', views.create_mission, name='create_mission'),
     path('missions/<str:pk>/update/', views.update_mission, name='update_mission'),
     path('missions/<str:pk>/delete/', views.delete_mission, name='delete_mission'),
+    path('missions/<str:pk>/terminer/', views.terminer_mission, name='terminer_mission'),
 
     path('mission-conteneurs/', views.mission_conteneur_list, name='mission_conteneur_list'),
     path('mission-conteneurs/create/', views.create_mission_conteneur, name='create_mission_conteneur'),
@@ -89,6 +90,7 @@ urlpatterns = [
     path('paiement-missions/create/', views.create_paiement_mission, name='create_paiement_mission'),
     path('paiement-missions/<str:pk>/update/', views.update_paiement_mission, name='update_paiement_mission'),
     path('paiement-missions/<str:pk>/delete/', views.delete_paiement_mission, name='delete_paiement_mission'),
+    path('paiement-missions/<str:pk>/valider/', views.valider_paiement_mission, name='valider_paiement_mission'),
 
     path('mecaniciens/', views.mecanicien_list, name='mecanicien_list'),
     path('mecaniciens/create/', views.create_mecanicien, name='create_mecanicien'),

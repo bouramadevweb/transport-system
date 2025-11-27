@@ -1,0 +1,345 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Valider le paiement | Gestion Transport{% endblock %}
+
+{% block title %}Valider le paiement{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header {% if mission_terminee %}bg-primary{% else %}bg-warning{% endif %} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Validation du paiement
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Alerte statut mission -->
+                    {% if not mission_terminee %}
+                    <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                        <div>
+                            <strong>⚠️ Impossible de valider!</strong><br>
+                            La mission est actuellement "<strong>{{ paiement.mission.statut }}</strong>".
+                            Vous devez d'abord terminer la mission avant de valider le paiement.
+                            <div class="mt-2">
+                                <a href="{% url 'terminer_mission' paiement.mission.pk_mission %}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-flag-checkered me-1"></i>Terminer la mission maintenant
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+                        <i class="fas fa-check-circle fa-2x me-3"></i>
+                        <div>
+                            <strong>✅ Mission terminée!</strong><br>
+                            Vous pouvez maintenant valider ce paiement en toute sécurité.
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Informations Paiement -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-3 text-muted">
+                                <i class="fas fa-credit-card me-1"></i>Détails du paiement
+                            </h6>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-hashtag me-2 text-primary"></i>ID Paiement :</strong><br>
+                                        <span class="ms-4 small">{{ paiement.pk_paiement }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-dollar-sign me-2 text-success"></i>Montant total :</strong><br>
+                                        <span class="ms-4 text-success fw-bold fs-5">{{ paiement.montant_total }}€</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-percentage me-2 text-warning"></i>Commission transitaire :</strong><br>
+                                        <span class="ms-4">{{ paiement.commission_transitaire }}€</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-calendar me-2 text-info"></i>Date création :</strong><br>
+                                        <span class="ms-4">{{ paiement.date_paiement|date:"d/m/Y" }}</span>
+                                    </div>
+                                    {% if paiement.mode_paiement %}
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-money-bill-wave me-2 text-secondary"></i>Mode de paiement :</strong><br>
+                                        <span class="ms-4">{{ paiement.mode_paiement }}</span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-shield-alt me-2 text-info"></i>Caution retirée :</strong><br>
+                                        <span class="ms-4">
+                                            {% if paiement.caution_est_retiree %}
+                                                <span class="badge bg-success">Oui</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Non</span>
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if paiement.observation %}
+                            <div class="alert alert-secondary mb-0">
+                                <strong><i class="fas fa-comment me-2"></i>Observation :</strong><br>
+                                {{ paiement.observation }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Informations Mission -->
+                    <div class="card border-{% if mission_terminee %}success{% else %}warning{% endif %} mb-4">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-3 text-{% if mission_terminee %}success{% else %}warning{% endif %}">
+                                <i class="fas fa-route me-1"></i>Mission associée
+                            </h6>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>ID Mission :</strong>
+                                        <span class="small">{{ paiement.mission.pk_mission }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Itinéraire :</strong>
+                                        {{ paiement.mission.origine }} → {{ paiement.mission.destination }}
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Date départ :</strong>
+                                        {{ paiement.mission.date_depart|date:"d/m/Y" }}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>Statut mission :</strong>
+                                        {% if paiement.mission.statut == 'terminée' %}
+                                            <span class="badge bg-success">✅ Terminée</span>
+                                        {% elif paiement.mission.statut == 'en cours' %}
+                                            <span class="badge bg-warning">⏳ En cours</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">❌ Annulée</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if paiement.mission.date_retour %}
+                                    <div class="mb-2">
+                                        <strong>Date retour :</strong>
+                                        {{ paiement.mission.date_retour|date:"d/m/Y" }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="mb-2">
+                                        <strong>Contrat BL :</strong>
+                                        {{ paiement.mission.contrat.numero_bl }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations Caution -->
+                    <div class="card bg-info bg-opacity-10 mb-4">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-3 text-info">
+                                <i class="fas fa-shield-alt me-1"></i>Caution
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Montant :</strong> {{ paiement.caution.montant }}€
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Remboursée :</strong>
+                                    {% if paiement.caution.est_rembourser %}
+                                        <span class="badge bg-success">Oui ({{ paiement.caution.montant_rembourser }}€)</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Non</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire de validation -->
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {% if mission_terminee %}
+                        <div class="alert alert-success d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-lg me-2"></i>
+                            <div>
+                                <strong>Confirmation :</strong> Le paiement sera marqué comme validé et la date de validation sera enregistrée.
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'paiement_mission_list' %}" class="btn btn-secondary px-4">
+                                <i class="fas fa-times me-1"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-check-circle me-1"></i> Valider le paiement
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'paiement_mission_list' %}" class="btn btn-secondary px-4">
+                                <i class="fas fa-arrow-left me-1"></i> Retour
+                            </a>
+                            <a href="{% url 'terminer_mission' paiement.mission.pk_mission %}" class="btn btn-success px-4">
+                                <i class="fas fa-flag-checkered me-1"></i> Terminer la mission d'abord
+                            </a>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <!-- Aide -->
+            <div class="card border-info mt-3 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-info mb-2">
+                        <i class="fas fa-lightbulb me-2"></i>Informations
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Un paiement ne peut être validé que si la mission associée est terminée</li>
+                        <li>Une fois validé, le paiement ne peut plus être modifié</li>
+                        <li>La date de validation sera enregistrée automatiquement</li>
+                        <li>Assurez-vous que toutes les informations sont correctes avant validation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .card {
+            margin-bottom: 1rem;
+        }
+
+        .row .col-md-6 {
+            margin-bottom: 1rem;
+        }
+
+        .card-body {
+            padding: 1.5rem !important;
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* Container */
+        .container-fluid {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+        /* En-têtes */
+        h5 {
+            font-size: 0.95rem !important;
+        }
+
+        .card-header h5 {
+            font-size: 0.9rem !important;
+        }
+
+        h6 {
+            font-size: 0.85rem !important;
+        }
+
+        /* Colonnes */
+        .col-lg-10, .col-xl-8 {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        /* Cartes */
+        .card {
+            margin-bottom: 0.75rem !important;
+        }
+
+        .card-body {
+            padding: 1rem !important;
+        }
+
+        .card-header {
+            padding: 0.75rem 1rem !important;
+        }
+
+        /* Rangées dans les cartes */
+        .row .col-md-6 {
+            margin-bottom: 0.75rem;
+        }
+
+        .row .col-md-6 .mb-3,
+        .row .col-md-6 .mb-2 {
+            margin-bottom: 0.5rem !important;
+        }
+
+        /* Textes */
+        strong {
+            font-size: 0.8rem !important;
+        }
+
+        span, div {
+            font-size: 0.75rem !important;
+        }
+
+        small {
+            font-size: 0.7rem !important;
+        }
+
+        .fs-5 {
+            font-size: 1rem !important;
+        }
+
+        /* Boutons */
+        .d-flex.gap-2 {
+            flex-direction: column;
+            gap: 0.5rem !important;
+        }
+
+        .d-flex.gap-2 .btn {
+            width: 100%;
+            font-size: 0.85rem !important;
+            padding: 0.5rem !important;
+        }
+
+        /* Alertes */
+        .alert {
+            font-size: 0.75rem !important;
+            padding: 0.75rem !important;
+        }
+
+        .alert i {
+            font-size: 1rem !important;
+        }
+
+        .alert ul {
+            font-size: 0.7rem !important;
+            padding-left: 1.25rem;
+        }
+
+        /* Badges */
+        .badge {
+            font-size: 0.7rem !important;
+            padding: 0.25em 0.5em !important;
+        }
+
+        /* Icônes */
+        i {
+            font-size: 0.9rem;
+        }
+
+        .fa-2x {
+            font-size: 1.25em !important;
+        }
+    }
+</style>
+{% endblock %}

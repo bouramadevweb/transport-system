@@ -6,155 +6,485 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header with Breadcrumb -->
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-2">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
-                    <li class="breadcrumb-item active">Missions</li>
-                </ol>
-            </nav>
-            <h2 class="mb-0"><i class="fas fa-tasks text-primary me-2"></i>{{ title }}</h2>
-        </div>
+        <h2 class="mb-0"><i class="fas fa-route text-primary me-2"></i>{{ title }}</h2>
         <a href="{% url 'create_mission' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i> Ajouter une mission
+            <i class="fas fa-plus me-1"></i> Nouvelle mission
         </a>
     </div>
 
-    {% if missions %}
-    <!-- Statistics Cards -->
-    <div class="row g-3 mb-4">
+    <!-- Statistiques -->
+    <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-warning bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-map-marked-alt fa-2x text-warning"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <p class="text-muted mb-1 small">Total Missions</p>
-                            <h3 class="mb-0 fw-bold">{{ missions|length }}</h3>
-                        </div>
-                    </div>
+            <div class="card border-warning shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-warning mb-1">{{ missions_en_cours.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-spinner me-1"></i>En cours</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-success mb-1">{{ missions_terminees.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-check-circle me-1"></i>Terminées</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-danger mb-1">{{ missions_annulees.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-times-circle me-1"></i>Annulées</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-primary mb-1">{{ missions.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-list me-1"></i>Total</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Search and Export -->
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text"
-                               class="form-control table-search"
-                               id="searchMissions"
-                               data-table="missionTable"
-                               placeholder="Rechercher par origine, destination, statut...">
+    <!-- Tabs pour filtrer -->
+    <ul class="nav nav-tabs mb-3" id="missionTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                <i class="fas fa-list me-1"></i>Toutes ({{ missions.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="encours-tab" data-bs-toggle="tab" data-bs-target="#encours" type="button" role="tab">
+                <i class="fas fa-spinner me-1"></i>En cours ({{ missions_en_cours.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="terminees-tab" data-bs-toggle="tab" data-bs-target="#terminees" type="button" role="tab">
+                <i class="fas fa-check-circle me-1"></i>Terminées ({{ missions_terminees.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="annulees-tab" data-bs-toggle="tab" data-bs-target="#annulees" type="button" role="tab">
+                <i class="fas fa-times-circle me-1"></i>Annulées ({{ missions_annulees.count }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="missionTabsContent">
+        <!-- Toutes les missions -->
+        <div class="tab-pane fade show active" id="all" role="tabpanel">
+            {% if missions %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-info-circle me-2"></i>Statut</th>
+                                    <th><i class="fas fa-map-marker-alt me-2"></i>Itinéraire</th>
+                                    <th><i class="fas fa-calendar me-2"></i>Date départ</th>
+                                    <th><i class="fas fa-calendar-check me-2"></i>Date retour</th>
+                                    <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mission in missions %}
+                                <tr>
+                                    <td>
+                                        {% if mission.statut == 'en cours' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-spinner me-1"></i>En cours
+                                            </span>
+                                        {% elif mission.statut == 'terminée' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Terminée
+                                            </span>
+                                        {% elif mission.statut == 'annulée' %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times-circle me-1"></i>Annulée
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ mission.statut }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
+                                    </td>
+                                    <td>{{ mission.date_depart|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if mission.date_retour %}
+                                            {{ mission.date_retour|date:"d/m/Y" }}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small class="text-muted">{{ mission.contrat.numero_bl }}</small></td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            {% if mission.statut == 'en cours' %}
+                                                <a href="{% url 'terminer_mission' mission.pk_mission %}"
+                                                   class="btn btn-sm btn-success"
+                                                   title="Terminer la mission">
+                                                    <i class="fas fa-flag-checkered"></i>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{% url 'update_mission' mission.pk_mission %}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'delete_mission' mission.pk_mission %}"
+                                               class="btn btn-sm btn-outline-danger"
+                                               title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <button class="btn btn-outline-success w-100" onclick="exportTableToExcel('missionTable', 'missions')">
-                        <i class="fas fa-file-excel me-2"></i>Exporter Excel
-                    </button>
+            </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune mission enregistrée. <a href="{% url 'create_mission' %}" class="alert-link">Ajouter la première</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Missions en cours -->
+        <div class="tab-pane fade" id="encours" role="tabpanel">
+            {% if missions_en_cours %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-map-marker-alt me-2"></i>Itinéraire</th>
+                                    <th><i class="fas fa-calendar me-2"></i>Date départ</th>
+                                    <th><i class="fas fa-clock me-2"></i>Durée</th>
+                                    <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mission in missions_en_cours %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
+                                    </td>
+                                    <td>{{ mission.date_depart|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% load humanize %}
+                                        {{ mission.date_depart|timesince }}
+                                    </td>
+                                    <td><small class="text-muted">{{ mission.contrat.numero_bl }}</small></td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'terminer_mission' mission.pk_mission %}"
+                                               class="btn btn-sm btn-success"
+                                               title="Terminer la mission">
+                                                <i class="fas fa-flag-checkered me-1"></i>Terminer
+                                            </a>
+                                            <a href="{% url 'update_mission' mission.pk_mission %}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune mission en cours.
+            </div>
+            {% endif %}
         </div>
-    </div>
 
-    <!-- Data Table -->
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="missionTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th><i class="fas fa-file-invoice me-1"></i>Prestation</th>
-                            <th><i class="fas fa-file-contract me-1"></i>Contrat</th>
-                            <th class="sortable" onclick="sortTable(2, 'missionTable')">
-                                <i class="fas fa-map-marker me-1"></i>Origine <i class="fas fa-sort ms-1 text-muted"></i>
-                            </th>
-                            <th class="sortable" onclick="sortTable(3, 'missionTable')">
-                                <i class="fas fa-map-marker-alt me-1"></i>Destination <i class="fas fa-sort ms-1 text-muted"></i>
-                            </th>
-                            <th class="sortable" onclick="sortTable(4, 'missionTable')">
-                                <i class="fas fa-calendar me-1"></i>Date départ <i class="fas fa-sort ms-1 text-muted"></i>
-                            </th>
-                            <th><i class="fas fa-calendar-check me-1"></i>Date retour</th>
-                            <th><i class="fas fa-dollar-sign me-1"></i>Frais trajet</th>
-                            <th class="sortable" onclick="sortTable(7, 'missionTable')">
-                                <i class="fas fa-info-circle me-1"></i>Statut <i class="fas fa-sort ms-1 text-muted"></i>
-                            </th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for m in missions %}
-                        <tr>
-                            <td>{{ m.prestation_transport.pk_presta_transport }}</td>
-                            <td>{{ m.contrat.pk_contrat }}</td>
-                            <td class="fw-medium">{{ m.origine }}</td>
-                            <td class="fw-medium">{{ m.destination }}</td>
-                            <td>{{ m.date_depart }}</td>
-                            <td>{{ m.date_retour|default:"—" }}</td>
-                            <td>{% if m.frais_trajet %}{{ m.frais_trajet.pk_frais }}{% else %}—{% endif %}</td>
-                            <td>
-                                {% if m.statut == "En cours" %}
-                                    <span class="badge bg-primary">{{ m.statut }}</span>
-                                {% elif m.statut == "Terminée" or m.statut == "Terminee" %}
-                                    <span class="badge bg-success">{{ m.statut }}</span>
-                                {% elif m.statut == "Annulée" or m.statut == "Annulee" %}
-                                    <span class="badge bg-danger">{{ m.statut }}</span>
-                                {% else %}
-                                    <span class="badge bg-warning text-dark">{{ m.statut }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'update_mission' m.pk_mission %}"
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'delete_mission' m.pk_mission %}"
-                                       class="btn btn-sm btn-outline-danger"
-                                       title="Supprimer">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- Missions terminées -->
+        <div class="tab-pane fade" id="terminees" role="tabpanel">
+            {% if missions_terminees %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-map-marker-alt me-2"></i>Itinéraire</th>
+                                    <th><i class="fas fa-calendar me-2"></i>Date départ</th>
+                                    <th><i class="fas fa-calendar-check me-2"></i>Date retour</th>
+                                    <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mission in missions_terminees %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
+                                    </td>
+                                    <td>{{ mission.date_depart|date:"d/m/Y" }}</td>
+                                    <td>{{ mission.date_retour|date:"d/m/Y" }}</td>
+                                    <td><small class="text-muted">{{ mission.contrat.numero_bl }}</small></td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'update_mission' mission.pk_mission %}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'delete_mission' mission.pk_mission %}"
+                                               class="btn btn-sm btn-outline-danger"
+                                               title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune mission terminée.
+            </div>
+            {% endif %}
         </div>
-        <div class="card-footer bg-white border-top-0">
-            <div class="d-flex justify-content-between align-items-center">
-                <small class="text-muted">
-                    <span id="rowCount">{{ missions|length }}</span> mission(s) affichée(s)
-                </small>
-                <small class="text-muted">
-                    <i class="fas fa-keyboard me-1"></i>Astuce: Appuyez sur <kbd>Ctrl</kbd> + <kbd>K</kbd> pour rechercher
-                </small>
+
+        <!-- Missions annulées -->
+        <div class="tab-pane fade" id="annulees" role="tabpanel">
+            {% if missions_annulees %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-map-marker-alt me-2"></i>Itinéraire</th>
+                                    <th><i class="fas fa-calendar me-2"></i>Date départ</th>
+                                    <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mission in missions_annulees %}
+                                <tr class="table-danger table-danger-subtle">
+                                    <td>
+                                        <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
+                                    </td>
+                                    <td>{{ mission.date_depart|date:"d/m/Y" }}</td>
+                                    <td><small class="text-muted">{{ mission.contrat.numero_bl }}</small></td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'delete_mission' mission.pk_mission %}"
+                                               class="btn btn-sm btn-outline-danger"
+                                               title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune mission annulée.
+            </div>
+            {% endif %}
         </div>
     </div>
-    {% else %}
-    <!-- Empty State -->
-    <div class="empty-state">
-        <i class="fas fa-route"></i>
-        <h4>Aucune mission enregistrée</h4>
-        <p>Commencez par créer votre première mission de transport pour gérer vos opérations.</p>
-        <a href="{% url 'create_mission' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Ajouter la première mission
-        </a>
-    </div>
-    {% endif %}
 </div>
+
+<style>
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #2563eb;
+        border-bottom: 2px solid #2563eb;
+    }
+
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.4em 0.8em;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .btn-group .btn {
+        margin: 0 2px;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .nav-tabs .nav-link {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .card .card-body h3 {
+            font-size: 1.5rem;
+        }
+
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .btn-group .btn {
+            margin: 0;
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* En-têtes et titres */
+        h2 {
+            font-size: 1rem !important;
+        }
+
+        h3 {
+            font-size: 1.25rem !important;
+        }
+
+        /* Boutons et layout principal */
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: stretch !important;
+        }
+
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+            font-size: 0.9rem;
+        }
+
+        /* Navigation par onglets */
+        .nav-tabs {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-tabs .nav-link {
+            white-space: nowrap;
+            font-size: 0.8rem;
+            padding: 0.5rem 0.65rem;
+        }
+
+        /* Cartes de statistiques */
+        .row.mb-4 {
+            margin-bottom: 1rem !important;
+        }
+
+        .card-body {
+            padding: 1rem !important;
+        }
+
+        .card-body p {
+            font-size: 0.75rem !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* Tables */
+        .table {
+            font-size: 0.75rem !important;
+        }
+
+        .table th {
+            font-size: 0.7rem !important;
+            padding: 0.5rem 0.3rem !important;
+        }
+
+        .table td {
+            padding: 0.5rem 0.3rem !important;
+        }
+
+        .table th i,
+        .table td i {
+            font-size: 0.8rem;
+        }
+
+        /* Badges */
+        .badge {
+            font-size: 0.65rem !important;
+            padding: 0.25em 0.5em !important;
+        }
+
+        /* Groupes de boutons dans les tables */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            width: 100%;
+        }
+
+        .btn-group .btn {
+            margin: 0 !important;
+            width: 100%;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.4rem;
+        }
+
+        /* Textes dans les cellules */
+        .table strong {
+            font-size: 0.75rem;
+        }
+
+        .table small,
+        .text-muted {
+            font-size: 0.65rem !important;
+        }
+
+        /* Alertes */
+        .alert {
+            font-size: 0.8rem !important;
+            padding: 0.75rem !important;
+        }
+
+        /* Container */
+        .container-fluid {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+    }
+</style>
 {% endblock %}

@@ -1,164 +1,451 @@
-{%extends "admin.html" %}
+{% extends "admin.html" %}
 
-{%block page_title %}Liste des Paiements Mission | Gestion Transport{%endblock %}
+{% block page_title %}Liste des Paiements | Gestion Transport{% endblock %}
 
-{%block title %}Liste des Paiements Mission{%endblock %}
+{% block title %}Liste des Paiements{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header with Breadcrumb -->
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-2">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
-                    <li class="breadcrumb-item active">Paiements</li>
-                </ol>
-            </nav>
-            <h2 class="mb-0"><i class="fas fa-money-check text-primary me-2"></i>{{ title }}</h2>
-        </div>
+        <h2 class="mb-0"><i class="fas fa-credit-card text-primary me-2"></i>{{ title }}</h2>
         <a href="{% url 'create_paiement_mission' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i> Ajouter un paiement
+            <i class="fas fa-plus me-1"></i> Nouveau paiement
         </a>
     </div>
 
-    {% if paiements %}
-    <!-- Statistics Cards -->
-    <div class="row g-3 mb-4">
+    <!-- Statistiques -->
+    <div class="row mb-4">
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-receipt fa-2x text-success"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <p class="text-muted mb-1 small">Total Paiements</p>
-                            <h3 class="mb-0 fw-bold">{{ paiements|length }}</h3>
-                        </div>
-                    </div>
+            <div class="card border-success shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-success mb-1">{{ paiements_valides.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-check-circle me-1"></i>Validés</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-warning shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-warning mb-1">{{ paiements_attente.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-clock me-1"></i>En attente</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-primary mb-1">{{ paiements.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-list me-1"></i>Total</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Search and Export -->
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text"
-                               class="form-control table-search"
-                               id="searchPaiements"
-                               data-table="paiementTable"
-                               placeholder="Rechercher par mission, montant, date, mode de paiement...">
+    <!-- Tabs pour filtrer -->
+    <ul class="nav nav-tabs mb-3" id="paiementTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                <i class="fas fa-list me-1"></i>Tous ({{ paiements.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="attente-tab" data-bs-toggle="tab" data-bs-target="#attente" type="button" role="tab">
+                <i class="fas fa-clock me-1"></i>En attente ({{ paiements_attente.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="valides-tab" data-bs-toggle="tab" data-bs-target="#valides" type="button" role="tab">
+                <i class="fas fa-check-circle me-1"></i>Validés ({{ paiements_valides.count }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="paiementTabsContent">
+        <!-- Tous les paiements -->
+        <div class="tab-pane fade show active" id="all" role="tabpanel">
+            {% if paiements %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-info-circle me-2"></i>Statut</th>
+                                    <th><i class="fas fa-route me-2"></i>Mission</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant</th>
+                                    <th><i class="fas fa-percentage me-2"></i>Commission</th>
+                                    <th><i class="fas fa-calendar me-2"></i>Date</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paiement in paiements %}
+                                <tr>
+                                    <td>
+                                        {% if paiement.est_valide %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Validé
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock me-1"></i>En attente
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <small class="text-muted d-block">{{ paiement.mission.pk_mission|slice:":20" }}...</small>
+                                            <strong>{{ paiement.mission.origine }}</strong> → <strong>{{ paiement.mission.destination }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">{{ paiement.montant_total }}€</span>
+                                    </td>
+                                    <td>{{ paiement.commission_transitaire }}€</td>
+                                    <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            {% if not paiement.est_valide %}
+                                                <a href="{% url 'valider_paiement_mission' paiement.pk_paiement %}"
+                                                   class="btn btn-sm btn-primary"
+                                                   title="Valider le paiement">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{% url 'update_paiement_mission' paiement.pk_paiement %}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'delete_paiement_mission' paiement.pk_paiement %}"
+                                               class="btn btn-sm btn-outline-danger"
+                                               title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <button class="btn btn-outline-success w-100" onclick="exportTableToExcel('paiementTable', 'paiements')">
-                        <i class="fas fa-file-excel me-2"></i>Exporter Excel
-                    </button>
+            </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucun paiement enregistré. <a href="{% url 'create_paiement_mission' %}" class="alert-link">Ajouter le premier</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Paiements en attente -->
+        <div class="tab-pane fade" id="attente" role="tabpanel">
+            {% if paiements_attente %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-route me-2"></i>Mission</th>
+                                    <th><i class="fas fa-info-circle me-2"></i>Statut Mission</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant</th>
+                                    <th><i class="fas fa-calendar me-2"></i>Date création</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paiement in paiements_attente %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <small class="text-muted d-block">{{ paiement.mission.pk_mission|slice:":20" }}...</small>
+                                            <strong>{{ paiement.mission.origine }}</strong> → <strong>{{ paiement.mission.destination }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if paiement.mission.statut == 'terminée' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Terminée
+                                            </span>
+                                        {% elif paiement.mission.statut == 'en cours' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-spinner me-1"></i>En cours
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times-circle me-1"></i>Annulée
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">{{ paiement.montant_total }}€</span>
+                                    </td>
+                                    <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            {% if paiement.mission.statut == 'terminée' %}
+                                                <a href="{% url 'valider_paiement_mission' paiement.pk_paiement %}"
+                                                   class="btn btn-sm btn-primary"
+                                                   title="Valider le paiement">
+                                                    <i class="fas fa-check-circle me-1"></i>Valider
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'terminer_mission' paiement.mission.pk_mission %}"
+                                                   class="btn btn-sm btn-success"
+                                                   title="Terminer la mission d'abord">
+                                                    <i class="fas fa-flag-checkered me-1"></i>Terminer mission
+                                                </a>
+                                            {% endif %}
+                                            <a href="{% url 'update_paiement_mission' paiement.pk_paiement %}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucun paiement en attente de validation.
+            </div>
+            {% endif %}
         </div>
-    </div>
 
-    <!-- Data Table -->
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="paiementTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="sortable" onclick="sortTable(0, 'paiementTable')">
-                                <i class="fas fa-tasks me-1"></i>Mission <i class="fas fa-sort ms-1 text-muted"></i>
-                            </th>
-                            <th class="sortable" onclick="sortTable(1, 'paiementTable')">
-                                <i class="fas fa-money-bill me-1"></i>Montant <i class="fas fa-sort ms-1 text-muted"></i>
-                            </th>
-                            <th class="sortable" onclick="sortTable(2, 'paiementTable')">
-                                <i class="fas fa-calendar me-1"></i>Date <i class="fas fa-sort ms-1 text-muted"></i>
-                            </th>
-                            <th class="sortable" onclick="sortTable(3, 'paiementTable')">
-                                <i class="fas fa-credit-card me-1"></i>Mode <i class="fas fa-sort ms-1 text-muted"></i>
-                            </th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in paiements %}
-                        <tr>
-                            <td>
-                                <span class="badge bg-primary">Mission #{{ p.mission.pk_mission }}</span>
-                            </td>
-                            <td class="fw-bold text-success">{{ p.montant_total|default:p.montant|floatformat:2 }} €</td>
-                            <td>{{ p.date_paiement }}</td>
-                            <td>
-                                {% if p.mode_paiement == "Espèces" or p.mode_paiement == "Especes" %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-money-bill-wave me-1"></i>{{ p.mode_paiement }}
-                                    </span>
-                                {% elif p.mode_paiement == "Carte bancaire" or p.mode_paiement == "CB" %}
-                                    <span class="badge bg-info">
-                                        <i class="fas fa-credit-card me-1"></i>{{ p.mode_paiement }}
-                                    </span>
-                                {% elif p.mode_paiement == "Virement" %}
-                                    <span class="badge bg-primary">
-                                        <i class="fas fa-exchange-alt me-1"></i>{{ p.mode_paiement }}
-                                    </span>
-                                {% elif p.mode_paiement == "Chèque" or p.mode_paiement == "Cheque" %}
-                                    <span class="badge bg-secondary">
-                                        <i class="fas fa-money-check me-1"></i>{{ p.mode_paiement }}
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ p.mode_paiement }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'update_paiement_mission' p.pk_paiement_mission %}"
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'delete_paiement_mission' p.pk_paiement_mission %}"
-                                       class="btn btn-sm btn-outline-danger"
-                                       title="Supprimer">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- Paiements validés -->
+        <div class="tab-pane fade" id="valides" role="tabpanel">
+            {% if paiements_valides %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-route me-2"></i>Mission</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant</th>
+                                    <th><i class="fas fa-percentage me-2"></i>Commission</th>
+                                    <th><i class="fas fa-calendar-check me-2"></i>Date validation</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paiement in paiements_valides %}
+                                <tr class="table-success table-success-subtle">
+                                    <td>
+                                        <div>
+                                            <small class="text-muted d-block">{{ paiement.mission.pk_mission|slice:":20" }}...</small>
+                                            <strong>{{ paiement.mission.origine }}</strong> → <strong>{{ paiement.mission.destination }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">{{ paiement.montant_total }}€</span>
+                                    </td>
+                                    <td>{{ paiement.commission_transitaire }}€</td>
+                                    <td>
+                                        {% if paiement.date_validation %}
+                                            {{ paiement.date_validation|date:"d/m/Y H:i" }}
+                                        {% else %}
+                                            {{ paiement.date_paiement|date:"d/m/Y" }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Validé
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="card-footer bg-white border-top-0">
-            <div class="d-flex justify-content-between align-items-center">
-                <small class="text-muted">
-                    <span id="rowCount">{{ paiements|length }}</span> paiement(s) affiché(s)
-                </small>
-                <small class="text-muted">
-                    <i class="fas fa-keyboard me-1"></i>Astuce: Appuyez sur <kbd>Ctrl</kbd> + <kbd>K</kbd> pour rechercher
-                </small>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucun paiement validé.
             </div>
+            {% endif %}
         </div>
     </div>
-    {% else %}
-    <!-- Empty State -->
-    <div class="empty-state">
-        <i class="fas fa-wallet"></i>
-        <h4>Aucun paiement enregistré</h4>
-        <p>Commencez par enregistrer votre premier paiement pour suivre vos transactions.</p>
-        <a href="{% url 'create_paiement_mission' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Ajouter le premier paiement
-        </a>
-    </div>
-    {% endif %}
 </div>
+
+<style>
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #2563eb;
+        border-bottom: 2px solid #2563eb;
+    }
+
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.4em 0.8em;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .btn-group .btn {
+        margin: 0 2px;
+    }
+
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+        .nav-tabs .nav-link {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .card .card-body h3 {
+            font-size: 1.5rem;
+        }
+
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .btn-group .btn {
+            margin: 0;
+        }
+    }
+
+    @media (max-width: 576px) {
+        /* En-têtes et titres */
+        h2 {
+            font-size: 1rem !important;
+        }
+
+        h3 {
+            font-size: 1.25rem !important;
+        }
+
+        /* Boutons et layout principal */
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: stretch !important;
+        }
+
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+            font-size: 0.9rem;
+        }
+
+        /* Navigation par onglets */
+        .nav-tabs {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-tabs .nav-link {
+            white-space: nowrap;
+            font-size: 0.8rem;
+            padding: 0.5rem 0.65rem;
+        }
+
+        /* Cartes de statistiques */
+        .row.mb-4 {
+            margin-bottom: 1rem !important;
+        }
+
+        .card-body {
+            padding: 1rem !important;
+        }
+
+        .card-body p {
+            font-size: 0.75rem !important;
+            margin-bottom: 0 !important;
+        }
+
+        /* Tables */
+        .table {
+            font-size: 0.75rem !important;
+        }
+
+        .table th {
+            font-size: 0.7rem !important;
+            padding: 0.5rem 0.3rem !important;
+        }
+
+        .table td {
+            padding: 0.5rem 0.3rem !important;
+        }
+
+        .table th i,
+        .table td i {
+            font-size: 0.8rem;
+        }
+
+        /* Badges */
+        .badge {
+            font-size: 0.65rem !important;
+            padding: 0.25em 0.5em !important;
+        }
+
+        /* Groupes de boutons dans les tables */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            width: 100%;
+        }
+
+        .btn-group .btn {
+            margin: 0 !important;
+            width: 100%;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.4rem;
+        }
+
+        /* Textes dans les cellules */
+        .table strong {
+            font-size: 0.75rem;
+        }
+
+        .table small,
+        .text-muted {
+            font-size: 0.65rem !important;
+        }
+
+        /* Alertes */
+        .alert {
+            font-size: 0.8rem !important;
+            padding: 0.75rem !important;
+        }
+
+        /* Container */
+        .container-fluid {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+    }
+</style>
 {% endblock %}

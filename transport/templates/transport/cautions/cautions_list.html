@@ -21,7 +21,7 @@
                     <thead class="table-light">
                         <tr>
                             <th><i class="fas fa-box me-2"></i>Conteneur</th>
-                            <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
+                            <!-- <th><i class="fas fa-file-contract me-2"></i>Contrat</th> -->
                             <th><i class="fas fa-dolly me-2"></i>Transitaire</th>
                             <th><i class="fas fa-user me-2"></i>Client</th>
                             <th><i class="fas fa-id-card me-2"></i>Chauffeur</th>
@@ -37,7 +37,7 @@
                         {% for c in cautions %}
                         <tr>
                             <td>{% if c.conteneur %}{{ c.conteneur.numero_conteneur }}{% else %}N/A{% endif %}</td>
-                            <td>{% if c.contrat %}{{ c.contrat.pk_contrat }}{% else %}N/A{% endif %}</td>
+                            <!-- <td>{% if c.contrat %}{{ c.contrat.pk_contrat }}{% else %}N/A{% endif %}</td> -->
                             <td>{% if c.transitaire %}{{ c.transitaire.nom }}{% else %}N/A{% endif %}</td>
                             <td>{% if c.client %}{{ c.client.nom }}{% else %}N/A{% endif %}</td>
                             <td>{% if c.chauffeur %}{{ c.chauffeur.nom }}{% else %}N/A{% endif %}</td>
