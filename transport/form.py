@@ -1,5 +1,6 @@
-from django import forms 
+from django import forms
 from django.contrib.auth.forms import UserCreationForm
+from django.db import models
 from .models import Entreprise, Utilisateur,Chauffeur,Camion,Affectation,Transitaire,Client,CompagnieConteneur,Conteneur,ContratTransport,PrestationDeTransports,Cautions,FraisTrajet,Mission,MissionConteneur,PaiementMission,Mecanicien,Fournisseur, Reparation,ReparationMecanicien,PieceReparee
 
 
@@ -113,7 +114,55 @@ class AffectationForm(forms.ModelForm):
             'camion': forms.Select(attrs={'class': 'form-select'}),
             'date_affectation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'date_fin_affectation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-        }   
+        }
+        labels = {
+            'chauffeur': 'Chauffeur',
+            'camion': 'Camion',
+            'date_affectation': 'Date d\'affectation',
+            'date_fin_affectation': 'Date de fin d\'affectation (optionnel)',
+        }
+        help_texts = {
+            'chauffeur': 'Seuls les chauffeurs disponibles sont affichés',
+            'camion': 'Seuls les camions disponibles sont affichés',
+            'date_fin_affectation': 'Laissez vide si l\'affectation est toujours active',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Filtrer les chauffeurs pour n'afficher que ceux disponibles
+        if self.instance and self.instance.pk:
+            # Mode édition : inclure le chauffeur actuellement affecté
+            chauffeurs_disponibles = Chauffeur.objects.filter(
+                models.Q(est_affecter=False) | models.Q(pk=self.instance.chauffeur.pk_chauffeur)
+            )
+        else:
+            # Mode création : seulement les chauffeurs non affectés
+            chauffeurs_disponibles = Chauffeur.objects.filter(est_affecter=False)
+
+        self.fields['chauffeur'].queryset = chauffeurs_disponibles
+
+        # Ajouter des messages si aucun chauffeur n'est disponible
+        if not chauffeurs_disponibles.exists():
+            self.fields['chauffeur'].help_text = '⚠️ Aucun chauffeur disponible. Tous les chauffeurs sont déjà affectés.'
+            self.fields['chauffeur'].widget.attrs['disabled'] = True
+
+        # Filtrer les camions pour n'afficher que ceux disponibles
+        if self.instance and self.instance.pk:
+            # Mode édition : inclure le camion actuellement affecté
+            camions_disponibles = Camion.objects.filter(
+                models.Q(est_affecter=False) | models.Q(pk=self.instance.camion.pk_camion)
+            )
+        else:
+            # Mode création : seulement les camions non affectés
+            camions_disponibles = Camion.objects.filter(est_affecter=False)
+
+        self.fields['camion'].queryset = camions_disponibles
+
+        # Ajouter des messages si aucun camion n'est disponible
+        if not camions_disponibles.exists():
+            self.fields['camion'].help_text = '⚠️ Aucun camion disponible. Tous les camions sont déjà affectés.'
+            self.fields['camion'].widget.attrs['disabled'] = True   
 
 class TransitaireForm(forms.ModelForm):
     class Meta:

@@ -3,13 +3,15 @@ from . import views
 from django.contrib.auth.views import LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
+from django.conf.urls import handler404, handler500
+from .views import rediriger_vers_connexion, rediriger_erreur_serveur
 
 urlpatterns = [
     path('inscription_utilisateur/', views.inscription_utilisateur, name='inscription_utilisateur'),
     path('connexion/', views.connexion_utilisateur, name='connexion'),
     # path('ajouter_entreprise/', views.ajouter_entreprise, name='ajouter_entreprise'),
-
-
+    
+    
     path('liste_entreprises/', views.liste_entreprises, name='liste_entreprises'),
     path('entreprises/ajouter/', views.ajouter_entreprise, name='ajouter_entreprise'),
     path('entreprises/modifier/<str:pk>/', views.modifier_entreprise, name='modifier_entreprise'),
@@ -30,6 +32,7 @@ urlpatterns = [
     path('affectations/create/', views.create_affectation, name='create_affectation'),
     path('affectations/<str:pk>/update/', views.update_affectation, name='update_affectation'),
     path('affectations/<str:pk>/delete/', views.delete_affectation, name='delete_affectation'),
+    path('affectations/<str:pk>/terminer/', views.terminer_affectation, name='terminer_affectation'),
 
     path('transitaires/', views.transitaire_list, name='transitaire_list'),
     path('transitaires/create/', views.create_transitaire, name='create_transitaire'),
@@ -121,7 +124,8 @@ urlpatterns = [
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
-
+handler404 = 'transport.views.rediriger_vers_connexion'
+handler500 = 'transport.views.rediriger_erreur_serveur'
 
 # urlpatterns = [
 #     path('inscription_utilisateur/', views.inscription_utilisateur, name='inscription_utilisateur'),

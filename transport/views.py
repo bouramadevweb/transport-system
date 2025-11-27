@@ -173,17 +173,35 @@ def delete_camion(request, pk):
 
 # Liste des affectations
 def affectation_list(request):
-    affectations = Affectation.objects.all()
-    return render(request, "transport/affectations/affectation_list.html", {"affectations": affectations, "title": "Liste des affectations"})
+    affectations = Affectation.objects.select_related('chauffeur', 'camion').order_by('-date_affectation')
+
+    # Séparer les affectations actives et terminées
+    affectations_actives = affectations.filter(date_fin_affectation__isnull=True)
+    affectations_terminees = affectations.filter(date_fin_affectation__isnull=False)
+
+    return render(request, "transport/affectations/affectation_list.html", {
+        "affectations": affectations,
+        "affectations_actives": affectations_actives,
+        "affectations_terminees": affectations_terminees,
+        "title": "Liste des affectations"
+    })
 
 # Ajouter une affectation
 def create_affectation(request):
     if request.method == "POST":
         form = AffectationForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "✅ Affectation ajoutée avec succès!")
-            return redirect('affectation_list')
+            try:
+                form.save()
+                messages.success(request, "✅ Affectation ajoutée avec succès!")
+                return redirect('affectation_list')
+            except Exception as e:
+                messages.error(request, f"❌ Erreur lors de l'affectation : {str(e)}")
+        else:
+            # Afficher les erreurs de validation
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {error}")
     else:
         form = AffectationForm()
     return render(request, "transport/affectations/affectation_form.html", {"form": form, "title": "Ajouter une affectation"})
@@ -194,12 +212,43 @@ def update_affectation(request, pk):
     if request.method == "POST":
         form = AffectationForm(request.POST, instance=affectation)
         if form.is_valid():
-            form.save()
-            messages.success(request, "✅ Affectation mise à jour avec succès!")
-            return redirect('affectation_list')
+            try:
+                form.save()
+                messages.success(request, "✅ Affectation mise à jour avec succès!")
+                return redirect('affectation_list')
+            except Exception as e:
+                messages.error(request, f"❌ Erreur lors de la mise à jour : {str(e)}")
+        else:
+            # Afficher les erreurs de validation
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {error}")
     else:
         form = AffectationForm(instance=affectation)
     return render(request, "transport/affectations/affectation_form.html", {"form": form, "title": "Modifier l'affectation"})
+
+# Terminer une affectation
+def terminer_affectation(request, pk):
+    affectation = get_object_or_404(Affectation, pk=pk)
+
+    # Vérifier que l'affectation est active
+    if affectation.date_fin_affectation is not None:
+        messages.warning(request, "⚠️ Cette affectation est déjà terminée.")
+        return redirect('affectation_list')
+
+    if request.method == "POST":
+        try:
+            affectation.terminer_affectation()
+            messages.success(request, f"✅ Affectation terminée avec succès! Le camion {affectation.camion.immatriculation} est maintenant disponible.")
+            return redirect('affectation_list')
+        except Exception as e:
+            messages.error(request, f"❌ Erreur lors de la fin de l'affectation : {str(e)}")
+            return redirect('affectation_list')
+
+    return render(request, "transport/affectations/terminer_affectation.html", {
+        "affectation": affectation,
+        "title": "Terminer l'affectation"
+    })
 
 # Supprimer une affectation
 def delete_affectation(request, pk):
@@ -369,24 +418,24 @@ def create_contrat(request):
         form = ContratTransportForm(request.POST)
         if form.is_valid():
 
-            # 1️⃣ Sauvegarde du contrat dans la base
+            # 1 Sauvegarde du contrat dans la base
             contrat = form.save()
 
-            # 2️⃣ Définition du chemin final du PDF
+            # 2 Définition du chemin final du PDF
             folder = os.path.join(settings.MEDIA_ROOT, "contrats")
             os.makedirs(folder, exist_ok=True)
 
             pdf_filename = f"{contrat.pk_contrat}.pdf"
             pdf_path = os.path.join(folder, pdf_filename)
 
-            # 3️⃣ Génération du PDF
+            # 3 Génération du PDF
             generate_pdf_contrat(contrat, pdf_path)
 
-            # 4️⃣ Enregistrement du PDF dans le modèle
+            # 4 Enregistrement du PDF dans le modèle
             contrat.pdf_file = f"contrats/{pdf_filename}"
             contrat.save()
 
-            # 5️⃣ Redirection
+            # 5 Redirection
             return redirect("contrat_list")
 
     else:
@@ -982,15 +1031,21 @@ def dashboard(request):
     })
 
 # gestion url redirection si pas bon url vers la connexion
+# def rediriger_vers_connexion(request, exception=None):
+#     return redirect('connexion')
+
+# handler404 = rediriger_vers_connexion
+# # gestion probleme server si la connexion n'est pas bon 
+# def rediriger_erreur_serveur(request):
+#     return redirect('connexion')
+
+# handler500 = rediriger_erreur_serveur
+
 def rediriger_vers_connexion(request, exception=None):
     return redirect('connexion')
 
-handler404 = rediriger_vers_connexion
-# gestion probleme server si la connexion n'est pas bon 
 def rediriger_erreur_serveur(request):
     return redirect('connexion')
-
-handler500 = rediriger_erreur_serveur
 
 # deconnexion 
 def logout_utilisateur(request):

@@ -13,51 +13,272 @@
         </a>
     </div>
 
-    {% if affectations %}
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th><i class="fas fa-user me-2"></i>Chauffeur</th>
-                            <th><i class="fas fa-truck me-2"></i>Camion</th>
-                            <th><i class="fas fa-calendar me-2"></i>Date d'affectation</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for affectation in affectations %}
-                        <tr>
-                            <td>{{ affectation.chauffeur }}</td>
-                            <td>{{ affectation.camion }}</td>
-                            <td>{{ affectation.date_affectation }}</td>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'update_affectation' affectation.pk %}"
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'delete_affectation' affectation.pk %}"
-                                       class="btn btn-sm btn-outline-danger"
-                                       title="Supprimer">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-success shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-success mb-1">{{ affectations_actives.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-check-circle me-1"></i>Affectations actives</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-secondary shadow-sm">
+                <div class="card-body text-center">
+                    <h3 class="text-secondary mb-1">{{ affectations_terminees.count }}</h3>
+                    <p class="text-muted mb-0"><i class="fas fa-history me-1"></i>Affectations terminées</p>
+                </div>
             </div>
         </div>
     </div>
-    {% else %}
-    <div class="alert alert-info shadow-sm">
-        <i class="fas fa-info-circle me-2"></i>
-        Aucune affectation enregistrée. <a href="{% url 'create_affectation' %}" class="alert-link">Ajouter la première</a>
+
+    <!-- Tabs pour filtrer -->
+    <ul class="nav nav-tabs mb-3" id="affectationTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab">
+                <i class="fas fa-list me-1"></i>Toutes ({{ affectations.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab">
+                <i class="fas fa-check-circle me-1"></i>Actives ({{ affectations_actives.count }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="finished-tab" data-bs-toggle="tab" data-bs-target="#finished" type="button" role="tab">
+                <i class="fas fa-history me-1"></i>Terminées ({{ affectations_terminees.count }})
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="affectationTabsContent">
+        <!-- Toutes les affectations -->
+        <div class="tab-pane fade show active" id="all" role="tabpanel">
+            {% if affectations %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-info-circle me-2"></i>Statut</th>
+                                    <th><i class="fas fa-user me-2"></i>Chauffeur</th>
+                                    <th><i class="fas fa-truck me-2"></i>Camion</th>
+                                    <th><i class="fas fa-calendar-plus me-2"></i>Date début</th>
+                                    <th><i class="fas fa-calendar-check me-2"></i>Date fin</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for affectation in affectations %}
+                                <tr>
+                                    <td>
+                                        {% if affectation.date_fin_affectation is None %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Active
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-flag-checkered me-1"></i>Terminée
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ affectation.chauffeur.nom }} {{ affectation.chauffeur.prenom }}</strong><br>
+                                        <small class="text-muted">{{ affectation.chauffeur.telephone }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ affectation.camion.immatriculation }}</strong><br>
+                                        <small class="text-muted">{{ affectation.camion.modele }}</small>
+                                    </td>
+                                    <td>{{ affectation.date_affectation|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if affectation.date_fin_affectation %}
+                                            {{ affectation.date_fin_affectation|date:"d/m/Y" }}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            {% if affectation.date_fin_affectation is None %}
+                                                <a href="{% url 'terminer_affectation' affectation.pk %}"
+                                                   class="btn btn-sm btn-outline-success"
+                                                   title="Terminer l'affectation">
+                                                    <i class="fas fa-flag-checkered"></i>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{% url 'update_affectation' affectation.pk %}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'delete_affectation' affectation.pk %}"
+                                               class="btn btn-sm btn-outline-danger"
+                                               title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune affectation enregistrée. <a href="{% url 'create_affectation' %}" class="alert-link">Ajouter la première</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Affectations actives -->
+        <div class="tab-pane fade" id="active" role="tabpanel">
+            {% if affectations_actives %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-user me-2"></i>Chauffeur</th>
+                                    <th><i class="fas fa-truck me-2"></i>Camion</th>
+                                    <th><i class="fas fa-calendar-plus me-2"></i>Date début</th>
+                                    <th><i class="fas fa-clock me-2"></i>Durée</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for affectation in affectations_actives %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ affectation.chauffeur.nom }} {{ affectation.chauffeur.prenom }}</strong><br>
+                                        <small class="text-muted">{{ affectation.chauffeur.telephone }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ affectation.camion.immatriculation }}</strong><br>
+                                        <small class="text-muted">{{ affectation.camion.modele }}</small>
+                                    </td>
+                                    <td>{{ affectation.date_affectation|date:"d/m/Y" }}</td>
+                                    
+                                    <td>
+                                        {{ affectation.date_affectation|timesince }}
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'terminer_affectation' affectation.pk %}"
+                                               class="btn btn-sm btn-success"
+                                               title="Terminer l'affectation">
+                                                <i class="fas fa-flag-checkered me-1"></i>Terminer
+                                            </a>
+                                            <a href="{% url 'update_affectation' affectation.pk %}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune affectation active pour le moment.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Affectations terminées -->
+        <div class="tab-pane fade" id="finished" role="tabpanel">
+            {% if affectations_terminees %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th><i class="fas fa-user me-2"></i>Chauffeur</th>
+                                    <th><i class="fas fa-truck me-2"></i>Camion</th>
+                                    <th><i class="fas fa-calendar-plus me-2"></i>Date début</th>
+                                    <th><i class="fas fa-calendar-check me-2"></i>Date fin</th>
+                                    <th><i class="fas fa-hourglass me-2"></i>Durée totale</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for affectation in affectations_terminees %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ affectation.chauffeur.nom }} {{ affectation.chauffeur.prenom }}</strong><br>
+                                        <small class="text-muted">{{ affectation.chauffeur.telephone }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ affectation.camion.immatriculation }}</strong><br>
+                                        <small class="text-muted">{{ affectation.camion.modele }}</small>
+                                    </td>
+                                    <td>{{ affectation.date_affectation|date:"d/m/Y" }}</td>
+                                    <td>{{ affectation.date_fin_affectation|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% widthratio affectation.date_fin_affectation|timesince:affectation.date_affectation 1 1 %} jours
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'update_affectation' affectation.pk %}"
+                                               class="btn btn-sm btn-outline-warning"
+                                               title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'delete_affectation' affectation.pk %}"
+                                               class="btn btn-sm btn-outline-danger"
+                                               title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info shadow-sm">
+                <i class="fas fa-info-circle me-2"></i>
+                Aucune affectation terminée.
+            </div>
+            {% endif %}
+        </div>
     </div>
-    {% endif %}
 </div>
+
+<style>
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #2563eb;
+        border-bottom: 2px solid #2563eb;
+    }
+
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.4em 0.8em;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>
 {% endblock %}
