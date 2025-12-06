@@ -6,66 +6,47 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header with Breadcrumb -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-2">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
-                    <li class="breadcrumb-item active">Camions</li>
-                </ol>
-            </nav>
-            <h2 class="mb-0"><i class="fas fa-truck text-primary me-2"></i>{{ title }}</h2>
+    <!-- Header avec recherche et export -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h2 class="mb-0">
+            <i class="fas fa-truck text-primary me-2"></i>
+            {{ title }}
+        </h2>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <!-- Barre de recherche -->
+            <div class="input-group" style="max-width: 300px;">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" id="searchInput" class="form-control border-start-0"
+                       placeholder="Rechercher...">
+            </div>
+            <!-- Export CSV -->
+            <button class="btn btn-outline-success btn-sm" onclick="exportToCSV('camions')"
+                    title="Exporter en CSV">
+                <i class="fas fa-file-csv me-1"></i> CSV
+            </button>
+            <!-- Bouton Nouveau -->
+            <a href="{% url 'create_camion' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Nouveau camion
+            </a>
         </div>
-        <a href="{% url 'create_camion' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i> Ajouter un camion
-        </a>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-4 col-sm-6 mb-3">
+            <div class="card border-primary shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-truck fa-2x text-primary mb-2"></i>
+                    <h3 class="text-primary mb-1" id="totalCamions">{{ camions|length }}</h3>
+                    <p class="text-muted mb-0 small">Total Camions</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     {% if camions %}
-    <!-- Statistics Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
-                                <i class="fas fa-truck fa-2x text-success"></i>
-                            </div>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <p class="text-muted mb-1 small">Total Camions</p>
-                            <h3 class="mb-0 fw-bold">{{ camions|length }}</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search and Export -->
-    <div class="card shadow-sm border-0 mb-3">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-8">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text"
-                               class="form-control table-search"
-                               id="searchCamions"
-                               data-table="camionTable"
-                               placeholder="Rechercher par immatriculation, modèle, entreprise...">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <button class="btn btn-outline-success w-100" onclick="exportTableToExcel('camionTable', 'camions')">
-                        <i class="fas fa-file-excel me-2"></i>Exporter Excel
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Data Table -->
     <div class="card shadow-sm border-0">

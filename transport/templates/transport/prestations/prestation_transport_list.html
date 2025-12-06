@@ -6,44 +6,130 @@
 
 {% block content %}
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <!-- Header avec recherche -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <h2 class="mb-0"><i class="fas fa-file-invoice text-primary me-2"></i>{{ title }}</h2>
-        <a href="{% url 'create_presta_transport' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i> Ajouter une prestation
-        </a>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <!-- Barre de recherche -->
+            <div class="input-group" style="max-width: 300px;">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="fas fa-search text-muted"></i>
+                </span>
+                <input type="text" id="searchInput" class="form-control border-start-0"
+                       placeholder="Rechercher...">
+            </div>
+            <!-- Boutons d'action -->
+            <button class="btn btn-outline-success btn-sm" onclick="exportToCSV()" title="Exporter en CSV">
+                <i class="fas fa-file-csv me-1"></i> CSV
+            </button>
+            <a href="{% url 'create_presta_transport' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Nouvelle prestation
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-primary shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-invoice fa-2x text-primary mb-2"></i>
+                    <h3 class="text-primary mb-1">{{ prestations.count }}</h3>
+                    <p class="text-muted mb-0 small">Total prestations</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-success shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                    <h3 class="text-success mb-1" id="totalPrix">0€</h3>
+                    <p class="text-muted mb-0 small">Chiffre d'affaires</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-warning shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-hand-holding-usd fa-2x text-warning mb-2"></i>
+                    <h3 class="text-warning mb-1" id="totalAvance">0€</h3>
+                    <p class="text-muted mb-0 small">Total avances</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-info shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calculator fa-2x text-info mb-2"></i>
+                    <h3 class="text-info mb-1" id="totalSolde">0€</h3>
+                    <p class="text-muted mb-0 small">Total soldes</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     {% if prestations %}
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0" id="prestationsTable">
                     <thead class="table-light">
                         <tr>
-                            <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
-                            <th><i class="fas fa-truck me-2"></i>Camion</th>
-                            <th><i class="fas fa-user me-2"></i>Client</th>
-                            <th><i class="fas fa-dolly me-2"></i>Transitaire</th>
-                            <th><i class="fas fa-money-bill me-2"></i>Prix</th>
-                            <th><i class="fas fa-hand-holding-usd me-2"></i>Avance</th>
-                            <th><i class="fas fa-shield-alt me-2"></i>Caution</th>
-                            <th><i class="fas fa-calculator me-2"></i>Solde</th>
-                            <th><i class="fas fa-calendar me-2"></i>Date</th>
+                            <th class="sortable" data-column="0">
+                                <i class="fas fa-truck me-2"></i>Camion
+                                <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-column="1">
+                                <i class="fas fa-user me-2"></i>Client
+                                <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-column="2">
+                                <i class="fas fa-dolly me-2"></i>Transitaire
+                                <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-column="3">
+                                <i class="fas fa-money-bill me-2"></i>Prix
+                                <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-column="4">
+                                <i class="fas fa-hand-holding-usd me-2"></i>Avance
+                                <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-column="5">
+                                <i class="fas fa-shield-alt me-2"></i>Caution
+                                <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-column="6">
+                                <i class="fas fa-calculator me-2"></i>Solde
+                                <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable" data-column="7">
+                                <i class="fas fa-calendar me-2"></i>Date
+                                <i class="fas fa-sort sort-icon"></i>
+                            </th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in prestations %}
                         <tr>
-                            <td>{{ p.contrat_transport.pk_contrat }}</td>
-                            <td>{{ p.camion.immatriculation }}</td>
-                            <td>{{ p.client.nom }}</td>
-                            <td>{{ p.transitaire.nom }}</td>
-                            <td>{{ p.prix_transport }}</td>
-                            <td>{{ p.avance }}</td>
-                            <td>{{ p.caution }}</td>
-                            <td>{{ p.solde }}</td>
-                            <td>{{ p.date }}</td>
+                            <td>
+                                <strong>{{ p.camion.immatriculation }}</strong><br>
+                                <small class="text-muted">{{ p.camion.modele|default:"" }}</small>
+                            </td>
+                            <td>
+                                <strong>{{ p.client.nom }}</strong><br>
+                                <small class="text-muted">{{ p.client.telephone|default:"" }}</small>
+                            </td>
+                            <td>
+                                <strong>{{ p.transitaire.nom }}</strong><br>
+                                <small class="text-muted">{{ p.transitaire.email|default:"" }}</small>
+                            </td>
+                            <td><span class="text-success fw-bold">{{ p.prix_transport }}€</span></td>
+                            <td><span class="text-warning fw-bold">{{ p.avance }}€</span></td>
+                            <td><span class="text-info fw-bold">{{ p.caution }}€</span></td>
+                            <td><span class="text-primary fw-bold">{{ p.solde }}€</span></td>
+                            <td>{{ p.date|date:"d/m/Y H:i" }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <a href="{% url 'update_presta_transport' p.pk_presta_transport %}"
@@ -53,6 +139,7 @@
                                     </a>
                                     <a href="{% url 'delete_presta_transport' p.pk_presta_transport %}"
                                        class="btn btn-sm btn-outline-danger"
+                                       onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette prestation?')"
                                        title="Supprimer">
                                         <i class="fas fa-trash"></i>
                                     </a>
@@ -64,12 +151,299 @@
                 </table>
             </div>
         </div>
+        </div>
+        <div class="card-footer bg-white border-top-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <span id="rowCount">{{ prestations.count }}</span> prestation(s) affichée(s)
+                </small>
+                <small class="text-muted">
+                    <i class="fas fa-keyboard me-1"></i>Astuce: Cliquez sur les en-têtes pour trier
+                </small>
+            </div>
+        </div>
     </div>
     {% else %}
-    <div class="alert alert-info shadow-sm">
-        <i class="fas fa-info-circle me-2"></i>
-        Aucune prestation enregistrée. <a href="{% url 'create_presta_transport' %}" class="alert-link">Ajouter la première</a>
+    <!-- Empty State -->
+    <div class="empty-state">
+        <i class="fas fa-file-invoice"></i>
+        <h4>Aucune prestation enregistrée</h4>
+        <p>Commencez par ajouter votre première prestation de transport.</p>
+        <a href="{% url 'create_presta_transport' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Ajouter la première prestation
+        </a>
     </div>
     {% endif %}
 </div>
+
+<style>
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #cbd5e1;
+        margin-bottom: 20px;
+    }
+
+    .empty-state h4 {
+        color: #334155;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        color: #64748b;
+        margin-bottom: 25px;
+        font-size: 0.95rem;
+    }
+
+    .sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+    }
+
+    .sortable:hover {
+        background-color: #e9ecef;
+        transform: translateY(-1px);
+    }
+
+    .sort-icon {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-left: 5px;
+        transition: all 0.2s ease;
+    }
+
+    /* Animations des statistiques */
+    .card-body h3 {
+        transition: transform 0.2s ease;
+    }
+
+    /* Animation du tbody */
+    tbody {
+        transition: opacity 0.15s ease;
+    }
+
+    /* Animation des lignes */
+    tbody tr {
+        transition: background-color 0.15s ease;
+    }
+
+    tbody tr:hover {
+        background-color: #f8f9fa !important;
+        transform: scale(1.005);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Amélioration des badges */
+    .badge {
+        transition: transform 0.2s ease;
+    }
+
+    .badge:hover {
+        transform: scale(1.05);
+    }
+
+    /* Animation des boutons */
+    .btn-group .btn {
+        transition: all 0.2s ease;
+    }
+
+    .btn-group .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        h2 {
+            font-size: 1.25rem !important;
+        }
+
+        .card-body h3 {
+            font-size: 1.5rem !important;
+        }
+
+        .fa-2x {
+            font-size: 1.5em !important;
+        }
+
+        .table {
+            font-size: 0.75rem !important;
+        }
+
+        .btn-sm {
+            font-size: 0.7rem !important;
+            padding: 0.25rem 0.4rem !important;
+        }
+    }
+</style>
+
+<script>
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    calculateStatistics();
+    initializeSearch();
+    initializeSort();
+});
+
+// Calcul des statistiques avec mise à jour dynamique
+function calculateStatistics() {
+    const table = document.getElementById('prestationsTable');
+    if (!table) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const visibleRows = rows.filter(row => row.style.display !== 'none');
+
+    let totalPrix = 0, totalAvance = 0, totalSolde = 0;
+
+    visibleRows.forEach(row => {
+        const cells = row.cells;
+        totalPrix += parseFloat(cells[3].textContent.replace('€', '').trim()) || 0;
+        totalAvance += parseFloat(cells[4].textContent.replace('€', '').trim()) || 0;
+        totalSolde += parseFloat(cells[6].textContent.replace('€', '').trim()) || 0;
+    });
+
+    // Mise à jour avec animation
+    updateStatWithAnimation('totalPrix', totalPrix);
+    updateStatWithAnimation('totalAvance', totalAvance);
+    updateStatWithAnimation('totalSolde', totalSolde);
+
+    // Mise à jour du compteur de lignes
+    const rowCountEl = document.getElementById('rowCount');
+    if (rowCountEl) {
+        rowCountEl.textContent = visibleRows.length;
+    }
+}
+
+// Animation des statistiques
+function updateStatWithAnimation(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    element.style.transform = 'scale(1.1)';
+    element.textContent = value.toFixed(2) + '€';
+
+    setTimeout(() => {
+        element.style.transform = 'scale(1)';
+    }, 200);
+}
+
+// Recherche en temps réel améliorée
+function initializeSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('keyup', function() {
+        const filter = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#prestationsTable tbody tr');
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+        });
+
+        // Recalculer les statistiques après la recherche
+        calculateStatistics();
+    });
+}
+
+// Tri des colonnes avec indicateurs visuels
+function initializeSort() {
+    const headers = document.querySelectorAll('.sortable');
+    headers.forEach(header => {
+        header.addEventListener('click', function() {
+            const columnIndex = parseInt(this.dataset.column);
+            sortTable(columnIndex, this);
+        });
+    });
+}
+
+function sortTable(columnIndex, headerElement) {
+    const table = document.getElementById('prestationsTable');
+    const rows = Array.from(table.querySelectorAll('tbody tr:not([style*="display: none"])'));
+    const currentOrder = headerElement.dataset.order || 'none';
+    const isAscending = currentOrder !== 'asc';
+
+    // Réinitialiser tous les indicateurs
+    document.querySelectorAll('.sortable .sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+
+    // Mettre à jour l'indicateur actuel
+    const sortIcon = headerElement.querySelector('.sort-icon');
+    sortIcon.className = isAscending ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+    headerElement.dataset.order = isAscending ? 'asc' : 'desc';
+
+    // Tri des lignes visibles
+    rows.sort((a, b) => {
+        const aValue = a.cells[columnIndex].textContent.trim();
+        const bValue = b.cells[columnIndex].textContent.trim();
+
+        // Parser comme nombre si possible
+        const aNum = parseFloat(aValue.replace(/[^\d.-]/g, ''));
+        const bNum = parseFloat(bValue.replace(/[^\d.-]/g, ''));
+
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return isAscending ? aNum - bNum : bNum - aNum;
+        }
+
+        // Tri alphabétique
+        return isAscending
+            ? aValue.localeCompare(bValue, 'fr', { sensitivity: 'base' })
+            : bValue.localeCompare(aValue, 'fr', { sensitivity: 'base' });
+    });
+
+    // Réinsérer les lignes avec animation
+    const tbody = table.querySelector('tbody');
+    tbody.style.opacity = '0.5';
+
+    setTimeout(() => {
+        rows.forEach(row => tbody.appendChild(row));
+        tbody.style.opacity = '1';
+    }, 150);
+}
+
+// Export CSV
+function exportToCSV() {
+    const table = document.getElementById('prestationsTable');
+    const rows = table.querySelectorAll('tr:not([style*="display: none"])');
+    let csv = [];
+
+    rows.forEach(row => {
+        const cells = Array.from(row.cells).slice(0, -1); // Exclure la colonne Actions
+        const rowData = cells.map(cell => {
+            return '"' + cell.textContent.trim().replace(/"/g, '""') + '"';
+        });
+        csv.push(rowData.join(','));
+    });
+
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'prestations_' + new Date().toISOString().slice(0,10) + '.csv';
+    link.click();
+}
+</script>
 {% endblock %}

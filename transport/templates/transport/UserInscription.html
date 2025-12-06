@@ -1,38 +1,280 @@
 {% extends "admin.html" %}
+
+{% block page_title %}Créer un utilisateur | Gestion Transport{% endblock %}
+
+{% block title %}Créer un utilisateur{% endblock %}
+
 {% block content %}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Créer un compte utilisateur</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <div class="container mt-5">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h2 class="mb-0">Créer un compte utilisateur</h2>
-            </div>
-            <div class="card-body">
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    {% for field in form %}
-                        <div class="mb-3">
-                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                            {{ field }}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <!-- Card principale -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-plus fa-2x me-3"></i>
+                        <div>
+                            <h4 class="mb-0">Créer un compte utilisateur</h4>
+                            <small class="opacity-75">Ajoutez un nouvel utilisateur au système</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    <form method="post" id="userForm" novalidate>
+                        {% csrf_token %}
+
+                        {% for field in form %}
+                        <div class="mb-4">
+                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-{% if 'username' in field.name %}user{% elif 'password' in field.name %}lock{% elif 'email' in field.name %}envelope{% elif 'first' in field.name %}id-card{% elif 'last' in field.name %}id-badge{% else %}info-circle{% endif %} me-2 text-primary"></i>
+                                {{ field.label }}
+                                {% if field.field.required %}
+                                <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+
+                            <div class="input-group">
+                                {% if 'password' in field.name %}
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-lock text-muted"></i>
+                                </span>
+                                {{ field }}
+                                <button class="btn btn-outline-secondary border-start-0 toggle-password" type="button" data-target="{{ field.id_for_label }}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                {% else %}
+                                <span class="input-group-text bg-light border-end-0">
+                                    <i class="fas fa-{% if 'username' in field.name %}user{% elif 'email' in field.name %}envelope{% elif 'first' in field.name %}id-card{% elif 'last' in field.name %}id-badge{% else %}info-circle{% endif %} text-muted"></i>
+                                </span>
+                                {{ field }}
+                                {% endif %}
+                            </div>
+
                             {% if field.help_text %}
-                                <div class="form-text">{{ field.help_text }}</div>
+                            <div class="form-text mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                {{ field.help_text }}
+                            </div>
                             {% endif %}
+
                             {% for error in field.errors %}
-                                <div class="text-danger small">{{ error }}</div>
+                            <div class="invalid-feedback d-block mt-2">
+                                <i class="fas fa-exclamation-circle me-1"></i>
+                                {{ error }}
+                            </div>
                             {% endfor %}
                         </div>
-                    {% endfor %}
-                    <button type="submit" class="btn btn-success">Créer le compte utilisateur </button>
-                </form>
+                        {% endfor %}
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex gap-3 mt-4 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                                <i class="fas fa-save me-2"></i>
+                                Créer le compte utilisateur
+                            </button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Carte d'aide -->
+            <div class="card border-0 shadow-sm mt-4 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Conseils de sécurité
+                    </h6>
+                    <ul class="mb-0 small text-muted">
+                        <li>Utilisez un mot de passe fort (8+ caractères)</li>
+                        <li>Mélangez majuscules, minuscules, chiffres et symboles</li>
+                        <li>Ne réutilisez pas les mots de passe</li>
+                        <li>Vérifiez l'adresse email avant validation</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+
+<style>
+    /* Gradient pour le header */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+
+    /* Amélioration des champs de formulaire */
+    .form-control, .form-select {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        border-left: 0;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .input-group-text {
+        border: 1px solid #e2e8f0;
+        border-right: 0;
+        border-radius: 8px 0 0 8px;
+    }
+
+    .input-group .form-control {
+        border-radius: 0 8px 8px 0;
+    }
+
+    .input-group .toggle-password {
+        border-radius: 0 8px 8px 0;
+        border-left: 0;
+    }
+
+    /* Labels améliorés */
+    .form-label {
+        color: #334155;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Boutons */
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border: none;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-outline-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Messages d'erreur */
+    .invalid-feedback {
+        color: #ef4444;
+        font-size: 0.875rem;
+        padding: 0.5rem;
+        background: #fef2f2;
+        border-left: 3px solid #ef4444;
+        border-radius: 4px;
+    }
+
+    /* Animation des champs */
+    .form-control.is-valid {
+        border-color: #10b981;
+    }
+
+    .form-control.is-invalid {
+        border-color: #ef4444;
+    }
+
+    /* Carte */
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 1.5rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .d-flex.gap-3 {
+            flex-direction: column;
+        }
+
+        .btn-lg {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle password visibility
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = this.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    });
+
+    // Validation en temps réel
+    const form = document.getElementById('userForm');
+    const inputs = form.querySelectorAll('.form-control');
+
+    inputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateField(this);
+        });
+
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') || this.classList.contains('is-valid')) {
+                validateField(this);
+            }
+        });
+    });
+
+    function validateField(field) {
+        // Validation simple côté client
+        if (field.hasAttribute('required') && !field.value.trim()) {
+            field.classList.remove('is-valid');
+            field.classList.add('is-invalid');
+        } else if (field.value.trim()) {
+            field.classList.remove('is-invalid');
+            field.classList.add('is-valid');
+        } else {
+            field.classList.remove('is-invalid', 'is-valid');
+        }
+
+        // Validation email
+        if (field.type === 'email' && field.value) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailRegex.test(field.value)) {
+                field.classList.remove('is-invalid');
+                field.classList.add('is-valid');
+            } else {
+                field.classList.remove('is-valid');
+                field.classList.add('is-invalid');
+            }
+        }
+    }
+
+    // Animation au submit
+    form.addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Création en cours...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
 {% endblock %}

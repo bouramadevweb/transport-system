@@ -1,0 +1,272 @@
+/**
+ * Styles communs pour les tables améliorées
+ */
+
+/* En-têtes triables */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.2s;
+}
+
+.sortable:hover {
+    background-color: #e9ecef;
+}
+
+.sort-icon {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-left: 5px;
+    transition: color 0.2s;
+}
+
+.sortable:hover .sort-icon {
+    color: #495057;
+}
+
+/* Cartes de statistiques */
+.stat-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.stat-card .stat-icon {
+    opacity: 0.8;
+}
+
+.stat-card:hover .stat-icon {
+    opacity: 1;
+}
+
+/* Barre de recherche */
+.search-box {
+    transition: box-shadow 0.2s;
+}
+
+.search-box:focus-within {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Tables responsive */
+@media (max-width: 992px) {
+    .table {
+        font-size: 0.9rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .table {
+        font-size: 0.85rem;
+    }
+
+    .table th i,
+    .table td i {
+        display: none;
+    }
+
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .btn-group .btn {
+        width: 100%;
+        margin: 0 !important;
+    }
+}
+
+@media (max-width: 576px) {
+    h2 {
+        font-size: 1.25rem !important;
+    }
+
+    .card-body h3 {
+        font-size: 1.5rem !important;
+    }
+
+    .fa-2x {
+        font-size: 1.5em !important;
+    }
+
+    .table {
+        font-size: 0.75rem !important;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.4rem 0.3rem !important;
+    }
+
+    .btn-sm {
+        font-size: 0.7rem !important;
+        padding: 0.25rem 0.4rem !important;
+    }
+
+    /* Réduire l'espacement sur mobile */
+    .container-fluid {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+
+    .gap-3 {
+        gap: 0.5rem !important;
+    }
+}
+
+/* Badges de statut */
+.status-badge {
+    font-size: 0.85rem;
+    padding: 0.4em 0.8em;
+    font-weight: 500;
+}
+
+/* Animation pour les lignes de table */
+.table tbody tr {
+    transition: background-color 0.15s;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Boutons d'action */
+.action-btn {
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    transform: scale(1.05);
+}
+
+/* Alertes personnalisées */
+.alert-modern {
+    border-left: 4px solid;
+    border-radius: 0.5rem;
+}
+
+.alert-modern.alert-info {
+    border-left-color: #0dcaf0;
+}
+
+.alert-modern.alert-success {
+    border-left-color: #198754;
+}
+
+.alert-modern.alert-warning {
+    border-left-color: #ffc107;
+}
+
+.alert-modern.alert-danger {
+    border-left-color: #dc3545;
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Cartes modernes */
+.modern-card {
+    border: none;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    transition: box-shadow 0.3s;
+}
+
+.modern-card:hover {
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+}
+
+/* En-tête de page */
+.page-header {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 1.5rem;
+}
+
+/* Filtres avancés */
+.filter-panel {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-panel .form-label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+/* Amélioration des formulaires */
+.form-control:focus,
+.form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Tooltips personnalisés */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem;
+    background-color: #333;
+    color: white;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* Pagination */
+.pagination {
+    margin-top: 1.5rem;
+}
+
+.page-link {
+    color: #0d6efd;
+    border-color: #dee2e6;
+}
+
+.page-link:hover {
+    background-color: #e9ecef;
+}
+
+.page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
