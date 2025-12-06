@@ -1233,7 +1233,3 @@ def pdf_contrat(request, pk):
         headers={"Content-Disposition": f'attachment; filename=\"Feuille_de_Route_{pk}.pdf\"'}
     )
 
-
-
-
-
