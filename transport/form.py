@@ -253,6 +253,25 @@ class ContratTransportForm(forms.ModelForm):
             'signature_transitaire': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+    def clean_numero_bl(self):
+        """Valide l'unicité du numéro BL"""
+        numero_bl = self.cleaned_data.get('numero_bl')
+
+        # Si on est en mode édition (instance existe), exclure l'instance actuelle
+        if self.instance and self.instance.pk:
+            if ContratTransport.objects.filter(numero_bl=numero_bl).exclude(pk=self.instance.pk).exists():
+                raise forms.ValidationError(
+                    f"Le numéro BL '{numero_bl}' existe déjà. Veuillez utiliser un numéro BL unique."
+                )
+        else:
+            # Mode création
+            if ContratTransport.objects.filter(numero_bl=numero_bl).exists():
+                raise forms.ValidationError(
+                    f"Le numéro BL '{numero_bl}' existe déjà. Veuillez utiliser un numéro BL unique."
+                )
+
+        return numero_bl
+
 
 class PrestationDeTransportsForm(forms.ModelForm):
     class Meta:

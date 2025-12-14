@@ -438,7 +438,7 @@ class ContratTransport(models.Model):
     camion = models.ForeignKey("Camion", on_delete=models.CASCADE)
     chauffeur = models.ForeignKey("Chauffeur", on_delete=models.CASCADE)
 
-    numero_bl = models.CharField(max_length=100)
+    numero_bl = models.CharField(max_length=100, unique=True)
     destinataire = models.CharField(max_length=200)
 
     montant_total = models.DecimalField(

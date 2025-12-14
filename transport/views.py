@@ -417,26 +417,35 @@ def create_contrat(request):
     if request.method == "POST":
         form = ContratTransportForm(request.POST)
         if form.is_valid():
+            try:
+                # 1 Sauvegarde du contrat dans la base
+                contrat = form.save()
 
-            # 1 Sauvegarde du contrat dans la base
-            contrat = form.save()
+                # 2 Définition du chemin final du PDF
+                folder = os.path.join(settings.MEDIA_ROOT, "contrats")
+                os.makedirs(folder, exist_ok=True)
 
-            # 2 Définition du chemin final du PDF
-            folder = os.path.join(settings.MEDIA_ROOT, "contrats")
-            os.makedirs(folder, exist_ok=True)
+                pdf_filename = f"{contrat.pk_contrat}.pdf"
+                pdf_path = os.path.join(folder, pdf_filename)
 
-            pdf_filename = f"{contrat.pk_contrat}.pdf"
-            pdf_path = os.path.join(folder, pdf_filename)
+                # 3 Génération du PDF
+                generate_pdf_contrat(contrat, pdf_path)
 
-            # 3 Génération du PDF
-            generate_pdf_contrat(contrat, pdf_path)
+                # 4 Enregistrement du PDF dans le modèle
+                contrat.pdf_file = f"contrats/{pdf_filename}"
+                contrat.save()
 
-            # 4 Enregistrement du PDF dans le modèle
-            contrat.pdf_file = f"contrats/{pdf_filename}"
-            contrat.save()
+                # 5 Message de succès et redirection
+                messages.success(request, "✅ Contrat créé avec succès!")
+                return redirect("contrat_list")
 
-            # 5 Redirection
-            return redirect("contrat_list")
+            except IntegrityError:
+                messages.error(request, f"❌ Erreur: Le numéro BL '{form.cleaned_data.get('numero_bl')}' existe déjà. Veuillez utiliser un numéro BL unique.")
+        else:
+            # Afficher les erreurs de validation
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {error}")
 
     else:
         form = ContratTransportForm()
@@ -454,8 +463,17 @@ def update_contrat(request, pk):
     if request.method == "POST":
         form = ContratTransportForm(request.POST, instance=contrat)
         if form.is_valid():
-            form.save()
-            return redirect('contrat_list')
+            try:
+                form.save()
+                messages.success(request, "✅ Contrat mis à jour avec succès!")
+                return redirect('contrat_list')
+            except IntegrityError:
+                messages.error(request, f"❌ Erreur: Le numéro BL '{form.cleaned_data.get('numero_bl')}' existe déjà. Veuillez utiliser un numéro BL unique.")
+        else:
+            # Afficher les erreurs de validation
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {error}")
     else:
         form = ContratTransportForm(instance=contrat)
     return render(request, "transport/contrat/contrat_form.html", {"form": form, "title": "Modifier le contrat"})
