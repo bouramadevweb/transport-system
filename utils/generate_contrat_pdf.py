@@ -1,30 +1,7 @@
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib import colors
-import os
-
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
-from django.shortcuts import render, redirect,get_object_or_404
-from django.db import IntegrityError
-from django.contrib import messages
-from transport.models import Chauffeur, Entreprise,Camion,Affectation,Transitaire,Client,CompagnieConteneur,Conteneur,ContratTransport,PrestationDeTransports,Cautions,FraisTrajet,Mission,MissionConteneur,PaiementMission,Mecanicien,Fournisseur,Reparation,ReparationMecanicien,PieceReparee
-from django.db.models import Count, Sum
-from django.db.models.functions import TruncMonth
-from datetime import datetime
-from django.contrib.auth.views import LogoutView
-from django.contrib.auth import logout
-from django.shortcuts import redirect
-
-from django.http import HttpResponse
-from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
-from io import BytesIO
-from django.conf import settings
-import os
 
 # def generate_pdf_contrat(contrat, output_path):
 #     styles = getSampleStyleSheet()
@@ -63,12 +40,9 @@ import os
 
 
 
-def generate_pdf_contrat(request, pk):
-    contrat = get_object_or_404(ContratTransport, pk_contrat=pk)
-
-    buffer = BytesIO()
+def generate_pdf_contrat(contrat, output_path):
     doc = SimpleDocTemplate(
-        buffer,
+        output_path,
         pagesize=A4,
         leftMargin=40,
         rightMargin=40,
@@ -156,10 +130,3 @@ def generate_pdf_contrat(request, pk):
 
     # Génération finale
     doc.build(story)
-
-    buffer.seek(0)
-    return HttpResponse(
-        buffer,
-        content_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename=\"Feuille_de_Route_{pk}.pdf\"'}
-    )
