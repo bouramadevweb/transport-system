@@ -35,3 +35,75 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+function calculerDateLimiteRetour() {
+    const dateDebutInput = document.getElementById('id_date_debut');
+    const dateLimiteRetourInput = document.getElementById('id_date_limite_retour');
+
+    if (dateDebutInput && dateDebutInput.value) {
+        // Récupérer la date de début
+        const dateDebut = new Date(dateDebutInput.value);
+
+        // Ajouter 23 jours
+        dateDebut.setDate(dateDebut.getDate() + 23);
+
+        // Formater la date au format YYYY-MM-DD
+        const annee = dateDebut.getFullYear();
+        const mois = String(dateDebut.getMonth() + 1).padStart(2, '0');
+        const jour = String(dateDebut.getDate()).padStart(2, '0');
+        const dateLimiteRetour = `${annee}-${mois}-${jour}`;
+
+        // Mettre à jour le champ date limite retour
+        dateLimiteRetourInput.value = dateLimiteRetour;
+
+        // Ajouter une indication visuelle
+        dateLimiteRetourInput.style.backgroundColor = '#d1ecf1';
+        dateLimiteRetourInput.title = 'Calculée automatiquement : Date début + 23 jours';
+    }
+}
+
+function calculerReliquat() {
+    const montantTotalInput = document.getElementById('id_montant_total');
+    const avanceTransportInput = document.getElementById('id_avance_transport');
+    const reliquatTransportInput = document.getElementById('id_reliquat_transport');
+
+    if (montantTotalInput && avanceTransportInput && reliquatTransportInput) {
+        // Récupérer les valeurs et les convertir en nombres
+        const montantTotal = parseFloat(montantTotalInput.value) || 0;
+        const avanceTransport = parseFloat(avanceTransportInput.value) || 0;
+
+        // Calculer le reliquat : Montant total - Avance
+        const reliquat = montantTotal - avanceTransport;
+
+        // Mettre à jour le champ reliquat avec 2 décimales
+        reliquatTransportInput.value = reliquat.toFixed(2);
+
+        // Indication visuelle selon le résultat
+        if (reliquat < 0) {
+            // Si le reliquat est négatif (avance > montant total)
+            reliquatTransportInput.style.backgroundColor = '#f8d7da';
+            reliquatTransportInput.style.color = '#721c24';
+            reliquatTransportInput.title = '⚠️ Attention : L\'avance dépasse le montant total';
+        } else if (reliquat === 0) {
+            // Si le reliquat est à zéro (avance = montant total)
+            reliquatTransportInput.style.backgroundColor = '#d4edda';
+            reliquatTransportInput.style.color = '#155724';
+            reliquatTransportInput.title = '✅ Paiement intégral en avance';
+        } else {
+            // Si le reliquat est positif (normal)
+            reliquatTransportInput.style.backgroundColor = '#d1ecf1';
+            reliquatTransportInput.style.color = '#0c5460';
+            reliquatTransportInput.title = 'Calculé automatiquement : Montant total - Avance';
+        }
+    }
+}
+
+// Calculer automatiquement au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    calculerDateLimiteRetour();
+    calculerReliquat();
+});
+</script>
+{% endblock %}

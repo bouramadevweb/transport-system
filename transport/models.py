@@ -484,29 +484,74 @@ class ContratTransport(models.Model):
         ]
 
     def clean(self):
-        """Validation personnalisée des montants"""
+        """Validation personnalisée des montants et champs obligatoires"""
         super().clean()
+
+        # Vérifier les champs obligatoires en utilisant les IDs
+        errors = {}
+
+        if not self.camion_id:
+            errors['camion'] = 'Le camion est obligatoire'
+        if not self.chauffeur_id:
+            errors['chauffeur'] = 'Le chauffeur est obligatoire'
+        if not self.client_id:
+            errors['client'] = 'Le client est obligatoire'
+        if not self.transitaire_id:
+            errors['transitaire'] = 'Le transitaire est obligatoire'
+
+        # Vérifier la disponibilité du camion et du chauffeur
+        if self.camion_id and self.chauffeur_id:
+            # Vérifier si le camion est déjà affecté à une mission en cours
+            missions_camion = Mission.objects.filter(
+                contrat__camion_id=self.camion_id,
+                statut='en cours'
+            )
+            # Exclure le contrat actuel si on est en mode édition
+            if self.pk_contrat:
+                missions_camion = missions_camion.exclude(contrat__pk_contrat=self.pk_contrat)
+
+            if missions_camion.exists():
+                # Récupérer l'objet camion pour afficher son immatriculation
+                try:
+                    camion = Camion.objects.get(pk=self.camion_id)
+                    errors['camion'] = f'Le camion {camion.immatriculation} est déjà affecté à une mission en cours'
+                except Camion.DoesNotExist:
+                    errors['camion'] = 'Le camion sélectionné est déjà affecté à une mission en cours'
+
+            # Vérifier si le chauffeur est déjà affecté à une mission en cours
+            missions_chauffeur = Mission.objects.filter(
+                contrat__chauffeur_id=self.chauffeur_id,
+                statut='en cours'
+            )
+            # Exclure le contrat actuel si on est en mode édition
+            if self.pk_contrat:
+                missions_chauffeur = missions_chauffeur.exclude(contrat__pk_contrat=self.pk_contrat)
+
+            if missions_chauffeur.exists():
+                # Récupérer l'objet chauffeur pour afficher son nom
+                try:
+                    chauffeur = Chauffeur.objects.get(pk=self.chauffeur_id)
+                    errors['chauffeur'] = f'Le chauffeur {chauffeur.nom} {chauffeur.prenom} est déjà affecté à une mission en cours'
+                except Chauffeur.DoesNotExist:
+                    errors['chauffeur'] = 'Le chauffeur sélectionné est déjà affecté à une mission en cours'
 
         # Vérifier que l'avance ne dépasse pas le montant total
         if self.avance_transport and self.montant_total:
             if self.avance_transport > self.montant_total:
-                raise ValidationError({
-                    'avance_transport': 'L\'avance ne peut pas dépasser le montant total'
-                })
+                errors['avance_transport'] = 'L\'avance ne peut pas dépasser le montant total'
 
         # Vérifier que la caution n'est pas trop élevée (max 50% du montant)
         if self.caution and self.montant_total:
             if self.caution > self.montant_total * Decimal('0.5'):
-                raise ValidationError({
-                    'caution': 'La caution ne peut pas dépasser 50% du montant total'
-                })
+                errors['caution'] = 'La caution ne peut pas dépasser 50% du montant total'
 
         # Vérifier que la date de retour est après la date de début
         if self.date_debut and self.date_limite_retour:
             if self.date_limite_retour < self.date_debut:
-                raise ValidationError({
-                    'date_limite_retour': 'La date limite de retour doit être après la date de début'
-                })
+                errors['date_limite_retour'] = 'La date limite de retour doit être après la date de début'
+
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         if not self.pk_contrat:
@@ -522,6 +567,12 @@ class ContratTransport(models.Model):
             base = base.replace(" ", "").replace("-", "")
             self.pk_contrat = slugify(base)[:250]
 
+        # Calcul automatique de la date limite de retour : date_debut + 23 jours
+        if self.date_debut:
+            from datetime import timedelta
+            self.date_limite_retour = self.date_debut + timedelta(days=23)
+
+        # Calcul automatique du reliquat
         self.reliquat_transport = Decimal(self.montant_total) - Decimal(self.avance_transport)
         super().save(*args, **kwargs)
 
@@ -663,13 +714,51 @@ class Mission(models.Model):
     prestation_transport = models.ForeignKey(PrestationDeTransports, on_delete=models.CASCADE)
     date_depart = models.DateField()
     date_retour = models.DateField(blank=True, null=True)
-    origine = models.CharField(max_length=50)
-    destination = models.CharField(max_length=50)
+    origine = models.CharField(max_length=200)
+    destination = models.CharField(max_length=200)
+    itineraire = models.TextField(
+        blank=True,
+        default='Itinéraire à compléter',
+        help_text="Décrivez l'itinéraire détaillé de la mission"
+    )
     frais_trajet = models.ForeignKey(FraisTrajet, on_delete=models.SET_NULL, blank=True, null=True)
     contrat = models.ForeignKey(ContratTransport, on_delete=models.CASCADE)
     statut = models.CharField(max_length=10, choices=STATUT_MISSION_CHOICES, default='en cours')
 
+    def clean(self):
+        """Validation des dates par rapport au contrat"""
+        super().clean()
+        errors = {}
+
+        # Vérifier que les champs obligatoires sont remplis
+        if not self.origine or not self.origine.strip():
+            errors['origine'] = 'L\'origine est obligatoire'
+        if not self.destination or not self.destination.strip():
+            errors['destination'] = 'La destination est obligatoire'
+        if not self.itineraire or not self.itineraire.strip():
+            errors['itineraire'] = 'L\'itinéraire est obligatoire'
+
+        # Vérifier la concordance des dates avec le contrat
+        if self.contrat and self.date_depart:
+            # La date de départ de la mission doit être >= date_debut du contrat
+            if self.date_depart < self.contrat.date_debut:
+                errors['date_depart'] = f'La date de départ ({self.date_depart}) doit être >= à la date de début du contrat ({self.contrat.date_debut})'
+
+        # Vérifier la date de retour si elle existe
+        if self.date_retour:
+            # La date de retour doit être après la date de départ
+            if self.date_depart and self.date_retour < self.date_depart:
+                errors['date_retour'] = 'La date de retour doit être après la date de départ'
+
+            # La date de retour devrait être <= date_limite_retour du contrat
+            if self.contrat and self.date_retour > self.contrat.date_limite_retour:
+                errors['date_retour'] = f'⚠️ La date de retour ({self.date_retour}) dépasse la date limite du contrat ({self.contrat.date_limite_retour}). Cela peut entraîner des pénalités.'
+
+        if errors:
+            raise ValidationError(errors)
+
     def save(self, *args, **kwargs):
+        # Générer la clé primaire si elle n'existe pas
         if not self.pk_mission:
             base = (
                 f"{self.prestation_transport.pk_presta_transport}_"
@@ -679,14 +768,36 @@ class Mission(models.Model):
             )
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_mission = slugify(base)[:250]
+
+        # Valider avant de sauvegarder (sauf si validate=False passé en kwargs)
+        validate = kwargs.pop('validate', True)
+        if validate:
+            self.full_clean()
+
         super().save(*args, **kwargs)
 
     def terminer_mission(self, date_retour=None):
-        """Méthode pour terminer proprement une mission"""
+        """Méthode pour terminer proprement une mission avec validation de la date"""
         from django.utils import timezone
 
         if date_retour is None:
             date_retour = timezone.now().date()
+
+        # Vérifier que la date de retour est cohérente
+        if date_retour < self.date_depart:
+            raise ValidationError(
+                f'La date de retour ({date_retour}) ne peut pas être avant la date de départ ({self.date_depart})'
+            )
+
+        # Vérifier si la date dépasse la limite du contrat
+        if date_retour > self.contrat.date_limite_retour:
+            jours_retard = (date_retour - self.contrat.date_limite_retour).days
+            penalite = jours_retard * 25000  # 25 000 FCFA par jour
+            raise ValidationError(
+                f'⚠️ ATTENTION: La date de retour ({date_retour}) dépasse la date limite du contrat ({self.contrat.date_limite_retour}) '
+                f'de {jours_retard} jour(s). Pénalité estimée: {penalite} FCFA. '
+                f'Confirmez-vous cette date de retour?'
+            )
 
         self.date_retour = date_retour
         self.statut = 'terminée'
