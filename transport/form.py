@@ -310,15 +310,15 @@ class ContratTransportForm(forms.ModelForm):
         # Mettre à jour le queryset du champ camion
         self.fields['camion'].queryset = camions_disponibles
 
-        # Ajouter un attribut ID au select du camion pour le JavaScript
+        # Ajouter les attributs pour la sélection automatique bidirectionnelle
         self.fields['camion'].widget.attrs.update({
             'id': 'id_camion',
             'onchange': 'chargerChauffeurAffecte()'
         })
 
-        # Ajouter un attribut ID au select du chauffeur
         self.fields['chauffeur'].widget.attrs.update({
-            'id': 'id_chauffeur'
+            'id': 'id_chauffeur',
+            'onchange': 'chargerCamionAffecte()'
         })
 
     def clean_numero_bl(self):
@@ -569,6 +569,15 @@ class FournisseurForm(forms.ModelForm):
         }
 
 class ReparationForm(forms.ModelForm):
+    # Champ pour sélectionner les mécaniciens directement dans le formulaire
+    mecaniciens = forms.ModelMultipleChoiceField(
+        queryset=Mecanicien.objects.all(),
+        required=True,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        label="Mécaniciens assignés",
+        help_text="Sélectionnez au moins un mécanicien pour cette réparation"
+    )
+
     class Meta:
         model = Reparation
         fields = ['camion', 'chauffeur', 'date_reparation', 'cout', 'description']
@@ -576,9 +585,46 @@ class ReparationForm(forms.ModelForm):
             'camion': forms.Select(attrs={'class': 'form-select'}),
             'chauffeur': forms.Select(attrs={'class': 'form-select'}),
             'date_reparation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'cout': forms.NumberInput(attrs={'class': 'form-control'}),
+            'cout': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Ajouter les attributs pour la sélection automatique bidirectionnelle
+        self.fields['camion'].widget.attrs.update({
+            'id': 'id_camion',
+            'onchange': 'chargerChauffeurAffecte()'
+        })
+
+        self.fields['chauffeur'].widget.attrs.update({
+            'id': 'id_chauffeur',
+            'onchange': 'chargerCamionAffecte()'
+        })
+
+        # Si on est en mode édition, pré-remplir les mécaniciens déjà assignés
+        if self.instance and self.instance.pk:
+            self.fields['mecaniciens'].initial = self.instance.get_mecaniciens()
+
+    def save(self, commit=True):
+        # Sauvegarder d'abord la réparation
+        reparation = super().save(commit=commit)
+
+        if commit:
+            # Supprimer les anciennes relations mécanicien
+            ReparationMecanicien.objects.filter(reparation=reparation).delete()
+
+            # Créer les nouvelles relations mécanicien
+            mecaniciens = self.cleaned_data.get('mecaniciens')
+            if mecaniciens:
+                for mecanicien in mecaniciens:
+                    ReparationMecanicien.objects.create(
+                        reparation=reparation,
+                        mecanicien=mecanicien
+                    )
+
+        return reparation
 
 
 class ReparationMecanicienForm(forms.ModelForm):

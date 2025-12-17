@@ -1101,6 +1101,23 @@ class Reparation(models.Model):
             self.pk_reparation = f"{slug}-{uuid4().hex[:8]}"
         super().save(*args, **kwargs)
 
+    def has_mecaniciens(self):
+        """Vérifie si la réparation a au moins un mécanicien assigné"""
+        return ReparationMecanicien.objects.filter(reparation=self).exists()
+
+    def get_mecaniciens(self):
+        """Retourne la liste des mécaniciens assignés à cette réparation"""
+        return Mecanicien.objects.filter(
+            reparationmecanicien__reparation=self
+        )
+
+    def get_cout_total(self):
+        """Calcule le coût total (coût de base + pièces)"""
+        cout_pieces = PieceReparee.objects.filter(reparation=self).aggregate(
+            total=models.Sum(models.F('quantite') * models.F('cout_unitaire'))
+        )['total'] or 0
+        return self.cout + cout_pieces
+
     def __str__(self):
         return f"Réparation {self.pk_reparation} - {self.camion}"
 

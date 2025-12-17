@@ -100,8 +100,13 @@ function calculerReliquat() {
     }
 }
 
+// Variable pour éviter les boucles infinies lors de la sélection bidirectionnelle
+let isUpdating = false;
+
 // Fonction pour charger automatiquement le chauffeur affecté au camion sélectionné
 function chargerChauffeurAffecte() {
+    if (isUpdating) return;
+
     const camionSelect = document.getElementById('id_camion');
     const chauffeurSelect = document.getElementById('id_chauffeur');
 
@@ -114,6 +119,8 @@ function chargerChauffeurAffecte() {
     if (!camionId) {
         return;
     }
+
+    isUpdating = true;
 
     // Appel AJAX pour récupérer le chauffeur affecté au camion
     fetch(`/api/camion/${camionId}/chauffeur/`)
@@ -128,7 +135,6 @@ function chargerChauffeurAffecte() {
                 chauffeurSelect.style.border = '2px solid #0c5460';
                 chauffeurSelect.title = `Chauffeur affecté : ${data.chauffeur_nom}`;
 
-                // Afficher un message d'information
                 console.log(`✅ Chauffeur affecté automatiquement : ${data.chauffeur_nom}`);
             } else {
                 // Aucun chauffeur affecté, réinitialiser
@@ -145,6 +151,63 @@ function chargerChauffeurAffecte() {
             chauffeurSelect.style.backgroundColor = '#f8d7da';
             chauffeurSelect.style.border = '1px solid #dc3545';
             chauffeurSelect.title = '❌ Erreur lors de la récupération du chauffeur';
+        })
+        .finally(() => {
+            isUpdating = false;
+        });
+}
+
+// Fonction pour charger automatiquement le camion affecté au chauffeur sélectionné
+function chargerCamionAffecte() {
+    if (isUpdating) return;
+
+    const camionSelect = document.getElementById('id_camion');
+    const chauffeurSelect = document.getElementById('id_chauffeur');
+
+    if (!camionSelect || !chauffeurSelect) {
+        return;
+    }
+
+    const chauffeurId = chauffeurSelect.value;
+
+    if (!chauffeurId) {
+        return;
+    }
+
+    isUpdating = true;
+
+    // Appel AJAX pour récupérer le camion affecté au chauffeur
+    fetch(`/api/chauffeur/${chauffeurId}/camion/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.camion_id) {
+                // Sélectionner automatiquement le camion
+                camionSelect.value = data.camion_id;
+
+                // Ajouter un effet visuel pour indiquer la sélection automatique
+                camionSelect.style.backgroundColor = '#d1ecf1';
+                camionSelect.style.border = '2px solid #0c5460';
+                camionSelect.title = `Camion affecté : ${data.camion_immatriculation}`;
+
+                console.log(`✅ Camion affecté automatiquement : ${data.camion_immatriculation}`);
+            } else {
+                // Aucun camion affecté, réinitialiser
+                camionSelect.value = '';
+                camionSelect.style.backgroundColor = '#fff3cd';
+                camionSelect.style.border = '1px solid #ffc107';
+                camionSelect.title = '⚠️ Aucun camion affecté à ce chauffeur';
+
+                console.warn('⚠️ Aucun camion affecté à ce chauffeur');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur lors de la récupération du camion:', error);
+            camionSelect.style.backgroundColor = '#f8d7da';
+            camionSelect.style.border = '1px solid #dc3545';
+            camionSelect.title = '❌ Erreur lors de la récupération du camion';
+        })
+        .finally(() => {
+            isUpdating = false;
         });
 }
 

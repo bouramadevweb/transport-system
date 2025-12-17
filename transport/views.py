@@ -521,6 +521,40 @@ def get_chauffeur_from_camion(request, pk_camion):
         }, status=404)
 
 
+# API: Récupérer le camion affecté à un chauffeur
+def get_camion_from_chauffeur(request, pk_chauffeur):
+    """
+    Retourne le camion actuellement affecté au chauffeur spécifié
+    """
+    from django.http import JsonResponse
+
+    try:
+        chauffeur = Chauffeur.objects.get(pk_chauffeur=pk_chauffeur)
+
+        # Chercher l'affectation active (sans date_fin_affectation)
+        affectation = Affectation.objects.filter(
+            chauffeur=chauffeur,
+            date_fin_affectation__isnull=True
+        ).first()
+
+        if affectation and affectation.camion:
+            return JsonResponse({
+                'success': True,
+                'camion_id': affectation.camion.pk_camion,
+                'camion_immatriculation': affectation.camion.immatriculation
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Aucun camion affecté à ce chauffeur'
+            })
+    except Chauffeur.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Chauffeur non trouvé'
+        }, status=404)
+
+
 # Liste
 def presta_transport_list(request):
     prestations = PrestationDeTransports.objects.all()
@@ -946,8 +980,14 @@ def create_reparation(request):
     if request.method == 'POST':
         form = ReparationForm(request.POST)
         if form.is_valid():
-            form.save()
+            reparation = form.save()
+            nb_mecaniciens = reparation.get_mecaniciens().count()
+            messages.success(request, f"✅ Réparation créée avec succès ({nb_mecaniciens} mécanicien(s) assigné(s))")
             return redirect('reparation_list')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {error}")
     else:
         form = ReparationForm()
     return render(request, 'transport/reparations/reparation_form.html', {'form': form, 'title': 'Ajouter une réparation'})
@@ -958,8 +998,14 @@ def update_reparation(request, pk):
     if request.method == 'POST':
         form = ReparationForm(request.POST, instance=reparation)
         if form.is_valid():
-            form.save()
+            reparation = form.save()
+            nb_mecaniciens = reparation.get_mecaniciens().count()
+            messages.success(request, f"✅ Réparation mise à jour avec succès ({nb_mecaniciens} mécanicien(s) assigné(s))")
             return redirect('reparation_list')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {error}")
     else:
         form = ReparationForm(instance=reparation)
     return render(request, 'transport/reparations/reparation_form.html', {'form': form, 'title': 'Modifier une réparation'})

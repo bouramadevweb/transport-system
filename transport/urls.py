@@ -61,6 +61,8 @@ urlpatterns = [
     path("contrat/pdf/<str:pk>/", views.pdf_contrat, name="pdf_contrat"),
     # API pour récupérer le chauffeur d'un camion
     path('api/camion/<str:pk_camion>/chauffeur/', views.get_chauffeur_from_camion, name='get_chauffeur_from_camion'),
+    # API pour récupérer le camion d'un chauffeur
+    path('api/chauffeur/<str:pk_chauffeur>/camion/', views.get_camion_from_chauffeur, name='get_camion_from_chauffeur'),
 
     path('prestations/', views.presta_transport_list, name='presta_transport_list'),
     path('prestations/create/', views.create_presta_transport, name='create_presta_transport'),
