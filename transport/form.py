@@ -284,6 +284,43 @@ class ContratTransportForm(forms.ModelForm):
             'signature_transitaire': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Filtrer pour afficher uniquement les camions disponibles (pas en mission en cours)
+        from .models import Camion, Mission, ContratTransport
+
+        # Récupérer tous les camions
+        all_camions = Camion.objects.all()
+
+        # Récupérer les IDs des camions en mission (statut='en cours')
+        camions_en_mission_ids = Mission.objects.filter(
+            statut='en cours'
+        ).values_list('contrat__camion_id', flat=True).distinct()
+
+        # Si on est en mode édition, autoriser le camion actuel même s'il est en mission
+        if self.instance and self.instance.pk and self.instance.camion:
+            camions_disponibles = all_camions.exclude(
+                pk_camion__in=camions_en_mission_ids
+            ) | Camion.objects.filter(pk_camion=self.instance.camion.pk_camion)
+        else:
+            # Mode création : uniquement les camions libres
+            camions_disponibles = all_camions.exclude(pk_camion__in=camions_en_mission_ids)
+
+        # Mettre à jour le queryset du champ camion
+        self.fields['camion'].queryset = camions_disponibles
+
+        # Ajouter un attribut ID au select du camion pour le JavaScript
+        self.fields['camion'].widget.attrs.update({
+            'id': 'id_camion',
+            'onchange': 'chargerChauffeurAffecte()'
+        })
+
+        # Ajouter un attribut ID au select du chauffeur
+        self.fields['chauffeur'].widget.attrs.update({
+            'id': 'id_chauffeur'
+        })
+
     def clean_numero_bl(self):
         """Valide l'unicité du numéro BL"""
         numero_bl = self.cleaned_data.get('numero_bl')
@@ -361,11 +398,54 @@ class CautionsForm(forms.ModelForm):
             'client': forms.Select(attrs={'class': 'form-select'}),
             'chauffeur': forms.Select(attrs={'class': 'form-select'}),
             'camion': forms.Select(attrs={'class': 'form-select'}),
-            'montant': forms.NumberInput(attrs={'class': 'form-control'}),
-            'non_rembourser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'est_rembourser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'montant_rembourser': forms.NumberInput(attrs={'class': 'form-control'}),
+            'montant': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'id': 'id_montant',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'statut': forms.Select(attrs={
+                'class': 'form-select',
+                'id': 'id_statut',
+                'onchange': 'gererEtatCaution()'
+            }),
+            'montant_rembourser': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'id': 'id_montant_rembourser',
+                'step': '0.01',
+                'min': '0'
+            }),
         }
+
+    def clean(self):
+        """Validation globale du formulaire"""
+        cleaned_data = super().clean()
+
+        # Créer une instance temporaire pour valider avec le modèle
+        if self.instance and self.instance.pk:
+            # Mode édition
+            temp_instance = self.instance
+        else:
+            # Mode création
+            temp_instance = Cautions(**cleaned_data)
+
+        # Mettre à jour les attributs de l'instance temporaire
+        for field, value in cleaned_data.items():
+            setattr(temp_instance, field, value)
+
+        # Appeler la validation du modèle
+        try:
+            temp_instance.clean()
+        except ValidationError as e:
+            # Convertir les erreurs du modèle en erreurs de formulaire
+            if hasattr(e, 'error_dict'):
+                for field, errors in e.error_dict.items():
+                    for error in errors:
+                        self.add_error(field, error)
+            else:
+                raise
+
+        return cleaned_data
 
 class FraisTrajetForm(forms.ModelForm):
     class Meta:

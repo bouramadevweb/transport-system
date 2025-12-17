@@ -16,6 +16,12 @@
                     </h5>
                 </div>
                 <div class="card-body p-4">
+                    <!-- Alertes d'aide -->
+                    <div class="alert alert-info mb-3" id="alert-aide">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Aide :</strong> Sélectionnez le statut de la caution et saisissez le montant remboursé si nécessaire.
+                    </div>
+
                     <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
                         {% bootstrap_form form %}
@@ -34,4 +40,119 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function gererEtatCaution() {
+    const statutSelect = document.getElementById('id_statut');
+    const montantInput = document.getElementById('id_montant');
+    const montantRembourserInput = document.getElementById('id_montant_rembourser');
+    const alertAide = document.getElementById('alert-aide');
+
+    if (!statutSelect || !montantRembourserInput) {
+        return;
+    }
+
+    const statut = statutSelect.value;
+
+    // Si statut = "remboursee"
+    if (statut === 'remboursee') {
+        // Activer le champ montant_rembourser
+        montantRembourserInput.disabled = false;
+        montantRembourserInput.required = true;
+
+        // Si le montant remboursé est vide, suggérer le montant de la caution
+        if (!montantRembourserInput.value || parseFloat(montantRembourserInput.value) === 0) {
+            if (montantInput && montantInput.value) {
+                montantRembourserInput.value = montantInput.value;
+            }
+        }
+
+        // Mettre en surbrillance le champ montant_rembourser
+        montantRembourserInput.style.backgroundColor = '#d1ecf1';
+        montantRembourserInput.style.border = '2px solid #0c5460';
+
+        // Afficher un message d'aide
+        alertAide.className = 'alert alert-success mb-3';
+        alertAide.innerHTML = '<i class="fas fa-check-circle me-2"></i><strong>Caution remboursée :</strong> Vérifiez que le montant remboursé est correct.';
+    }
+    // Si statut = "consommee"
+    else if (statut === 'consommee') {
+        // Activer le champ montant_rembourser
+        montantRembourserInput.disabled = false;
+        montantRembourserInput.required = false;
+
+        // Mettre en surbrillance le champ
+        montantRembourserInput.style.backgroundColor = '#cfe2ff';
+        montantRembourserInput.style.border = '2px solid #0d6efd';
+
+        // Afficher un message d'aide
+        alertAide.className = 'alert alert-info mb-3';
+        alertAide.innerHTML = '<i class="fas fa-shopping-cart me-2"></i><strong>Caution consommée :</strong> La caution a été utilisée pour des frais ou pénalités.';
+    }
+    // Si statut = "non_remboursee"
+    else if (statut === 'non_remboursee') {
+        // Désactiver et mettre à 0 le champ montant_rembourser
+        montantRembourserInput.value = '0';
+        montantRembourserInput.disabled = true;
+        montantRembourserInput.required = false;
+        montantRembourserInput.style.backgroundColor = '#f8d7da';
+        montantRembourserInput.style.border = '1px solid #dc3545';
+
+        // Afficher un message d'aide
+        alertAide.className = 'alert alert-danger mb-3';
+        alertAide.innerHTML = '<i class="fas fa-times-circle me-2"></i><strong>Caution non remboursée :</strong> La caution ne sera pas restituée au client.';
+    }
+    // Si statut = "en_attente"
+    else {
+        // Réinitialiser le champ montant_rembourser
+        montantRembourserInput.value = '0';
+        montantRembourserInput.disabled = false;
+        montantRembourserInput.required = false;
+        montantRembourserInput.style.backgroundColor = '';
+        montantRembourserInput.style.border = '';
+
+        // Afficher le message d'aide par défaut
+        alertAide.className = 'alert alert-warning mb-3';
+        alertAide.innerHTML = '<i class="fas fa-clock me-2"></i><strong>Caution en attente :</strong> Le statut de la caution n\'a pas encore été déterminé.';
+    }
+}
+
+// Copier le montant de la caution dans le montant remboursé quand on change le statut
+document.addEventListener('DOMContentLoaded', function() {
+    const statutSelect = document.getElementById('id_statut');
+    const montantInput = document.getElementById('id_montant');
+    const montantRembourserInput = document.getElementById('id_montant_rembourser');
+
+    // Initialiser l'état au chargement
+    gererEtatCaution();
+
+    // Si le montant de la caution change, mettre à jour le montant remboursé si statut = remboursee
+    if (montantInput) {
+        montantInput.addEventListener('change', function() {
+            if (statutSelect && statutSelect.value === 'remboursee') {
+                if (!montantRembourserInput.value || parseFloat(montantRembourserInput.value) === 0) {
+                    montantRembourserInput.value = this.value;
+                }
+            }
+        });
+    }
+
+    // Validation avant soumission
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (statutSelect && statutSelect.value === 'remboursee') {
+                if (!montantRembourserInput.value || parseFloat(montantRembourserInput.value) <= 0) {
+                    e.preventDefault();
+                    alert('⚠️ Erreur: Le montant remboursé doit être supérieur à 0 si la caution est marquée comme remboursée.');
+                    montantRembourserInput.focus();
+                    return false;
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

@@ -27,8 +27,7 @@
                             <th><i class="fas fa-id-card me-2"></i>Chauffeur</th>
                             <th><i class="fas fa-truck me-2"></i>Camion</th>
                             <th><i class="fas fa-money-bill me-2"></i>Montant</th>
-                            <th class="text-center"><i class="fas fa-ban me-2"></i>Non remboursé</th>
-                            <th class="text-center"><i class="fas fa-check me-2"></i>Remboursé</th>
+                            <th class="text-center"><i class="fas fa-info-circle me-2"></i>Statut</th>
                             <th><i class="fas fa-dollar-sign me-2"></i>Montant remboursé</th>
                             <th class="text-center">Actions</th>
                         </tr>
@@ -44,20 +43,25 @@
                             <td>{% if c.camion %}{{ c.camion.immatriculation }}{% else %}N/A{% endif %}</td>
                             <td>{{ c.montant }}</td>
                             <td class="text-center">
-                                {% if c.non_rembourser %}
-                                    <i class="fas fa-check-circle text-success"></i>
+                                {% if c.statut == 'remboursee' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Remboursée
+                                    </span>
+                                {% elif c.statut == 'consommee' %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-shopping-cart me-1"></i>Consommée
+                                    </span>
+                                {% elif c.statut == 'non_remboursee' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times-circle me-1"></i>Non remboursée
+                                    </span>
                                 {% else %}
-                                    <i class="fas fa-times-circle text-danger"></i>
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-clock me-1"></i>En attente
+                                    </span>
                                 {% endif %}
                             </td>
-                            <td class="text-center">
-                                {% if c.est_rembourser %}
-                                    <i class="fas fa-check-circle text-success"></i>
-                                {% else %}
-                                    <i class="fas fa-times-circle text-danger"></i>
-                                {% endif %}
-                            </td>
-                            <td>{{ c.montant_rembourser }}</td>
+                            <td>{{ c.montant_rembourser }} FCFA</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <a href="{% url 'update_caution' c.pk_caution %}"

@@ -59,6 +59,8 @@ urlpatterns = [
     path('contrats/<str:pk>/update/', views.update_contrat, name='update_contrat'),
     path('contrats/<str:pk>/delete/', views.delete_contrat, name='delete_contrat'),
     path("contrat/pdf/<str:pk>/", views.pdf_contrat, name="pdf_contrat"),
+    # API pour récupérer le chauffeur d'un camion
+    path('api/camion/<str:pk_camion>/chauffeur/', views.get_chauffeur_from_camion, name='get_chauffeur_from_camion'),
 
     path('prestations/', views.presta_transport_list, name='presta_transport_list'),
     path('prestations/create/', views.create_presta_transport, name='create_presta_transport'),

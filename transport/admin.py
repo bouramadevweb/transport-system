@@ -162,13 +162,11 @@ class CautionsAdmin(admin.ModelAdmin):
         'chauffeur',
         'camion',
         'montant',
-        'non_rembourser',
-        'est_rembourser',
+        'statut',
         'montant_rembourser',
     )
     list_filter = (
-        'non_rembourser',
-        'est_rembourser',
+        'statut',
         'transitaire',
         'client',
     )

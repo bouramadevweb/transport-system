@@ -100,10 +100,64 @@ function calculerReliquat() {
     }
 }
 
+// Fonction pour charger automatiquement le chauffeur affecté au camion sélectionné
+function chargerChauffeurAffecte() {
+    const camionSelect = document.getElementById('id_camion');
+    const chauffeurSelect = document.getElementById('id_chauffeur');
+
+    if (!camionSelect || !chauffeurSelect) {
+        return;
+    }
+
+    const camionId = camionSelect.value;
+
+    if (!camionId) {
+        return;
+    }
+
+    // Appel AJAX pour récupérer le chauffeur affecté au camion
+    fetch(`/api/camion/${camionId}/chauffeur/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.chauffeur_id) {
+                // Sélectionner automatiquement le chauffeur
+                chauffeurSelect.value = data.chauffeur_id;
+
+                // Ajouter un effet visuel pour indiquer la sélection automatique
+                chauffeurSelect.style.backgroundColor = '#d1ecf1';
+                chauffeurSelect.style.border = '2px solid #0c5460';
+                chauffeurSelect.title = `Chauffeur affecté : ${data.chauffeur_nom}`;
+
+                // Afficher un message d'information
+                console.log(`✅ Chauffeur affecté automatiquement : ${data.chauffeur_nom}`);
+            } else {
+                // Aucun chauffeur affecté, réinitialiser
+                chauffeurSelect.value = '';
+                chauffeurSelect.style.backgroundColor = '#fff3cd';
+                chauffeurSelect.style.border = '1px solid #ffc107';
+                chauffeurSelect.title = '⚠️ Aucun chauffeur affecté à ce camion';
+
+                console.warn('⚠️ Aucun chauffeur affecté à ce camion');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur lors de la récupération du chauffeur:', error);
+            chauffeurSelect.style.backgroundColor = '#f8d7da';
+            chauffeurSelect.style.border = '1px solid #dc3545';
+            chauffeurSelect.title = '❌ Erreur lors de la récupération du chauffeur';
+        });
+}
+
 // Calculer automatiquement au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     calculerDateLimiteRetour();
     calculerReliquat();
+
+    // Charger le chauffeur si un camion est déjà sélectionné (mode édition)
+    const camionSelect = document.getElementById('id_camion');
+    if (camionSelect && camionSelect.value) {
+        chargerChauffeurAffecte();
+    }
 });
 </script>
 {% endblock %}

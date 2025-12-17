@@ -35,7 +35,32 @@
                         <i class="fas fa-check-circle fa-2x me-3"></i>
                         <div>
                             <strong>✅ Mission terminée!</strong><br>
-                            Vous pouvez maintenant valider ce paiement en toute sécurité.
+                            La mission est terminée et prête pour validation.
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Alerte statut caution -->
+                    {% if not caution_ok %}
+                    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+                        <i class="fas fa-shield-alt fa-2x me-3"></i>
+                        <div>
+                            <strong>⚠️ Caution non remboursée!</strong><br>
+                            {{ caution_message }}<br>
+                            Vous devez rembourser la caution avant de valider le paiement.
+                            <div class="mt-2">
+                                <a href="{% url 'update_caution' caution.pk_caution %}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit me-1"></i>Gérer la caution
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+                        <i class="fas fa-shield-alt fa-2x me-3"></i>
+                        <div>
+                            <strong>✅ Caution OK!</strong><br>
+                            {{ caution_message }}
                         </div>
                     </div>
                     {% endif %}
@@ -144,21 +169,41 @@
                     </div>
 
                     <!-- Informations Caution -->
-                    <div class="card bg-info bg-opacity-10 mb-4">
+                    <div class="card {% if caution_ok %}border-success{% else %}border-warning{% endif %} mb-4">
                         <div class="card-body">
-                            <h6 class="card-subtitle mb-3 text-info">
+                            <h6 class="card-subtitle mb-3 {% if caution_ok %}text-success{% else %}text-warning{% endif %}">
                                 <i class="fas fa-shield-alt me-1"></i>Caution
                             </h6>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <strong>Montant :</strong> {{ paiement.caution.montant }}€
+                                    <div class="mb-2">
+                                        <strong>Montant :</strong> {{ caution.montant }} FCFA
+                                    </div>
+                                    {% if caution.est_rembourser %}
+                                    <div class="mb-2">
+                                        <strong>Montant remboursé :</strong>
+                                        <span class="text-success fw-bold">{{ caution.montant_rembourser }} FCFA</span>
+                                    </div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    <strong>Remboursée :</strong>
-                                    {% if paiement.caution.est_rembourser %}
-                                        <span class="badge bg-success">Oui ({{ paiement.caution.montant_rembourser }}€)</span>
-                                    {% else %}
-                                        <span class="badge bg-warning">Non</span>
+                                    <div class="mb-2">
+                                        <strong>Statut :</strong>
+                                        {% if caution.statut == 'remboursee' %}
+                                            <span class="badge bg-success">✅ Remboursée</span>
+                                        {% elif caution.statut == 'consommee' %}
+                                            <span class="badge bg-info">🛒 Consommée</span>
+                                        {% elif caution.statut == 'non_remboursee' %}
+                                            <span class="badge bg-danger">❌ Non remboursée</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">⏳ En attente</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if not caution_ok %}
+                                    <div class="alert alert-warning p-2 mb-0 mt-2 small">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        La caution doit être remboursée ou consommée avant validation
+                                    </div>
                                     {% endif %}
                                 </div>
                             </div>
@@ -169,7 +214,7 @@
                     <form method="post">
                         {% csrf_token %}
 
-                        {% if mission_terminee %}
+                        {% if mission_terminee and caution_ok %}
                         <div class="alert alert-success d-flex align-items-center">
                             <i class="fas fa-check-circle fa-lg me-2"></i>
                             <div>
@@ -190,9 +235,15 @@
                             <a href="{% url 'paiement_mission_list' %}" class="btn btn-secondary px-4">
                                 <i class="fas fa-arrow-left me-1"></i> Retour
                             </a>
+                            {% if not mission_terminee %}
                             <a href="{% url 'terminer_mission' paiement.mission.pk_mission %}" class="btn btn-success px-4">
                                 <i class="fas fa-flag-checkered me-1"></i> Terminer la mission d'abord
                             </a>
+                            {% elif not caution_ok %}
+                            <a href="{% url 'update_caution' caution.pk_caution %}" class="btn btn-warning px-4">
+                                <i class="fas fa-shield-alt me-1"></i> Gérer la caution d'abord
+                            </a>
+                            {% endif %}
                         </div>
                         {% endif %}
                     </form>
@@ -206,9 +257,15 @@
                         <i class="fas fa-lightbulb me-2"></i>Informations
                     </h6>
                     <ul class="small mb-0">
-                        <li>Un paiement ne peut être validé que si la mission associée est terminée</li>
+                        <li><strong>Conditions de validation :</strong>
+                            <ul>
+                                <li>La mission associée doit être terminée</li>
+                                <li>La caution doit être remboursée</li>
+                            </ul>
+                        </li>
                         <li>Une fois validé, le paiement ne peut plus être modifié</li>
                         <li>La date de validation sera enregistrée automatiquement</li>
+                        <li>Si la caution est remboursée, le champ "caution_est_retiree" sera automatiquement coché</li>
                         <li>Assurez-vous que toutes les informations sont correctes avant validation</li>
                     </ul>
                 </div>

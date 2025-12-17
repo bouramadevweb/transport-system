@@ -486,6 +486,41 @@ def delete_contrat(request, pk):
         return redirect('contrat_list')
     return render(request, "transport/contrat/contrat_confirm_delete.html", {"contrat": contrat, "title": "Supprimer le contrat"})
 
+
+# API: Récupérer le chauffeur affecté à un camion
+def get_chauffeur_from_camion(request, pk_camion):
+    """
+    Retourne le chauffeur actuellement affecté au camion spécifié
+    """
+    from django.http import JsonResponse
+
+    try:
+        camion = Camion.objects.get(pk_camion=pk_camion)
+
+        # Chercher l'affectation active (sans date_fin_affectation)
+        affectation = Affectation.objects.filter(
+            camion=camion,
+            date_fin_affectation__isnull=True
+        ).first()
+
+        if affectation and affectation.chauffeur:
+            return JsonResponse({
+                'success': True,
+                'chauffeur_id': affectation.chauffeur.pk_chauffeur,
+                'chauffeur_nom': f"{affectation.chauffeur.nom} {affectation.chauffeur.prenom}"
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Aucun chauffeur affecté à ce camion'
+            })
+    except Camion.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Camion non trouvé'
+        }, status=404)
+
+
 # Liste
 def presta_transport_list(request):
     prestations = PrestationDeTransports.objects.all()
@@ -772,14 +807,33 @@ def valider_paiement_mission(request, pk):
     # Vérifier le statut de la mission
     mission_terminee = paiement.mission.statut == 'terminée'
 
+    # Vérifier l'état de la caution
+    caution = paiement.caution
+    caution_ok = False
+    caution_message = ""
+
+    if caution:
+        if caution.statut in ['remboursee', 'consommee']:
+            caution_ok = True
+            statut_label = caution.get_statut_display()
+            caution_message = f"✅ Caution {statut_label.lower()} ({caution.montant_rembourser} FCFA sur {caution.montant} FCFA)"
+        else:
+            caution_ok = False
+            statut_label = caution.get_statut_display()
+            caution_message = f"❌ Caution {statut_label.lower()} ({caution.montant} FCFA)"
+
     if request.method == 'POST':
         if not mission_terminee:
             messages.error(request, f"❌ Impossible de valider! La mission est '{paiement.mission.statut}'. Terminez d'abord la mission.")
             return redirect('paiement_mission_list')
 
+        if not caution_ok:
+            messages.error(request, f"❌ Impossible de valider! La caution de {caution.montant} FCFA n'a pas été remboursée. Veuillez rembourser la caution avant de valider le paiement.")
+            return redirect('paiement_mission_list')
+
         try:
             paiement.valider_paiement()
-            messages.success(request, f"✅ Paiement validé avec succès! Montant: {paiement.montant_total}€")
+            messages.success(request, f"✅ Paiement validé avec succès! Montant: {paiement.montant_total} FCFA")
             return redirect('paiement_mission_list')
         except Exception as e:
             messages.error(request, f"❌ Erreur lors de la validation : {str(e)}")
@@ -788,6 +842,9 @@ def valider_paiement_mission(request, pk):
     return render(request, 'transport/paiements-mission/valider_paiement.html', {
         'paiement': paiement,
         'mission_terminee': mission_terminee,
+        'caution': caution,
+        'caution_ok': caution_ok,
+        'caution_message': caution_message,
         'title': 'Valider le paiement'
     })
 
