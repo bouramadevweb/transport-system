@@ -983,7 +983,9 @@ def create_reparation(request):
             reparation = form.save()
             nb_mecaniciens = reparation.get_mecaniciens().count()
             messages.success(request, f"✅ Réparation créée avec succès ({nb_mecaniciens} mécanicien(s) assigné(s))")
-            return redirect('reparation_list')
+            messages.info(request, f"🔧 Vous pouvez maintenant ajouter les pièces utilisées pour cette réparation.")
+            # Rediriger vers l'ajout de pièces avec la réparation pré-remplie
+            return redirect('create_piece_reparee', reparation_id=reparation.pk_reparation)
         else:
             for field, errors in form.errors.items():
                 for error in errors:
@@ -1078,18 +1080,32 @@ def piece_reparee_list(request):
     })
 
 # Création
-def create_piece_reparee(request):
+def create_piece_reparee(request, reparation_id=None):
+    # Récupérer la réparation si un ID est fourni
+    reparation_preselected = None
+    if reparation_id:
+        reparation_preselected = get_object_or_404(Reparation, pk_reparation=reparation_id)
+
     if request.method == 'POST':
-        form = PieceRepareeForm(request.POST)
+        form = PieceRepareeForm(request.POST, reparation_id=reparation_id)
         if form.is_valid():
-            form.save()
-            return redirect('piece_reparee_list')
+            piece = form.save()
+            messages.success(request, f"✅ Pièce '{piece.nom_piece}' ajoutée avec succès!")
+
+            # Rediriger vers la liste des réparations ou des pièces
+            if reparation_id:
+                return redirect('reparation_list')
+            else:
+                return redirect('piece_reparee_list')
     else:
-        form = PieceRepareeForm()
-    return render(request, 'transport/reparations/piece_reparee_form.html', {
+        form = PieceRepareeForm(reparation_id=reparation_id)
+
+    context = {
         'form': form,
-        'title': 'Ajouter une pièce réparée'
-    })
+        'title': 'Ajouter une pièce réparée',
+        'reparation_preselected': reparation_preselected
+    }
+    return render(request, 'transport/reparations/piece_reparee_form.html', context)
 
 # Modification
 def update_piece_reparee(request, pk):
@@ -1353,4 +1369,222 @@ def pdf_contrat(request, pk):
         content_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename=\"Feuille_de_Route_{pk}.pdf\"'}
     )
+
+
+# ============================================================================
+# TABLEAU DE BORD STATISTIQUES
+# ============================================================================
+
+def tableau_bord_statistiques(request):
+    """
+    Affiche le tableau de bord avec toutes les statistiques avancées :
+    - Statistiques par camion/chauffeur
+    - Évolution temporelle (par mois/année)
+    - Top et bottom performers
+    """
+    from django.db.models import Count, Sum, F, Max, Min
+    from django.db.models.functions import TruncMonth, TruncYear
+
+    # ========== STATISTIQUES GLOBALES ==========
+    total_missions = Mission.objects.count()
+    total_camions = Camion.objects.count()
+    total_chauffeurs = Chauffeur.objects.count()
+    total_reparations = Reparation.objects.count()
+    total_pieces = PieceReparee.objects.count()
+    ca_total = ContratTransport.objects.aggregate(total=Sum('montant_total'))['total'] or 0
+    cout_reparations_total = Reparation.objects.aggregate(total=Sum('cout'))['total'] or 0
+    cout_pieces_total = PieceReparee.objects.aggregate(total=Sum(F('quantite') * F('cout_unitaire')))['total'] or 0
+
+    # ========== TOP PERFORMERS ==========
+
+    # Camion avec le plus de missions
+    top_camion_missions = Mission.objects.values(
+        'contrat__camion__immatriculation',
+        'contrat__camion__modele'
+    ).annotate(nb_missions=Count('pk_mission')).order_by('-nb_missions').first()
+
+    # Chauffeur avec le plus de missions
+    top_chauffeur_missions = Mission.objects.values(
+        'contrat__chauffeur__nom',
+        'contrat__chauffeur__prenom'
+    ).annotate(nb_missions=Count('pk_mission')).order_by('-nb_missions').first()
+
+    # Camion qui a généré le plus d'argent
+    top_camion_ca = ContratTransport.objects.values(
+        'camion__immatriculation',
+        'camion__modele'
+    ).annotate(ca_total=Sum('montant_total')).order_by('-ca_total').first()
+
+    # Camion avec le moins de réparations (qui a au moins une réparation)
+    bottom_camion_reparations = Reparation.objects.values(
+        'camion__immatriculation',
+        'camion__modele'
+    ).annotate(nb_reparations=Count('pk_reparation')).order_by('nb_reparations').first()
+
+    # ========== STATISTIQUES PAR CAMION ==========
+
+    # 1. Missions par camion
+    missions_par_camion = Mission.objects.values(
+        'contrat__camion__pk_camion',
+        'contrat__camion__immatriculation',
+        'contrat__camion__modele'
+    ).annotate(nb_missions=Count('pk_mission')).order_by('-nb_missions')
+
+    # 2. Missions par chauffeur
+    missions_par_chauffeur = Mission.objects.values(
+        'contrat__chauffeur__pk_chauffeur',
+        'contrat__chauffeur__nom',
+        'contrat__chauffeur__prenom'
+    ).annotate(nb_missions=Count('pk_mission')).order_by('-nb_missions')
+
+    # 3. CA par camion
+    ca_par_camion = ContratTransport.objects.values(
+        'camion__pk_camion',
+        'camion__immatriculation',
+        'camion__modele'
+    ).annotate(ca_total=Sum('montant_total')).order_by('-ca_total')
+
+    # 4. Réparations par camion
+    reparations_par_camion = Reparation.objects.values(
+        'camion__pk_camion',
+        'camion__immatriculation',
+        'camion__modele'
+    ).annotate(
+        nb_reparations=Count('pk_reparation'),
+        cout_total=Sum('cout')
+    ).order_by('-nb_reparations')
+
+    # ========== ÉVOLUTION TEMPORELLE (PAR MOIS) ==========
+
+    # Missions par mois et par camion
+    missions_par_mois_camion = Mission.objects.annotate(
+        mois=TruncMonth('date_depart')
+    ).values(
+        'mois',
+        'contrat__camion__immatriculation'
+    ).annotate(
+        nb_missions=Count('pk_mission')
+    ).order_by('-mois', 'contrat__camion__immatriculation')
+
+    # CA par mois et par camion
+    ca_par_mois_camion = ContratTransport.objects.annotate(
+        mois=TruncMonth('date_debut')
+    ).values(
+        'mois',
+        'camion__immatriculation'
+    ).annotate(
+        ca=Sum('montant_total')
+    ).order_by('-mois', 'camion__immatriculation')
+
+    # Réparations par mois et par camion
+    reparations_par_mois_camion = Reparation.objects.annotate(
+        mois=TruncMonth('date_reparation')
+    ).values(
+        'mois',
+        'camion__immatriculation'
+    ).annotate(
+        nb_reparations=Count('pk_reparation'),
+        cout_total=Sum('cout')
+    ).order_by('-mois', 'camion__immatriculation')
+
+    # Pièces réparées par mois et par camion
+    pieces_par_mois_camion = PieceReparee.objects.annotate(
+        mois=TruncMonth('reparation__date_reparation')
+    ).values(
+        'mois',
+        'reparation__camion__immatriculation'
+    ).annotate(
+        nb_pieces=Count('pk_piece'),
+        cout_total=Sum(F('quantite') * F('cout_unitaire'))
+    ).order_by('-mois', 'reparation__camion__immatriculation')
+
+    # ========== ÉVOLUTION TEMPORELLE (PAR ANNÉE) ==========
+
+    # Missions par année
+    missions_par_annee = Mission.objects.annotate(
+        annee=TruncYear('date_depart')
+    ).values('annee').annotate(
+        nb_missions=Count('pk_mission')
+    ).order_by('-annee')
+
+    # CA par année
+    ca_par_annee = ContratTransport.objects.annotate(
+        annee=TruncYear('date_debut')
+    ).values('annee').annotate(
+        ca=Sum('montant_total')
+    ).order_by('-annee')
+
+    # Réparations par année
+    reparations_par_annee = Reparation.objects.annotate(
+        annee=TruncYear('date_reparation')
+    ).values('annee').annotate(
+        nb_reparations=Count('pk_reparation'),
+        cout_total=Sum('cout')
+    ).order_by('-annee')
+
+    # ========== PIÈCES ==========
+
+    # Pièces réparées détaillées
+    pieces_reparees = PieceReparee.objects.select_related(
+        'reparation__camion', 'fournisseur'
+    ).annotate(
+        cout_total_piece=F('quantite') * F('cout_unitaire')
+    ).order_by('-cout_total_piece')
+
+    # Statistiques des pièces par catégorie
+    pieces_par_categorie = PieceReparee.objects.values(
+        'categorie'
+    ).annotate(
+        nb_pieces=Count('pk_piece'),
+        cout_total=Sum(F('quantite') * F('cout_unitaire'))
+    ).order_by('-cout_total')
+
+    # Ajouter le nom de la catégorie
+    for item in pieces_par_categorie:
+        item['categorie_display'] = dict(
+            PieceReparee._meta.get_field('categorie').choices
+        ).get(item['categorie'], item['categorie'])
+
+    context = {
+        'title': 'Tableau de bord - Statistiques',
+
+        # Globales
+        'total_missions': total_missions,
+        'total_camions': total_camions,
+        'total_chauffeurs': total_chauffeurs,
+        'total_reparations': total_reparations,
+        'total_pieces': total_pieces,
+        'ca_total': ca_total,
+        'cout_reparations_total': cout_reparations_total,
+        'cout_pieces_total': cout_pieces_total,
+
+        # Top performers
+        'top_camion_missions': top_camion_missions,
+        'top_chauffeur_missions': top_chauffeur_missions,
+        'top_camion_ca': top_camion_ca,
+        'bottom_camion_reparations': bottom_camion_reparations,
+
+        # Par camion/chauffeur
+        'missions_par_camion': missions_par_camion,
+        'missions_par_chauffeur': missions_par_chauffeur,
+        'ca_par_camion': ca_par_camion,
+        'reparations_par_camion': reparations_par_camion,
+
+        # Évolution temporelle (mois)
+        'missions_par_mois_camion': missions_par_mois_camion,
+        'ca_par_mois_camion': ca_par_mois_camion,
+        'reparations_par_mois_camion': reparations_par_mois_camion,
+        'pieces_par_mois_camion': pieces_par_mois_camion,
+
+        # Évolution temporelle (année)
+        'missions_par_annee': missions_par_annee,
+        'ca_par_annee': ca_par_annee,
+        'reparations_par_annee': reparations_par_annee,
+
+        # Pièces
+        'pieces_reparees': pieces_reparees,
+        'pieces_par_categorie': pieces_par_categorie,
+    }
+
+    return render(request, 'transport/statistiques/tableau_bord.html', context)
 

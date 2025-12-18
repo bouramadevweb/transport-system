@@ -70,6 +70,28 @@
           </div>
         </div>
 
+   
+
+
+<!-- Statistique -->
+        <div class="menu-section">
+          <div class="section-header" data-section="statistique">
+            <i class="fas fa-building"></i>
+            <span>Statistique</span>
+            <i class="fas fa-chevron-down toggle-icon"></i>
+          </div>
+          <div class="section-content">
+            <a href="{% url 'statistiques' %}" class="{% if 'entreprise' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Entreprises">
+              <i class="fas fa-chart-bar"></i><span>Statistiques</span>
+            </a>
+            
+          </div>
+        </div>
+
+
+
+
+
         <!-- Partenaires -->
         <div class="menu-section">
           <div class="section-header" data-section="partenaires">

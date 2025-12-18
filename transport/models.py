@@ -439,6 +439,7 @@ class ContratTransport(models.Model):
     chauffeur = models.ForeignKey("Chauffeur", on_delete=models.CASCADE)
 
     numero_bl = models.CharField(max_length=100, unique=True)
+    lieu_chargement = models.CharField(max_length=200, default='Bamako', help_text="Lieu de chargement / Origine")
     destinataire = models.CharField(max_length=200)
 
     montant_total = models.DecimalField(
@@ -751,7 +752,7 @@ class Mission(models.Model):
     destination = models.CharField(max_length=200)
     itineraire = models.TextField(
         blank=True,
-        default='Itinéraire à compléter',
+        # default='Itinéraire à compléter',
         help_text="Décrivez l'itinéraire détaillé de la mission"
     )
     frais_trajet = models.ForeignKey(FraisTrajet, on_delete=models.SET_NULL, blank=True, null=True)

@@ -16,14 +16,38 @@
                     </h5>
                 </div>
                 <div class="card-body p-4">
+                    {% if reparation_preselected %}
+                    <!-- Alerte pour la réparation pré-sélectionnée -->
+                    <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+                        <i class="fas fa-wrench fa-2x me-3"></i>
+                        <div>
+                            <strong>🔧 Réparation sélectionnée</strong><br>
+                            <small>
+                                ID: <code>{{ reparation_preselected.pk_reparation }}</code> |
+                                Camion: <strong>{{ reparation_preselected.camion.immatriculation }}</strong> |
+                                Date: {{ reparation_preselected.date_reparation|date:"d/m/Y" }}
+                            </small>
+                            <div class="mt-2">
+                                <span class="badge bg-info">Cette pièce sera automatiquement liée à cette réparation</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <form method="post" class="needs-validation" novalidate>
                         {%csrf_token %}
                         {%bootstrap_form form %}
 
                         <div class="d-flex gap-2 justify-content-end mt-4">
-                            <a href="{%url 'piece_reparee_list' %}" class="btn btn-secondary">
-                                <i class="fas fa-times me-1"></i> Annuler
+                            {% if reparation_preselected %}
+                            <a href="{%url 'reparation_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Retour aux réparations
                             </a>
+                            {% else %}
+                            <a href="{%url 'piece_reparee_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-list me-1"></i> Liste des pièces
+                            </a>
+                            {% endif %}
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-1"></i> Enregistrer
                             </button>
@@ -31,6 +55,22 @@
                     </form>
                 </div>
             </div>
+
+            {% if reparation_preselected %}
+            <!-- Carte d'aide -->
+            <div class="card border-info mt-3 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-info mb-2">
+                        <i class="fas fa-lightbulb me-2"></i>Informations
+                    </h6>
+                    <ul class="small mb-0">
+                        <li>Le champ <strong>Réparation</strong> est verrouillé pour éviter les doublons</li>
+                        <li>Cette pièce sera automatiquement liée à cette réparation</li>
+                        <li>Utilisez <strong>"Retour aux réparations"</strong> après l'enregistrement</li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

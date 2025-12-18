@@ -217,7 +217,7 @@ class ContratTransportForm(forms.ModelForm):
     class Meta:
         model = ContratTransport
         fields = [
-            "numero_bl", "destinataire",
+            "numero_bl", "lieu_chargement", "destinataire",
             "conteneur", "client", "transitaire", "entreprise",
             "camion", "chauffeur",
             "montant_total", "avance_transport", "reliquat_transport", "caution",
@@ -227,8 +227,14 @@ class ContratTransportForm(forms.ModelForm):
             "signature_chauffeur", "signature_client", "signature_transitaire",
         ]
 
+        labels = {
+            'destinataire': 'Destination',
+            'lieu_chargement': 'Lieu de chargement (Origine)',
+        }
+
         widgets = {
             'numero_bl': forms.TextInput(attrs={'class': 'form-control'}),
+            'lieu_chargement': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Bamako, Port de Dakar, etc.'}),
             'destinataire': forms.TextInput(attrs={'class': 'form-control'}),
 
             'conteneur': forms.Select(attrs={'class': 'form-select'}),
@@ -640,18 +646,40 @@ class PieceRepareeForm(forms.ModelForm):
     class Meta:
         model = PieceReparee
         fields = [
-            'reparation', 'nom_piece', 'categorie', 'reference', 
+            'reparation', 'nom_piece', 'categorie', 'reference',
             'quantite', 'cout_unitaire', 'fournisseur'
         ]
         widgets = {
-            'reparation': forms.Select(attrs={'class': 'form-select'}),
+            'reparation': forms.Select(attrs={'class': 'form-select', 'id': 'id_reparation'}),
             'nom_piece': forms.TextInput(attrs={'class': 'form-control'}),
             'categorie': forms.Select(attrs={'class': 'form-select'}),
             'reference': forms.TextInput(attrs={'class': 'form-control'}),
-            'quantite': forms.NumberInput(attrs={'class': 'form-control'}),
-            'cout_unitaire': forms.NumberInput(attrs={'class': 'form-control'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'value': '1'}),
+            'cout_unitaire': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'fournisseur': forms.Select(attrs={'class': 'form-select'}),
-        }            
+        }
+
+    def __init__(self, *args, **kwargs):
+        # Extraire reparation_id des kwargs
+        reparation_id = kwargs.pop('reparation_id', None)
+        super().__init__(*args, **kwargs)
+
+        # Si une réparation est pré-sélectionnée
+        if reparation_id:
+            from .models import Reparation
+            try:
+                reparation = Reparation.objects.get(pk_reparation=reparation_id)
+                # Pré-remplir le champ réparation
+                self.fields['reparation'].initial = reparation
+                # Filtrer le queryset pour ne montrer que cette réparation
+                self.fields['reparation'].queryset = Reparation.objects.filter(pk_reparation=reparation_id)
+                # Désactiver complètement le champ pour empêcher toute modification
+                self.fields['reparation'].disabled = True
+                self.fields['reparation'].widget.attrs['style'] = 'background-color: #e9ecef;'
+                self.fields['reparation'].widget.attrs['title'] = '🔒 Réparation verrouillée'
+                self.fields['reparation'].help_text = "🔒 Réparation verrouillée - Cette pièce sera ajoutée à cette réparation"
+            except Reparation.DoesNotExist:
+                pass
 
 class ConnexionForm(forms.Form):
     email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={'class': 'form-control'}))

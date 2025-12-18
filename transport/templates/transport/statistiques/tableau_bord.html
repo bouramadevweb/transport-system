@@ -1,0 +1,699 @@
+{% extends "admin.html" %}
+
+{% block page_title %}{{ title }} | Gestion Transport{% endblock %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0"><i class="fas fa-chart-line text-primary me-2"></i>{{ title }}</h2>
+    </div>
+
+    <!-- Statistiques globales -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-primary shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-truck fa-2x text-primary mb-2"></i>
+                    <h3 class="text-primary mb-1">{{ total_camions }}</h3>
+                    <p class="text-muted mb-0">Camions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-info shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-tie fa-2x text-info mb-2"></i>
+                    <h3 class="text-info mb-1">{{ total_chauffeurs }}</h3>
+                    <p class="text-muted mb-0">Chauffeurs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-warning shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-route fa-2x text-warning mb-2"></i>
+                    <h3 class="text-warning mb-1">{{ total_missions }}</h3>
+                    <p class="text-muted mb-0">Missions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-success shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                    <h3 class="text-success mb-1">{{ ca_total|floatformat:0 }}</h3>
+                    <p class="text-muted mb-0">CA Total (FCFA)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Performers -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-warning shadow-sm h-100">
+                <div class="card-header bg-warning text-white">
+                    <h6 class="mb-0"><i class="fas fa-trophy me-2"></i>Top Missions</h6>
+                </div>
+                <div class="card-body">
+                    {% if top_camion_missions %}
+                    <p class="mb-1"><strong>Camion:</strong></p>
+                    <p class="text-muted">{{ top_camion_missions.contrat__camion__immatriculation }}</p>
+                    <h4 class="text-warning">{{ top_camion_missions.nb_missions }} missions</h4>
+                    {% else %}
+                    <p class="text-muted">Aucune donnée</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-info shadow-sm h-100">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-star me-2"></i>Top Chauffeur</h6>
+                </div>
+                <div class="card-body">
+                    {% if top_chauffeur_missions %}
+                    <p class="mb-1"><strong>Chauffeur:</strong></p>
+                    <p class="text-muted">{{ top_chauffeur_missions.contrat__chauffeur__prenom }} {{ top_chauffeur_missions.contrat__chauffeur__nom }}</p>
+                    <h4 class="text-info">{{ top_chauffeur_missions.nb_missions }} missions</h4>
+                    {% else %}
+                    <p class="text-muted">Aucune donnée</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-success shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Top CA</h6>
+                </div>
+                <div class="card-body">
+                    {% if top_camion_ca %}
+                    <p class="mb-1"><strong>Camion:</strong></p>
+                    <p class="text-muted">{{ top_camion_ca.camion__immatriculation }}</p>
+                    <h4 class="text-success">{{ top_camion_ca.ca_total|floatformat:0 }}</h4>
+                    {% else %}
+                    <p class="text-muted">Aucune donnée</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-primary shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-tools me-2"></i>Moins réparations</h6>
+                </div>
+                <div class="card-body">
+                    {% if bottom_camion_reparations %}
+                    <p class="mb-1"><strong>Camion:</strong></p>
+                    <p class="text-muted">{{ bottom_camion_reparations.camion__immatriculation }}</p>
+                    <h4 class="text-primary">{{ bottom_camion_reparations.nb_reparations }} rép.</h4>
+                    {% else %}
+                    <p class="text-muted">Aucune donnée</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="statsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="vue-ensemble-tab" data-bs-toggle="tab" data-bs-target="#vue-ensemble" type="button" role="tab">
+                <i class="fas fa-chart-bar me-1"></i>Vue d'ensemble
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="mensuel-tab" data-bs-toggle="tab" data-bs-target="#mensuel" type="button" role="tab">
+                <i class="fas fa-calendar-alt me-1"></i>Mensuel
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="annuel-tab" data-bs-toggle="tab" data-bs-target="#annuel" type="button" role="tab">
+                <i class="fas fa-calendar me-1"></i>Annuel
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pieces-tab" data-bs-toggle="tab" data-bs-target="#pieces" type="button" role="tab">
+                <i class="fas fa-cog me-1"></i>Pièces
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="statsTabsContent">
+        <!-- Onglet Vue d'ensemble -->
+        <div class="tab-pane fade show active" id="vue-ensemble" role="tabpanel">
+            <div class="row">
+                <!-- Missions par camion -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Missions par camion</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Camion</th>
+                                            <th>Modèle</th>
+                                            <th class="text-center">Missions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in missions_par_camion %}
+                                        <tr>
+                                            <td><strong>{{ item.contrat__camion__immatriculation }}</strong></td>
+                                            <td>{{ item.contrat__camion__modele }}</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary">{{ item.nb_missions }}</span>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Aucune mission</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Missions par chauffeur -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-user-tie me-2"></i>Missions par chauffeur</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Chauffeur</th>
+                                            <th class="text-center">Missions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in missions_par_chauffeur %}
+                                        <tr>
+                                            <td><strong>{{ item.contrat__chauffeur__prenom }} {{ item.contrat__chauffeur__nom }}</strong></td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info">{{ item.nb_missions }}</span>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Aucune mission</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CA par camion -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>CA par camion</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Camion</th>
+                                            <th class="text-end">CA (FCFA)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in ca_par_camion %}
+                                        <tr>
+                                            <td><strong>{{ item.camion__immatriculation }}</strong></td>
+                                            <td class="text-end text-success">
+                                                <strong>{{ item.ca_total|floatformat:0 }}</strong>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Aucun CA</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <th>TOTAL</th>
+                                            <th class="text-end text-success">{{ ca_total|floatformat:0 }} FCFA</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Réparations par camion -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="fas fa-wrench me-2"></i>Réparations par camion</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Camion</th>
+                                            <th class="text-center">Nb.</th>
+                                            <th class="text-end">Coût (FCFA)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in reparations_par_camion %}
+                                        <tr>
+                                            <td><strong>{{ item.camion__immatriculation }}</strong></td>
+                                            <td class="text-center">
+                                                <span class="badge bg-danger">{{ item.nb_reparations }}</span>
+                                            </td>
+                                            <td class="text-end text-danger">
+                                                <strong>{{ item.cout_total|default:0|floatformat:0 }}</strong>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Aucune réparation</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Mensuel -->
+        <div class="tab-pane fade" id="mensuel" role="tabpanel">
+            <div class="row">
+                <!-- Missions par mois et camion -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Missions par mois/camion</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Mois</th>
+                                            <th>Camion</th>
+                                            <th class="text-center">Nb.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in missions_par_mois_camion %}
+                                        <tr>
+                                            <td>{{ item.mois|date:"m/Y" }}</td>
+                                            <td><strong>{{ item.contrat__camion__immatriculation }}</strong></td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary">{{ item.nb_missions }}</span>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CA par mois et camion -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>CA par mois/camion</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Mois</th>
+                                            <th>Camion</th>
+                                            <th class="text-end">CA (FCFA)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in ca_par_mois_camion %}
+                                        <tr>
+                                            <td>{{ item.mois|date:"m/Y" }}</td>
+                                            <td><strong>{{ item.camion__immatriculation }}</strong></td>
+                                            <td class="text-end text-success">{{ item.ca|floatformat:0 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Réparations par mois et camion -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="fas fa-wrench me-2"></i>Réparations par mois/camion</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Mois</th>
+                                            <th>Camion</th>
+                                            <th class="text-center">Nb.</th>
+                                            <th class="text-end">Coût</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in reparations_par_mois_camion %}
+                                        <tr>
+                                            <td>{{ item.mois|date:"m/Y" }}</td>
+                                            <td><strong>{{ item.camion__immatriculation }}</strong></td>
+                                            <td class="text-center">
+                                                <span class="badge bg-danger">{{ item.nb_reparations }}</span>
+                                            </td>
+                                            <td class="text-end">{{ item.cout_total|floatformat:0 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pièces par mois et camion -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Pièces par mois/camion</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Mois</th>
+                                            <th>Camion</th>
+                                            <th class="text-center">Nb.</th>
+                                            <th class="text-end">Coût</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in pieces_par_mois_camion %}
+                                        <tr>
+                                            <td>{{ item.mois|date:"m/Y" }}</td>
+                                            <td><strong>{{ item.reparation__camion__immatriculation }}</strong></td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">{{ item.nb_pieces }}</span>
+                                            </td>
+                                            <td class="text-end">{{ item.cout_total|floatformat:0 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Annuel -->
+        <div class="tab-pane fade" id="annuel" role="tabpanel">
+            <div class="row">
+                <!-- Missions par année -->
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-route me-2"></i>Missions par année</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Année</th>
+                                            <th class="text-center">Missions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in missions_par_annee %}
+                                        <tr>
+                                            <td><strong>{{ item.annee|date:"Y" }}</strong></td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary">{{ item.nb_missions }}</span>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CA par année -->
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>CA par année</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Année</th>
+                                            <th class="text-end">CA (FCFA)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in ca_par_annee %}
+                                        <tr>
+                                            <td><strong>{{ item.annee|date:"Y" }}</strong></td>
+                                            <td class="text-end text-success">
+                                                <strong>{{ item.ca|floatformat:0 }}</strong>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Réparations par année -->
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0"><i class="fas fa-wrench me-2"></i>Réparations par année</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Année</th>
+                                            <th class="text-center">Nb.</th>
+                                            <th class="text-end">Coût</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in reparations_par_annee %}
+                                        <tr>
+                                            <td><strong>{{ item.annee|date:"Y" }}</strong></td>
+                                            <td class="text-center">
+                                                <span class="badge bg-danger">{{ item.nb_reparations }}</span>
+                                            </td>
+                                            <td class="text-end">{{ item.cout_total|floatformat:0 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Aucune donnée</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Pièces -->
+        <div class="tab-pane fade" id="pieces" role="tabpanel">
+            <div class="row">
+                <!-- Pièces par catégorie -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Pièces par catégorie</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Catégorie</th>
+                                            <th class="text-center">Quantité</th>
+                                            <th class="text-end">Coût (FCFA)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in pieces_par_categorie %}
+                                        <tr>
+                                            <td><strong>{{ item.categorie_display }}</strong></td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">{{ item.nb_pieces }}</span>
+                                            </td>
+                                            <td class="text-end">{{ item.cout_total|floatformat:0 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Aucune pièce</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <th>TOTAL</th>
+                                            <th class="text-center">{{ total_pieces }}</th>
+                                            <th class="text-end">{{ cout_pieces_total|floatformat:0 }} FCFA</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Liste détaillée des pièces -->
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Détail des pièces</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Pièce</th>
+                                            <th>Camion</th>
+                                            <th class="text-center">Qté</th>
+                                            <th class="text-end">Coût</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for piece in pieces_reparees %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ piece.nom_piece }}</strong>
+                                                {% if piece.reference %}
+                                                <br><small class="text-muted">Réf: {{ piece.reference }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ piece.reparation.camion.immatriculation }}</td>
+                                            <td class="text-center">{{ piece.quantite }}</td>
+                                            <td class="text-end">{{ piece.cout_total_piece|floatformat:0 }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">Aucune pièce</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #2563eb;
+        border-bottom: 2px solid #2563eb;
+    }
+
+    .card {
+        transition: transform 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+    }
+
+    .badge {
+        font-size: 0.9rem;
+        padding: 0.4em 0.8em;
+    }
+
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .table-sm td, .table-sm th {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

@@ -22,8 +22,10 @@
                         <tr>
                             <th><i class="fas fa-wrench me-2"></i>Réparation</th>
                             <th><i class="fas fa-cog me-2"></i>Pièce</th>
+                            <th><i class="fas fa-tags me-2"></i>Catégorie</th>
                             <th><i class="fas fa-hashtag me-2"></i>Quantité</th>
-                            <th><i class="fas fa-dollar-sign me-2"></i>Prix unitaire</th>
+                            <th><i class="fas fa-money-bill-wave me-2"></i>Coût unitaire</th>
+                            <th><i class="fas fa-calculator me-2"></i>Coût total</th>
                             <th><i class="fas fa-industry me-2"></i>Fournisseur</th>
                             <th class="text-center">Actions</th>
                         </tr>
@@ -31,19 +33,36 @@
                     <tbody>
                         {%for p in pieces %}
                         <tr>
-                            <td>{{ p.reparation.pk_reparation }}</td>
-                            <td>{{ p.nom_piece }}</td>
-                            <td>{{ p.quantite }}</td>
-                            <td>{{ p.prix_unitaire }}</td>
-                            <td>{{ p.fournisseur.nom }}</td>
+                            <td>
+                                <small class="text-muted">{{ p.reparation.pk_reparation|truncatechars:20 }}</small>
+                            </td>
+                            <td>
+                                <strong>{{ p.nom_piece }}</strong>
+                                {% if p.reference %}
+                                    <br><small class="text-muted">Réf: {{ p.reference }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ p.get_categorie_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info text-dark">{{ p.quantite }}</span>
+                            </td>
+                            <td>{{ p.cout_unitaire }} FCFA</td>
+                            <td>
+                                <strong class="text-success">
+                                    {% widthratio p.quantite 1 p.cout_unitaire %} FCFA
+                                </strong>
+                            </td>
+                            <td>{% if p.fournisseur %}{{ p.fournisseur.nom }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{%url 'update_piece_reparee' p.pk_piece_reparee %}"
+                                    <a href="{%url 'update_piece_reparee' p.pk_piece %}"
                                        class="btn btn-sm btn-outline-warning"
                                        title="Modifier">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="{%url 'delete_piece_reparee' p.pk_piece_reparee %}"
+                                    <a href="{%url 'delete_piece_reparee' p.pk_piece %}"
                                        class="btn btn-sm btn-outline-danger"
                                        title="Supprimer">
                                         <i class="fas fa-trash"></i>

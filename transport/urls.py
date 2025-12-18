@@ -118,11 +118,15 @@ urlpatterns = [
 
     path('pieces-reparees/', views.piece_reparee_list, name='piece_reparee_list'),
     path('pieces-reparees/create/', views.create_piece_reparee, name='create_piece_reparee'),
+    path('pieces-reparees/create/<str:reparation_id>/', views.create_piece_reparee, name='create_piece_reparee'),
     path('pieces-reparees/<str:pk>/update/', views.update_piece_reparee, name='update_piece_reparee'),
     path('pieces-reparees/<str:pk>/delete/', views.delete_piece_reparee, name='delete_piece_reparee'),
 
     path("", views.dashboard, name="dashboard"),
     path('dashboard/', views.dashboard, name='dashboard'),
+
+    # Tableau de bord statistiques
+    path('statistiques/', views.tableau_bord_statistiques, name='statistiques'),
 
     path('logout/', views.logout_utilisateur, name='logout'),
 
