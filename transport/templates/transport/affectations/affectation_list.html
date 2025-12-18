@@ -14,20 +14,20 @@
     </div>
 
     <!-- Statistiques -->
-    <div class="row mb-4">
-        <div class="col-12 col-sm-6 mb-3 mb-sm-0">
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6">
             <div class="card border-success shadow-sm h-100">
-                <div class="card-body text-center">
-                    <h3 class="text-success mb-1">{{ affectations_actives.count }}</h3>
-                    <p class="text-muted mb-0"><i class="fas fa-check-circle me-1"></i>Affectations actives</p>
+                <div class="card-body text-center py-3">
+                    <h3 class="text-success mb-2">{{ affectations_actives.count }}</h3>
+                    <p class="text-muted mb-0 small"><i class="fas fa-check-circle me-1"></i>Affectations actives</p>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6">
             <div class="card border-secondary shadow-sm h-100">
-                <div class="card-body text-center">
-                    <h3 class="text-secondary mb-1">{{ affectations_terminees.count }}</h3>
-                    <p class="text-muted mb-0"><i class="fas fa-history me-1"></i>Affectations terminées</p>
+                <div class="card-body text-center py-3">
+                    <h3 class="text-secondary mb-2">{{ affectations_terminees.count }}</h3>
+                    <p class="text-muted mb-0 small"><i class="fas fa-history me-1"></i>Affectations terminées</p>
                 </div>
             </div>
         </div>
