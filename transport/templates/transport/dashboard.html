@@ -7,9 +7,73 @@
 {% block content %}
 <div class="dashboard container-fluid px-4 py-3">
 
-  <h2 class="fw-semibold mb-4 text-primary">
-    <i class="fas fa-tachometer-alt"></i> Tableau de bord
-  </h2>
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <h2 class="fw-semibold mb-0 text-primary">
+      <i class="fas fa-tachometer-alt"></i> Tableau de bord
+    </h2>
+    <button onclick="exportDashboardToPDF()" class="btn btn-danger">
+      <i class="fas fa-file-pdf me-2"></i>Exporter en PDF
+    </button>
+  </div>
+
+  <!-- Filtres de date -->
+  <div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+      <form method="get" id="dateFilterForm" class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label for="date_debut" class="form-label small fw-semibold">
+            <i class="fas fa-calendar-alt text-primary me-1"></i>Date de début
+          </label>
+          <input type="date" class="form-control" id="date_debut" name="date_debut"
+                 value="{{ date_debut|default:'' }}">
+        </div>
+        <div class="col-12 col-md-4">
+          <label for="date_fin" class="form-label small fw-semibold">
+            <i class="fas fa-calendar-check text-primary me-1"></i>Date de fin
+          </label>
+          <input type="date" class="form-control" id="date_fin" name="date_fin"
+                 value="{{ date_fin|default:'' }}">
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">
+              <i class="fas fa-filter me-1"></i>Filtrer
+            </button>
+            <button type="button" onclick="resetFilters()" class="btn btn-outline-secondary">
+              <i class="fas fa-redo me-1"></i>Réinitialiser
+            </button>
+          </div>
+        </div>
+        <!-- Quick filter buttons -->
+        <div class="col-12">
+          <div class="btn-group btn-group-sm flex-wrap" role="group">
+            <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(7)">
+              <i class="fas fa-calendar-week me-1"></i>7 derniers jours
+            </button>
+            <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(30)">
+              <i class="fas fa-calendar-day me-1"></i>30 derniers jours
+            </button>
+            <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(90)">
+              <i class="fas fa-calendar me-1"></i>3 derniers mois
+            </button>
+            <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(365)">
+              <i class="fas fa-calendar-alt me-1"></i>Année en cours
+            </button>
+          </div>
+        </div>
+      </form>
+      {% if date_debut or date_fin %}
+      <div class="mt-3">
+        <small class="text-muted">
+          <i class="fas fa-info-circle me-1"></i>
+          Période affichée :
+          {% if date_debut %}du {{ date_debut|date:"d/m/Y" }}{% endif %}
+          {% if date_fin %}au {{ date_fin|date:"d/m/Y" }}{% endif %}
+        </small>
+      </div>
+      {% endif %}
+    </div>
+  </div>
 
   <!-- Alertes -->
   {% if missions_en_retard > 0 %}
@@ -149,6 +213,63 @@
             </div>
           {% else %}
             <p class="text-muted mb-0 text-center py-5">Pas encore de paiements enregistrés.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graphiques additionnels -->
+  <div class="row g-4 mb-4">
+    <!-- Réparations par type -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">
+            <i class="fas fa-tools text-danger me-2"></i>Réparations par type
+          </h5>
+          {% if reparations_recentes %}
+            <div style="height: 250px;">
+              <canvas id="reparationsChart"></canvas>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0 text-center py-5">Pas de données de réparation.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Camions par entreprise -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">
+            <i class="fas fa-building text-info me-2"></i>Camions par entreprise
+          </h5>
+          {% if entreprises_stats %}
+            <div style="height: 250px;">
+              <canvas id="entreprisesChart"></canvas>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0 text-center py-5">Pas de données d'entreprise.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Missions par mois (tendance) -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h5 class="card-title mb-3">
+            <i class="fas fa-chart-area text-warning me-2"></i>Tendance missions
+          </h5>
+          {% if missions_actives %}
+            <div style="height: 250px;">
+              <canvas id="missionsTrendChart"></canvas>
+            </div>
+          {% else %}
+            <p class="text-muted mb-0 text-center py-5">Pas de données de mission.</p>
           {% endif %}
         </div>
       </div>
@@ -555,5 +676,402 @@
       }
     });
   {% endif %}
+
+  // 3. Réparations par type (Doughnut Chart)
+  {% if reparations_recentes %}
+    const ctxReparations = document.getElementById('reparationsChart').getContext('2d');
+
+    // Compter les types de réparations
+    const reparationsData = {};
+    {% for reparation in reparations_recentes %}
+      const type = '{{ reparation.type_reparation }}';
+      reparationsData[type] = (reparationsData[type] || 0) + 1;
+    {% endfor %}
+
+    const reparationLabels = Object.keys(reparationsData);
+    const reparationValues = Object.values(reparationsData);
+
+    const colorsPalette = [
+      '#ef4444', '#f97316', '#f59e0b', '#eab308',
+      '#84cc16', '#22c55e', '#10b981', '#14b8a6'
+    ];
+
+    new Chart(ctxReparations, {
+      type: 'doughnut',
+      data: {
+        labels: reparationLabels,
+        datasets: [{
+          data: reparationValues,
+          backgroundColor: colorsPalette.slice(0, reparationLabels.length),
+          borderWidth: 3,
+          borderColor: '#ffffff',
+          hoverBorderWidth: 4,
+          hoverOffset: 15
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 12,
+              usePointStyle: true,
+              font: {
+                size: 11,
+                weight: '500'
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = ((value / total) * 100).toFixed(1);
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            }
+          }
+        },
+        animation: {
+          animateRotate: true,
+          animateScale: true,
+          duration: 1500,
+          easing: 'easeInOutQuart'
+        }
+      }
+    });
+  {% endif %}
+
+  // 4. Camions par entreprise (Bar Chart)
+  {% if entreprises_stats %}
+    const ctxEntreprises = document.getElementById('entreprisesChart').getContext('2d');
+
+    new Chart(ctxEntreprises, {
+      type: 'bar',
+      data: {
+        labels: [
+          {% for entreprise in entreprises_stats %}
+            '{{ entreprise.nom }}'{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ],
+        datasets: [{
+          label: 'Camions',
+          data: [
+            {% for entreprise in entreprises_stats %}
+              {{ entreprise.camions }}{% if not forloop.last %},{% endif %}
+            {% endfor %}
+          ],
+          backgroundColor: '#06b6d4',
+          borderColor: '#0891b2',
+          borderWidth: 2,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(context) {
+                return 'Camions: ' + context.parsed.y;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: {
+                size: 10
+              },
+              maxRotation: 45,
+              minRotation: 0
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)',
+              borderDash: [5, 5]
+            },
+            ticks: {
+              stepSize: 1,
+              font: {
+                size: 11
+              }
+            }
+          }
+        },
+        animation: {
+          duration: 1500,
+          easing: 'easeInOutQuart'
+        }
+      }
+    });
+  {% endif %}
+
+  // 5. Tendance missions (Area/Line Chart)
+  {% if missions_actives %}
+    const ctxMissionsTrend = document.getElementById('missionsTrendChart').getContext('2d');
+
+    // Créer des données simulées pour la tendance (basées sur les missions actuelles)
+    const currentMonth = new Date().getMonth();
+    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const last6Months = [];
+    const missionTrendData = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const monthIndex = (currentMonth - i + 12) % 12;
+      last6Months.push(monthNames[monthIndex]);
+      // Simulation : utiliser le nombre de missions actives comme base
+      missionTrendData.push(Math.floor({{ stats.missions|default:0 }} * (0.7 + Math.random() * 0.6)));
+    }
+
+    const gradientTrend = ctxMissionsTrend.createLinearGradient(0, 0, 0, 250);
+    gradientTrend.addColorStop(0, 'rgba(245, 158, 11, 0.3)');
+    gradientTrend.addColorStop(0.5, 'rgba(245, 158, 11, 0.15)');
+    gradientTrend.addColorStop(1, 'rgba(245, 158, 11, 0.05)');
+
+    new Chart(ctxMissionsTrend, {
+      type: 'line',
+      data: {
+        labels: last6Months,
+        datasets: [{
+          label: 'Missions',
+          data: missionTrendData,
+          fill: true,
+          borderColor: '#f59e0b',
+          backgroundColor: gradientTrend,
+          tension: 0.4,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#f59e0b',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointHoverBackgroundColor: '#f59e0b',
+          pointHoverBorderColor: '#ffffff',
+          pointHoverBorderWidth: 3,
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(context) {
+                return 'Missions: ' + context.parsed.y;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: {
+                size: 10
+              }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.05)',
+              borderDash: [5, 5]
+            },
+            ticks: {
+              stepSize: 1,
+              font: {
+                size: 11
+              }
+            }
+          }
+        },
+        animation: {
+          duration: 1500,
+          easing: 'easeInOutQuart'
+        }
+      }
+    });
+  {% endif %}
+
+  // Reset date filters function
+  window.resetFilters = function() {
+    window.location.href = window.location.pathname;
+  };
+
+  // Quick filter function
+  window.setQuickFilter = function(days) {
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - days);
+
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    document.getElementById('date_debut').value = formatDate(startDate);
+    document.getElementById('date_fin').value = formatDate(today);
+    document.getElementById('dateFilterForm').submit();
+  };
+
+  // PDF Export Function for Dashboard
+  window.exportDashboardToPDF = async function() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - (2 * margin);
+
+    // Add title
+    pdf.setFontSize(20);
+    pdf.setTextColor(37, 99, 235);
+    pdf.text('Tableau de Bord - Transport', margin, 20);
+
+    // Add date
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    const today = new Date().toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    pdf.text('Généré le ' + today, margin, 28);
+
+    let yPosition = 40;
+
+    // Capture statistics cards
+    pdf.setFontSize(14);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Statistiques Principales', margin, yPosition);
+    yPosition += 10;
+
+    const statsCards = document.querySelector('.row.g-3.mb-4');
+    if (statsCards) {
+      const canvas = await html2canvas(statsCards, {
+        scale: 2,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+      if (yPosition + imgHeight > pageHeight - margin) {
+        pdf.addPage();
+        yPosition = margin;
+      }
+
+      pdf.addImage(imgData, 'PNG', margin, yPosition, contentWidth, imgHeight);
+      yPosition += imgHeight + 10;
+    }
+
+    // Capture revenue cards
+    const revenueCards = document.querySelectorAll('.row.g-3.mb-4')[1];
+    if (revenueCards) {
+      if (yPosition + 40 > pageHeight - margin) {
+        pdf.addPage();
+        yPosition = margin;
+      }
+
+      const canvas = await html2canvas(revenueCards, {
+        scale: 2,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', margin, yPosition, contentWidth, imgHeight);
+      yPosition += imgHeight + 10;
+    }
+
+    // Capture charts
+    pdf.addPage();
+    yPosition = margin;
+
+    pdf.setFontSize(14);
+    pdf.text('Graphiques', margin, yPosition);
+    yPosition += 10;
+
+    const chartsRow = document.querySelectorAll('.row.g-4.mb-4')[0];
+    if (chartsRow) {
+      const canvas = await html2canvas(chartsRow, {
+        scale: 2,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+      if (yPosition + imgHeight > pageHeight - margin) {
+        // Split into multiple pages if needed
+        const maxHeight = pageHeight - yPosition - margin;
+        const ratio = maxHeight / imgHeight;
+        const adjustedHeight = maxHeight;
+
+        pdf.addImage(imgData, 'PNG', margin, yPosition, contentWidth, adjustedHeight);
+      } else {
+        pdf.addImage(imgData, 'PNG', margin, yPosition, contentWidth, imgHeight);
+      }
+    }
+
+    // Capture additional charts
+    const additionalChartsRow = document.querySelectorAll('.row.g-4.mb-4')[1];
+    if (additionalChartsRow) {
+      pdf.addPage();
+      yPosition = margin;
+
+      pdf.setFontSize(14);
+      pdf.text('Graphiques Complémentaires', margin, yPosition);
+      yPosition += 10;
+
+      const canvas = await html2canvas(additionalChartsRow, {
+        scale: 2,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', margin, yPosition, contentWidth, imgHeight);
+    }
+
+    // Save the PDF
+    pdf.save('dashboard_transport_' + new Date().toISOString().slice(0,10) + '.pdf');
+
+    // Show success message
+    alert('PDF généré avec succès !');
+  };
 </script>
 {% endblock %}

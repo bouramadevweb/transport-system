@@ -14,6 +14,65 @@
         </a>
     </div>
 
+    <!-- Filtres de date -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" id="dateFilterForm" class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="date_debut" class="form-label small fw-semibold">
+                        <i class="fas fa-calendar-alt text-primary me-1"></i>Date de début
+                    </label>
+                    <input type="date" class="form-control" id="date_debut" name="date_debut"
+                           value="{{ date_debut|default:'' }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="date_fin" class="form-label small fw-semibold">
+                        <i class="fas fa-calendar-check text-primary me-1"></i>Date de fin
+                    </label>
+                    <input type="date" class="form-control" id="date_fin" name="date_fin"
+                           value="{{ date_fin|default:'' }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <button type="button" onclick="resetFilters()" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-1"></i>Réinitialiser
+                        </button>
+                    </div>
+                </div>
+                <!-- Quick filter buttons -->
+                <div class="col-12">
+                    <div class="btn-group btn-group-sm flex-wrap" role="group">
+                        <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(7)">
+                            <i class="fas fa-calendar-week me-1"></i>7 derniers jours
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(30)">
+                            <i class="fas fa-calendar-day me-1"></i>30 derniers jours
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(90)">
+                            <i class="fas fa-calendar me-1"></i>3 derniers mois
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(365)">
+                            <i class="fas fa-calendar-alt me-1"></i>Année en cours
+                        </button>
+                    </div>
+                </div>
+            </form>
+            {% if date_debut or date_fin %}
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Période affichée :
+                    {% if date_debut %}du {{ date_debut|date:"d/m/Y" }}{% endif %}
+                    {% if date_fin %}au {{ date_fin|date:"d/m/Y" }}{% endif %}
+                </small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Statistiques -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-lg-4">

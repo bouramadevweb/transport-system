@@ -7,112 +7,174 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <h2 class="mb-0"><i class="fas fa-chart-line text-primary me-2"></i>{{ title }}</h2>
+        <button onclick="exportChartsToPDF()" class="btn btn-danger">
+            <i class="fas fa-file-pdf me-2"></i>Exporter en PDF
+        </button>
+    </div>
+
+    <!-- Filtres de date -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" id="dateFilterForm" class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label for="date_debut" class="form-label small fw-semibold">
+                        <i class="fas fa-calendar-alt text-primary me-1"></i>Date de début
+                    </label>
+                    <input type="date" class="form-control" id="date_debut" name="date_debut"
+                           value="{{ date_debut|default:'' }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label for="date_fin" class="form-label small fw-semibold">
+                        <i class="fas fa-calendar-check text-primary me-1"></i>Date de fin
+                    </label>
+                    <input type="date" class="form-control" id="date_fin" name="date_fin"
+                           value="{{ date_fin|default:'' }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            <i class="fas fa-filter me-1"></i>Filtrer
+                        </button>
+                        <button type="button" onclick="resetFilters()" class="btn btn-outline-secondary">
+                            <i class="fas fa-redo me-1"></i>Réinitialiser
+                        </button>
+                    </div>
+                </div>
+                <!-- Quick filter buttons -->
+                <div class="col-12">
+                    <div class="btn-group btn-group-sm flex-wrap" role="group">
+                        <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(7)">
+                            <i class="fas fa-calendar-week me-1"></i>7 derniers jours
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(30)">
+                            <i class="fas fa-calendar-day me-1"></i>30 derniers jours
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(90)">
+                            <i class="fas fa-calendar me-1"></i>3 derniers mois
+                        </button>
+                        <button type="button" class="btn btn-outline-info" onclick="setQuickFilter(365)">
+                            <i class="fas fa-calendar-alt me-1"></i>Année en cours
+                        </button>
+                    </div>
+                </div>
+            </form>
+            {% if date_debut or date_fin %}
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Période affichée :
+                    {% if date_debut %}du {{ date_debut|date:"d/m/Y" }}{% endif %}
+                    {% if date_fin %}au {{ date_fin|date:"d/m/Y" }}{% endif %}
+                </small>
+            </div>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Statistiques globales -->
-    <div class="row mb-4">
-        <div class="col-12 col-sm-6 col-md-3 mb-3">
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-primary shadow-sm h-100">
-                <div class="card-body text-center">
+                <div class="card-body text-center py-3">
                     <i class="fas fa-truck fa-2x text-primary mb-2"></i>
-                    <h3 class="text-primary mb-1">{{ total_camions }}</h3>
-                    <p class="text-muted mb-0">Camions</p>
+                    <h3 class="text-primary mb-2">{{ total_camions }}</h3>
+                    <p class="text-muted mb-0 small">Camions</p>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-md-3 mb-3">
+        <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-info shadow-sm h-100">
-                <div class="card-body text-center">
+                <div class="card-body text-center py-3">
                     <i class="fas fa-user-tie fa-2x text-info mb-2"></i>
-                    <h3 class="text-info mb-1">{{ total_chauffeurs }}</h3>
-                    <p class="text-muted mb-0">Chauffeurs</p>
+                    <h3 class="text-info mb-2">{{ total_chauffeurs }}</h3>
+                    <p class="text-muted mb-0 small">Chauffeurs</p>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-md-3 mb-3">
+        <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-warning shadow-sm h-100">
-                <div class="card-body text-center">
+                <div class="card-body text-center py-3">
                     <i class="fas fa-route fa-2x text-warning mb-2"></i>
-                    <h3 class="text-warning mb-1">{{ total_missions }}</h3>
-                    <p class="text-muted mb-0">Missions</p>
+                    <h3 class="text-warning mb-2">{{ total_missions }}</h3>
+                    <p class="text-muted mb-0 small">Missions</p>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-md-3 mb-3">
+        <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-success shadow-sm h-100">
-                <div class="card-body text-center">
+                <div class="card-body text-center py-3">
                     <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
-                    <h3 class="text-success mb-1">{{ ca_total|floatformat:0 }}</h3>
-                    <p class="text-muted mb-0">CA Total (FCFA)</p>
+                    <h3 class="text-success mb-2">{{ ca_total|floatformat:0 }}</h3>
+                    <p class="text-muted mb-0 small">CA Total (FCFA)</p>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Top Performers -->
-    <div class="row mb-4">
-        <div class="col-12 col-sm-6 col-md-3 mb-3">
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-warning shadow-sm h-100">
                 <div class="card-header bg-warning text-white">
                     <h6 class="mb-0"><i class="fas fa-trophy me-2"></i>Top Missions</h6>
                 </div>
                 <div class="card-body">
                     {% if top_camion_missions %}
-                    <p class="mb-1"><strong>Camion:</strong></p>
-                    <p class="text-muted">{{ top_camion_missions.contrat__camion__immatriculation }}</p>
+                    <p class="mb-1 small"><strong>Camion:</strong></p>
+                    <p class="text-muted small">{{ top_camion_missions.contrat__camion__immatriculation }}</p>
                     <h4 class="text-warning">{{ top_camion_missions.nb_missions }} missions</h4>
                     {% else %}
-                    <p class="text-muted">Aucune donnée</p>
+                    <p class="text-muted small">Aucune donnée</p>
                     {% endif %}
                 </div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-md-3 mb-3">
+        <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-info shadow-sm h-100">
                 <div class="card-header bg-info text-white">
                     <h6 class="mb-0"><i class="fas fa-star me-2"></i>Top Chauffeur</h6>
                 </div>
                 <div class="card-body">
                     {% if top_chauffeur_missions %}
-                    <p class="mb-1"><strong>Chauffeur:</strong></p>
-                    <p class="text-muted">{{ top_chauffeur_missions.contrat__chauffeur__prenom }} {{ top_chauffeur_missions.contrat__chauffeur__nom }}</p>
+                    <p class="mb-1 small"><strong>Chauffeur:</strong></p>
+                    <p class="text-muted small">{{ top_chauffeur_missions.contrat__chauffeur__prenom }} {{ top_chauffeur_missions.contrat__chauffeur__nom }}</p>
                     <h4 class="text-info">{{ top_chauffeur_missions.nb_missions }} missions</h4>
                     {% else %}
-                    <p class="text-muted">Aucune donnée</p>
+                    <p class="text-muted small">Aucune donnée</p>
                     {% endif %}
                 </div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-md-3 mb-3">
+        <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-success shadow-sm h-100">
                 <div class="card-header bg-success text-white">
                     <h6 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Top CA</h6>
                 </div>
                 <div class="card-body">
                     {% if top_camion_ca %}
-                    <p class="mb-1"><strong>Camion:</strong></p>
-                    <p class="text-muted">{{ top_camion_ca.camion__immatriculation }}</p>
+                    <p class="mb-1 small"><strong>Camion:</strong></p>
+                    <p class="text-muted small">{{ top_camion_ca.camion__immatriculation }}</p>
                     <h4 class="text-success">{{ top_camion_ca.ca_total|floatformat:0 }}</h4>
                     {% else %}
-                    <p class="text-muted">Aucune donnée</p>
+                    <p class="text-muted small">Aucune donnée</p>
                     {% endif %}
                 </div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-md-3 mb-3">
+        <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-primary shadow-sm h-100">
                 <div class="card-header bg-primary text-white">
                     <h6 class="mb-0"><i class="fas fa-tools me-2"></i>Moins réparations</h6>
                 </div>
                 <div class="card-body">
                     {% if bottom_camion_reparations %}
-                    <p class="mb-1"><strong>Camion:</strong></p>
-                    <p class="text-muted">{{ bottom_camion_reparations.camion__immatriculation }}</p>
+                    <p class="mb-1 small"><strong>Camion:</strong></p>
+                    <p class="text-muted small">{{ bottom_camion_reparations.camion__immatriculation }}</p>
                     <h4 class="text-primary">{{ bottom_camion_reparations.nb_reparations }} rép.</h4>
                     {% else %}
-                    <p class="text-muted">Aucune donnée</p>
+                    <p class="text-muted small">Aucune donnée</p>
                     {% endif %}
                 </div>
             </div>
@@ -122,7 +184,12 @@
     <!-- Tabs -->
     <ul class="nav nav-tabs mb-3" id="statsTabs" role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="vue-ensemble-tab" data-bs-toggle="tab" data-bs-target="#vue-ensemble" type="button" role="tab">
+            <button class="nav-link active" id="graphiques-tab" data-bs-toggle="tab" data-bs-target="#graphiques" type="button" role="tab">
+                <i class="fas fa-chart-line me-1"></i>Graphiques
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="vue-ensemble-tab" data-bs-toggle="tab" data-bs-target="#vue-ensemble" type="button" role="tab">
                 <i class="fas fa-chart-bar me-1"></i>Vue d'ensemble
             </button>
         </li>
@@ -144,8 +211,85 @@
     </ul>
 
     <div class="tab-content" id="statsTabsContent">
+        <!-- Onglet Graphiques -->
+        <div class="tab-pane fade show active" id="graphiques" role="tabpanel">
+            <div class="row g-3 mb-4">
+                <!-- Missions par camion (Bar Chart) -->
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0"><i class="fas fa-truck me-2"></i>Missions par camion</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="missionsCamionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CA par camion (Horizontal Bar Chart) -->
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>CA par camion</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="caCamionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Réparations par camion (Bar Chart) -->
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0"><i class="fas fa-wrench me-2"></i>Réparations par camion</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="reparationsCamionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CA mensuel (Line Chart) -->
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Évolution CA mensuel</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="caMensuelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Missions par mois (Area Chart) -->
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-warning text-white">
+                            <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Missions par mois</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="missionsMensuelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pièces par catégorie (Doughnut Chart) -->
+                <div class="col-12 col-lg-6">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Pièces par catégorie</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="piecesCategorieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Onglet Vue d'ensemble -->
-        <div class="tab-pane fade show active" id="vue-ensemble" role="tabpanel">
+        <div class="tab-pane fade" id="vue-ensemble" role="tabpanel">
             <div class="row">
                 <!-- Missions par camion -->
                 <div class="col-md-6 mb-4">
@@ -695,5 +839,484 @@
         padding: 0.5rem;
         font-size: 0.875rem;
     }
+
+    /* Responsive charts */
+    canvas {
+        max-height: 350px;
+    }
+
+    @media (max-width: 768px) {
+        canvas {
+            max-height: 250px;
+        }
+    }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration globale Chart.js
+    Chart.defaults.responsive = true;
+    Chart.defaults.maintainAspectRatio = true;
+    Chart.defaults.plugins.legend.display = true;
+    Chart.defaults.plugins.legend.position = 'bottom';
+
+    // Couleurs harmonieuses
+    const colors = {
+        primary: '#2563eb',
+        success: '#10b981',
+        danger: '#ef4444',
+        warning: '#f59e0b',
+        info: '#06b6d4',
+        secondary: '#6b7280'
+    };
+
+    const backgroundColors = [
+        'rgba(37, 99, 235, 0.8)',
+        'rgba(16, 185, 129, 0.8)',
+        'rgba(239, 68, 68, 0.8)',
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(6, 182, 212, 0.8)',
+        'rgba(107, 114, 128, 0.8)',
+        'rgba(168, 85, 247, 0.8)',
+        'rgba(236, 72, 153, 0.8)'
+    ];
+
+    // 1. Missions par camion (Bar Chart)
+    {% if missions_par_camion %}
+    const missionsCamionCtx = document.getElementById('missionsCamionChart');
+    if (missionsCamionCtx) {
+        new Chart(missionsCamionCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for item in missions_par_camion %}
+                    '{{ item.contrat__camion__immatriculation }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Nombre de missions',
+                    data: [
+                        {% for item in missions_par_camion %}
+                        {{ item.nb_missions }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: colors.primary,
+                    borderColor: colors.primary,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Missions: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // 2. CA par camion (Horizontal Bar Chart)
+    {% if ca_par_camion %}
+    const caCamionCtx = document.getElementById('caCamionChart');
+    if (caCamionCtx) {
+        new Chart(caCamionCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for item in ca_par_camion %}
+                    '{{ item.camion__immatriculation }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'CA (FCFA)',
+                    data: [
+                        {% for item in ca_par_camion %}
+                        {{ item.ca_total|default:0 }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: colors.success,
+                    borderColor: colors.success,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'CA: ' + context.parsed.x.toLocaleString() + ' FCFA';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // 3. Réparations par camion (Bar Chart)
+    {% if reparations_par_camion %}
+    const reparationsCamionCtx = document.getElementById('reparationsCamionChart');
+    if (reparationsCamionCtx) {
+        new Chart(reparationsCamionCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for item in reparations_par_camion %}
+                    '{{ item.camion__immatriculation }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Nombre de réparations',
+                    data: [
+                        {% for item in reparations_par_camion %}
+                        {{ item.nb_reparations }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: colors.danger,
+                    borderColor: colors.danger,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Réparations: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // 4. CA mensuel (Line Chart)
+    {% if ca_par_mois_camion %}
+    const caMensuelCtx = document.getElementById('caMensuelChart');
+    if (caMensuelCtx) {
+        // Grouper les données par mois
+        const monthlyData = {};
+        {% for item in ca_par_mois_camion %}
+        const month_{{ forloop.counter }} = '{{ item.mois|date:"m/Y" }}';
+        if (!monthlyData[month_{{ forloop.counter }}]) {
+            monthlyData[month_{{ forloop.counter }}] = 0;
+        }
+        monthlyData[month_{{ forloop.counter }}] += {{ item.ca|default:0 }};
+        {% endfor %}
+
+        const months = Object.keys(monthlyData).sort();
+        const caValues = months.map(m => monthlyData[m]);
+
+        new Chart(caMensuelCtx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'CA mensuel (FCFA)',
+                    data: caValues,
+                    backgroundColor: 'rgba(6, 182, 212, 0.2)',
+                    borderColor: colors.info,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'CA: ' + context.parsed.y.toLocaleString() + ' FCFA';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // 5. Missions par mois (Area Chart)
+    {% if missions_par_mois_camion %}
+    const missionsMensuelCtx = document.getElementById('missionsMensuelChart');
+    if (missionsMensuelCtx) {
+        // Grouper les données par mois
+        const monthlyMissions = {};
+        {% for item in missions_par_mois_camion %}
+        const month_m_{{ forloop.counter }} = '{{ item.mois|date:"m/Y" }}';
+        if (!monthlyMissions[month_m_{{ forloop.counter }}]) {
+            monthlyMissions[month_m_{{ forloop.counter }}] = 0;
+        }
+        monthlyMissions[month_m_{{ forloop.counter }}] += {{ item.nb_missions }};
+        {% endfor %}
+
+        const months_m = Object.keys(monthlyMissions).sort();
+        const missionsValues = months_m.map(m => monthlyMissions[m]);
+
+        new Chart(missionsMensuelCtx, {
+            type: 'line',
+            data: {
+                labels: months_m,
+                datasets: [{
+                    label: 'Missions par mois',
+                    data: missionsValues,
+                    backgroundColor: 'rgba(245, 158, 11, 0.3)',
+                    borderColor: colors.warning,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Missions: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // 6. Pièces par catégorie (Doughnut Chart)
+    {% if pieces_par_categorie %}
+    const piecesCategorieCtx = document.getElementById('piecesCategorieChart');
+    if (piecesCategorieCtx) {
+        new Chart(piecesCategorieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    {% for item in pieces_par_categorie %}
+                    '{{ item.categorie_display }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Nombre de pièces',
+                    data: [
+                        {% for item in pieces_par_categorie %}
+                        {{ item.nb_pieces }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: backgroundColors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return label + ': ' + value + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+
+    // Reset date filters function
+    window.resetFilters = function() {
+        window.location.href = window.location.pathname;
+    };
+
+    // Quick filter function
+    window.setQuickFilter = function(days) {
+        const today = new Date();
+        const startDate = new Date();
+        startDate.setDate(today.getDate() - days);
+
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        document.getElementById('date_debut').value = formatDate(startDate);
+        document.getElementById('date_fin').value = formatDate(today);
+        document.getElementById('dateFilterForm').submit();
+    };
+
+    // PDF Export Function
+    window.exportChartsToPDF = async function() {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15;
+        const contentWidth = pageWidth - (2 * margin);
+
+        // Add title
+        pdf.setFontSize(20);
+        pdf.setTextColor(37, 99, 235);
+        pdf.text('Tableau de Bord - Statistiques', margin, 20);
+
+        // Add date
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        const today = new Date().toLocaleDateString('fr-FR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        pdf.text('Généré le ' + today, margin, 28);
+
+        let yPosition = 40;
+
+        // Capture statistics cards
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Statistiques Globales', margin, yPosition);
+        yPosition += 10;
+
+        const statsCards = document.querySelectorAll('.row.g-3.mb-4')[0];
+        if (statsCards) {
+            const canvas = await html2canvas(statsCards, {
+                scale: 2,
+                backgroundColor: '#ffffff'
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const imgHeight = (canvas.height * contentWidth) / canvas.width;
+
+            if (yPosition + imgHeight > pageHeight - margin) {
+                pdf.addPage();
+                yPosition = margin;
+            }
+
+            pdf.addImage(imgData, 'PNG', margin, yPosition, contentWidth, imgHeight);
+            yPosition += imgHeight + 10;
+        }
+
+        // Capture charts from Graphiques tab
+        pdf.addPage();
+        yPosition = margin;
+
+        pdf.setFontSize(14);
+        pdf.text('Graphiques Statistiques', margin, yPosition);
+        yPosition += 10;
+
+        const chartsContainer = document.querySelector('#graphiques .row.g-3.mb-4');
+        if (chartsContainer) {
+            const chartCards = chartsContainer.querySelectorAll('.col-12.col-lg-6');
+
+            for (let i = 0; i < chartCards.length; i++) {
+                const card = chartCards[i];
+
+                const canvas = await html2canvas(card, {
+                    scale: 2,
+                    backgroundColor: '#ffffff'
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = contentWidth / 2 - 5;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                const xPosition = (i % 2 === 0) ? margin : (pageWidth / 2 + 2.5);
+
+                if (i % 2 === 0 && i > 0) {
+                    yPosition += imgHeight + 10;
+                }
+
+                if (yPosition + imgHeight > pageHeight - margin) {
+                    pdf.addPage();
+                    yPosition = margin;
+                }
+
+                pdf.addImage(imgData, 'PNG', xPosition, yPosition, imgWidth, imgHeight);
+            }
+        }
+
+        // Save the PDF
+        pdf.save('statistiques_transport_' + new Date().toISOString().slice(0,10) + '.pdf');
+
+        // Show success message
+        alert('PDF généré avec succès !');
+    };
+});
+</script>
 {% endblock %}

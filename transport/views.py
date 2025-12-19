@@ -660,7 +660,35 @@ def delete_frais(request, pk):
 
 # Liste des missions
 def mission_list(request):
+    from datetime import datetime
+
+    # ========== RÉCUPÉRATION DES FILTRES DE DATE ==========
+    date_debut_str = request.GET.get('date_debut', '')
+    date_fin_str = request.GET.get('date_fin', '')
+
+    date_debut = None
+    date_fin = None
+
+    if date_debut_str:
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    if date_fin_str:
+        try:
+            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    # ========== APPLICATION DES FILTRES ==========
     missions = Mission.objects.select_related('contrat', 'prestation_transport').order_by('-date_depart')
+
+    # Apply date filters if provided
+    if date_debut:
+        missions = missions.filter(date_depart__gte=date_debut)
+    if date_fin:
+        missions = missions.filter(date_depart__lte=date_fin)
 
     # Séparer par statut
     missions_en_cours = missions.filter(statut='en cours')
@@ -668,6 +696,8 @@ def mission_list(request):
     missions_annulees = missions.filter(statut='annulée')
 
     return render(request, 'transport/missions/mission_list.html', {
+        'date_debut': date_debut,
+        'date_fin': date_fin,
         'missions': missions,
         'missions_en_cours': missions_en_cours,
         'missions_terminees': missions_terminees,
@@ -969,8 +999,39 @@ def delete_fournisseur(request, pk):
 
 # Liste
 def reparation_list(request):
+    from datetime import datetime
+
+    # ========== RÉCUPÉRATION DES FILTRES DE DATE ==========
+    date_debut_str = request.GET.get('date_debut', '')
+    date_fin_str = request.GET.get('date_fin', '')
+
+    date_debut = None
+    date_fin = None
+
+    if date_debut_str:
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    if date_fin_str:
+        try:
+            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    # ========== APPLICATION DES FILTRES ==========
     reparations = Reparation.objects.select_related('camion', 'chauffeur').order_by('-date_reparation')
+
+    # Apply date filters if provided
+    if date_debut:
+        reparations = reparations.filter(date_reparation__gte=date_debut)
+    if date_fin:
+        reparations = reparations.filter(date_reparation__lte=date_fin)
+
     return render(request, 'transport/reparations/reparation_list.html', {
+        'date_debut': date_debut,
+        'date_fin': date_fin,
         'reparations': reparations,
         'title': 'Liste des réparations'
     })
@@ -1155,28 +1216,69 @@ def connexion_utilisateur(request):
 
 def dashboard(request):
     from .models import Chauffeur, Camion, Mission, Reparation, PaiementMission, Affectation, Client
-    from datetime import timedelta
+    from datetime import timedelta, datetime
     from django.utils import timezone
+
+    # ========== RÉCUPÉRATION DES FILTRES DE DATE ==========
+    date_debut_str = request.GET.get('date_debut', '')
+    date_fin_str = request.GET.get('date_fin', '')
+
+    date_debut = None
+    date_fin = None
+
+    if date_debut_str:
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    if date_fin_str:
+        try:
+            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    # ========== APPLICATION DES FILTRES ==========
+    # Missions queryset with filters
+    missions_qs = Mission.objects.all()
+    if date_debut:
+        missions_qs = missions_qs.filter(date_depart__gte=date_debut)
+    if date_fin:
+        missions_qs = missions_qs.filter(date_depart__lte=date_fin)
+
+    # Paiements queryset with filters
+    paiements_qs = PaiementMission.objects.all()
+    if date_debut:
+        paiements_qs = paiements_qs.filter(date_paiement__gte=date_debut)
+    if date_fin:
+        paiements_qs = paiements_qs.filter(date_paiement__lte=date_fin)
+
+    # Réparations queryset with filters
+    reparations_qs = Reparation.objects.all()
+    if date_debut:
+        reparations_qs = reparations_qs.filter(date_reparation__gte=date_debut)
+    if date_fin:
+        reparations_qs = reparations_qs.filter(date_reparation__lte=date_fin)
 
     # Statistiques générales
     stats = {
         "chauffeurs": Chauffeur.objects.count(),
         "camions": Camion.objects.count(),
-        "missions": Mission.objects.count(),
-        "missions_en_cours": Mission.objects.filter(statut="En cours").count(),
-        "missions_terminees": Mission.objects.filter(statut__in=["Terminée", "Terminee"]).count(),
-        "reparations": Reparation.objects.count(),
-        "paiements": PaiementMission.objects.aggregate(total=Sum("montant_total"))["total"] or 0,
+        "missions": missions_qs.count(),
+        "missions_en_cours": missions_qs.filter(statut="En cours").count(),
+        "missions_terminees": missions_qs.filter(statut__in=["Terminée", "Terminee"]).count(),
+        "reparations": reparations_qs.count(),
+        "paiements": paiements_qs.aggregate(total=Sum("montant_total"))["total"] or 0,
         "clients": Client.objects.count(),
         "affectations": Affectation.objects.count(),
     }
 
     # Missions par statut pour le graphique
-    mission_par_statut = Mission.objects.values("statut").annotate(total=Count("statut"))
+    mission_par_statut = missions_qs.values("statut").annotate(total=Count("statut"))
 
     # Paiements mensuels
     paiements_mensuels = (
-        PaiementMission.objects
+        paiements_qs
         .annotate(mois=TruncMonth("date_paiement"))
         .values("mois")
         .annotate(total=Sum("montant_total"))
@@ -1187,29 +1289,29 @@ def dashboard(request):
     montant_values = [float(p["total"]) for p in paiements_mensuels]
 
     # Dernières missions (5 plus récentes)
-    dernieres_missions = Mission.objects.select_related(
+    dernieres_missions = missions_qs.select_related(
         'prestation_transport', 'contrat'
     ).order_by('-date_depart')[:5]
 
     # Derniers paiements (5 plus récents)
-    derniers_paiements = PaiementMission.objects.select_related(
+    derniers_paiements = paiements_qs.select_related(
         'mission'
     ).order_by('-date_paiement')[:5]
 
     # Missions en cours
-    missions_actives = Mission.objects.filter(
+    missions_actives = missions_qs.filter(
         statut="En cours"
     ).select_related('prestation_transport', 'contrat')[:5]
 
     # Alertes - Missions qui devraient être terminées (date retour passée)
     today = timezone.now().date()
-    missions_en_retard = Mission.objects.filter(
+    missions_en_retard = missions_qs.filter(
         statut="En cours",
         date_retour__lt=today
-    ).count() if Mission.objects.filter(statut="En cours").exists() else 0
+    ).count() if missions_qs.filter(statut="En cours").exists() else 0
 
     # Réparations récentes
-    reparations_recentes = Reparation.objects.select_related(
+    reparations_recentes = reparations_qs.select_related(
         'camion'
     ).order_by('-date_reparation')[:5]
 
@@ -1224,15 +1326,20 @@ def dashboard(request):
             'camions': Camion.objects.filter(entreprise=entreprise).count(),
         })
 
-    # Calcul des revenus du mois en cours
-    current_month = timezone.now().month
-    current_year = timezone.now().year
-    revenus_mois_actuel = PaiementMission.objects.filter(
-        date_paiement__month=current_month,
-        date_paiement__year=current_year
-    ).aggregate(total=Sum("montant_total"))["total"] or 0
+    # Calcul des revenus du mois en cours (ou période filtrée)
+    if date_debut and date_fin:
+        revenus_mois_actuel = paiements_qs.aggregate(total=Sum("montant_total"))["total"] or 0
+    else:
+        current_month = timezone.now().month
+        current_year = timezone.now().year
+        revenus_mois_actuel = PaiementMission.objects.filter(
+            date_paiement__month=current_month,
+            date_paiement__year=current_year
+        ).aggregate(total=Sum("montant_total"))["total"] or 0
 
     return render(request, "transport/dashboard.html", {
+        "date_debut": date_debut,
+        "date_fin": date_fin,
         "stats": stats,
         "mission_par_statut": list(mission_par_statut),
         "paiements_mois_labels": mois_labels,
@@ -1382,41 +1489,89 @@ def tableau_bord_statistiques(request):
     - Évolution temporelle (par mois/année)
     - Top et bottom performers
     """
-    from django.db.models import Count, Sum, F, Max, Min
+    from django.db.models import Count, Sum, F, Max, Min, Q
     from django.db.models.functions import TruncMonth, TruncYear
+    from datetime import datetime
+
+    # ========== RÉCUPÉRATION DES FILTRES DE DATE ==========
+    date_debut_str = request.GET.get('date_debut', '')
+    date_fin_str = request.GET.get('date_fin', '')
+
+    date_debut = None
+    date_fin = None
+
+    if date_debut_str:
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    if date_fin_str:
+        try:
+            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
 
     # ========== STATISTIQUES GLOBALES ==========
-    total_missions = Mission.objects.count()
+    # Apply date filters to missions
+    missions_qs = Mission.objects.all()
+    if date_debut:
+        missions_qs = missions_qs.filter(date_depart__gte=date_debut)
+    if date_fin:
+        missions_qs = missions_qs.filter(date_depart__lte=date_fin)
+
+    # Apply date filters to contracts
+    contrats_qs = ContratTransport.objects.all()
+    if date_debut:
+        contrats_qs = contrats_qs.filter(date_debut__gte=date_debut)
+    if date_fin:
+        contrats_qs = contrats_qs.filter(date_debut__lte=date_fin)
+
+    # Apply date filters to reparations
+    reparations_qs = Reparation.objects.all()
+    if date_debut:
+        reparations_qs = reparations_qs.filter(date_reparation__gte=date_debut)
+    if date_fin:
+        reparations_qs = reparations_qs.filter(date_reparation__lte=date_fin)
+
+    # Apply date filters to pieces
+    pieces_qs = PieceReparee.objects.all()
+    if date_debut:
+        pieces_qs = pieces_qs.filter(reparation__date_reparation__gte=date_debut)
+    if date_fin:
+        pieces_qs = pieces_qs.filter(reparation__date_reparation__lte=date_fin)
+
+    total_missions = missions_qs.count()
     total_camions = Camion.objects.count()
     total_chauffeurs = Chauffeur.objects.count()
-    total_reparations = Reparation.objects.count()
-    total_pieces = PieceReparee.objects.count()
-    ca_total = ContratTransport.objects.aggregate(total=Sum('montant_total'))['total'] or 0
-    cout_reparations_total = Reparation.objects.aggregate(total=Sum('cout'))['total'] or 0
-    cout_pieces_total = PieceReparee.objects.aggregate(total=Sum(F('quantite') * F('cout_unitaire')))['total'] or 0
+    total_reparations = reparations_qs.count()
+    total_pieces = pieces_qs.count()
+    ca_total = contrats_qs.aggregate(total=Sum('montant_total'))['total'] or 0
+    cout_reparations_total = reparations_qs.aggregate(total=Sum('cout'))['total'] or 0
+    cout_pieces_total = pieces_qs.aggregate(total=Sum(F('quantite') * F('cout_unitaire')))['total'] or 0
 
     # ========== TOP PERFORMERS ==========
 
     # Camion avec le plus de missions
-    top_camion_missions = Mission.objects.values(
+    top_camion_missions = missions_qs.values(
         'contrat__camion__immatriculation',
         'contrat__camion__modele'
     ).annotate(nb_missions=Count('pk_mission')).order_by('-nb_missions').first()
 
     # Chauffeur avec le plus de missions
-    top_chauffeur_missions = Mission.objects.values(
+    top_chauffeur_missions = missions_qs.values(
         'contrat__chauffeur__nom',
         'contrat__chauffeur__prenom'
     ).annotate(nb_missions=Count('pk_mission')).order_by('-nb_missions').first()
 
     # Camion qui a généré le plus d'argent
-    top_camion_ca = ContratTransport.objects.values(
+    top_camion_ca = contrats_qs.values(
         'camion__immatriculation',
         'camion__modele'
     ).annotate(ca_total=Sum('montant_total')).order_by('-ca_total').first()
 
     # Camion avec le moins de réparations (qui a au moins une réparation)
-    bottom_camion_reparations = Reparation.objects.values(
+    bottom_camion_reparations = reparations_qs.values(
         'camion__immatriculation',
         'camion__modele'
     ).annotate(nb_reparations=Count('pk_reparation')).order_by('nb_reparations').first()
@@ -1424,28 +1579,28 @@ def tableau_bord_statistiques(request):
     # ========== STATISTIQUES PAR CAMION ==========
 
     # 1. Missions par camion
-    missions_par_camion = Mission.objects.values(
+    missions_par_camion = missions_qs.values(
         'contrat__camion__pk_camion',
         'contrat__camion__immatriculation',
         'contrat__camion__modele'
     ).annotate(nb_missions=Count('pk_mission')).order_by('-nb_missions')
 
     # 2. Missions par chauffeur
-    missions_par_chauffeur = Mission.objects.values(
+    missions_par_chauffeur = missions_qs.values(
         'contrat__chauffeur__pk_chauffeur',
         'contrat__chauffeur__nom',
         'contrat__chauffeur__prenom'
     ).annotate(nb_missions=Count('pk_mission')).order_by('-nb_missions')
 
     # 3. CA par camion
-    ca_par_camion = ContratTransport.objects.values(
+    ca_par_camion = contrats_qs.values(
         'camion__pk_camion',
         'camion__immatriculation',
         'camion__modele'
     ).annotate(ca_total=Sum('montant_total')).order_by('-ca_total')
 
     # 4. Réparations par camion
-    reparations_par_camion = Reparation.objects.values(
+    reparations_par_camion = reparations_qs.values(
         'camion__pk_camion',
         'camion__immatriculation',
         'camion__modele'
@@ -1457,7 +1612,7 @@ def tableau_bord_statistiques(request):
     # ========== ÉVOLUTION TEMPORELLE (PAR MOIS) ==========
 
     # Missions par mois et par camion
-    missions_par_mois_camion = Mission.objects.annotate(
+    missions_par_mois_camion = missions_qs.annotate(
         mois=TruncMonth('date_depart')
     ).values(
         'mois',
@@ -1467,7 +1622,7 @@ def tableau_bord_statistiques(request):
     ).order_by('-mois', 'contrat__camion__immatriculation')
 
     # CA par mois et par camion
-    ca_par_mois_camion = ContratTransport.objects.annotate(
+    ca_par_mois_camion = contrats_qs.annotate(
         mois=TruncMonth('date_debut')
     ).values(
         'mois',
@@ -1477,7 +1632,7 @@ def tableau_bord_statistiques(request):
     ).order_by('-mois', 'camion__immatriculation')
 
     # Réparations par mois et par camion
-    reparations_par_mois_camion = Reparation.objects.annotate(
+    reparations_par_mois_camion = reparations_qs.annotate(
         mois=TruncMonth('date_reparation')
     ).values(
         'mois',
@@ -1488,7 +1643,7 @@ def tableau_bord_statistiques(request):
     ).order_by('-mois', 'camion__immatriculation')
 
     # Pièces réparées par mois et par camion
-    pieces_par_mois_camion = PieceReparee.objects.annotate(
+    pieces_par_mois_camion = pieces_qs.annotate(
         mois=TruncMonth('reparation__date_reparation')
     ).values(
         'mois',
@@ -1501,21 +1656,21 @@ def tableau_bord_statistiques(request):
     # ========== ÉVOLUTION TEMPORELLE (PAR ANNÉE) ==========
 
     # Missions par année
-    missions_par_annee = Mission.objects.annotate(
+    missions_par_annee = missions_qs.annotate(
         annee=TruncYear('date_depart')
     ).values('annee').annotate(
         nb_missions=Count('pk_mission')
     ).order_by('-annee')
 
     # CA par année
-    ca_par_annee = ContratTransport.objects.annotate(
+    ca_par_annee = contrats_qs.annotate(
         annee=TruncYear('date_debut')
     ).values('annee').annotate(
         ca=Sum('montant_total')
     ).order_by('-annee')
 
     # Réparations par année
-    reparations_par_annee = Reparation.objects.annotate(
+    reparations_par_annee = reparations_qs.annotate(
         annee=TruncYear('date_reparation')
     ).values('annee').annotate(
         nb_reparations=Count('pk_reparation'),
@@ -1525,14 +1680,14 @@ def tableau_bord_statistiques(request):
     # ========== PIÈCES ==========
 
     # Pièces réparées détaillées
-    pieces_reparees = PieceReparee.objects.select_related(
+    pieces_reparees = pieces_qs.select_related(
         'reparation__camion', 'fournisseur'
     ).annotate(
         cout_total_piece=F('quantite') * F('cout_unitaire')
     ).order_by('-cout_total_piece')
 
     # Statistiques des pièces par catégorie
-    pieces_par_categorie = PieceReparee.objects.values(
+    pieces_par_categorie = pieces_qs.values(
         'categorie'
     ).annotate(
         nb_pieces=Count('pk_piece'),
@@ -1547,6 +1702,10 @@ def tableau_bord_statistiques(request):
 
     context = {
         'title': 'Tableau de bord - Statistiques',
+
+        # Filtres de date
+        'date_debut': date_debut,
+        'date_fin': date_fin,
 
         # Globales
         'total_missions': total_missions,
