@@ -109,23 +109,113 @@
                     </div>
                     {% endif %}
 
-                    <form method="post">
-                        {% csrf_token %}
+                    <!-- Alerte de pénalité si en retard -->
+                    {% if en_retard %}
+                    <div class="card border-danger mb-4">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Mission en retard - Pénalité
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning mb-3">
+                                <strong><i class="fas fa-calendar-times me-2"></i>Attention :</strong>
+                                La date de retour prévue était le <strong>{{ info_penalite.date_limite|date:"d/m/Y" }}</strong>
+                            </div>
 
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fas fa-calendar-day fa-2x text-danger mb-2"></i>
+                                        <h4 class="text-danger">{{ info_penalite.jours_retard }}</h4>
+                                        <small class="text-muted">Jour(s) de retard</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-light rounded">
+                                        <i class="fas fa-calculator fa-2x text-warning mb-2"></i>
+                                        <h6 class="mb-0">25 000 FCFA</h6>
+                                        <small class="text-muted">par jour</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center p-3 bg-danger text-white rounded">
+                                        <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+                                        <h4>{{ info_penalite.penalite|floatformat:0 }} FCFA</h4>
+                                        <small>Pénalité totale</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if confirmation_required %}
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Confirmez pour continuer :</strong> Cette pénalité sera enregistrée et devra être déduite du paiement.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" id="terminerMissionForm">
+                        {% csrf_token %}
+                        {% if confirmation_required %}
+                        <input type="hidden" name="force" value="1">
+                        {% endif %}
+
+                        <!-- Champ de date de retour -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <label for="date_retour" class="form-label fw-bold">
+                                    <i class="fas fa-calendar-check me-2"></i>Date de retour effective
+                                </label>
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    id="date_retour"
+                                    name="date_retour"
+                                    value="{% if request.POST.date_retour %}{{ request.POST.date_retour }}{% elif date_retour %}{{ date_retour|date:'Y-m-d' }}{% endif %}"
+                                    required
+                                >
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Date de départ de la mission: <strong>{{ mission.date_depart|date:"d/m/Y" }}</strong>
+                                    {% if mission.contrat %}
+                                    | Date limite: <strong>{{ mission.contrat.date_limite_retour|date:"d/m/Y" }}</strong>
+                                    {% endif %}
+                                </div>
+                                <div class="form-text text-muted">
+                                    Si vous terminez avant la date de départ prévue, la date de départ sera automatiquement ajustée.
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if not en_retard %}
                         <div class="alert alert-success d-flex align-items-center">
                             <i class="fas fa-check-circle fa-lg me-2"></i>
                             <div>
-                                <strong>Action :</strong> La mission sera marquée comme "terminée" avec la date de retour d'aujourd'hui.
+                                <strong>Action :</strong> La mission sera marquée comme "terminée" avec la date de retour saisie.
                             </div>
                         </div>
+                        {% endif %}
 
                         <div class="d-flex gap-2 justify-content-end">
                             <a href="{% url 'mission_list' %}" class="btn btn-secondary px-4">
                                 <i class="fas fa-times me-1"></i> Annuler
                             </a>
+                            {% if confirmation_required %}
+                            <button type="submit" class="btn btn-danger px-4">
+                                <i class="fas fa-check-circle me-1"></i> Confirmer avec pénalité
+                            </button>
+                            {% elif en_retard %}
+                            <button type="submit" class="btn btn-warning px-4">
+                                <i class="fas fa-flag-checkered me-1"></i> Terminer avec retard
+                            </button>
+                            {% else %}
                             <button type="submit" class="btn btn-success px-4">
                                 <i class="fas fa-flag-checkered me-1"></i> Terminer la mission
                             </button>
+                            {% endif %}
                         </div>
                     </form>
                 </div>
@@ -250,4 +340,18 @@
         }
     }
 </style>
+
+<script>
+// Initialiser la date de retour avec la date d'aujourd'hui si vide
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('date_retour');
+    if (dateInput && !dateInput.value) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+});
+</script>
 {% endblock %}

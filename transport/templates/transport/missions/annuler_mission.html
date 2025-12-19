@@ -1,0 +1,145 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Annuler la mission | Gestion Transport{% endblock %}
+
+{% block title %}Annuler la mission{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-times-circle me-2"></i>Confirmation - Annuler la mission
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                        <div>
+                            <strong>⚠️ ANNULATION EN CASCADE!</strong><br>
+                            L'annulation de cette mission entraînera automatiquement:
+                            <ul class="mb-0 mt-2">
+                                <li>❌ Annulation de la mission (statut = annulée)</li>
+                                <li>📝 Annotation du contrat de transport avec la raison</li>
+                                <li>🔒 Annulation de toutes les cautions liées (statut = annulée)</li>
+                                <li>💰 Annotation de tous les paiements non validés</li>
+                            </ul>
+                            <br>
+                            <strong>Cette action est irréversible!</strong> Vous ne pourrez plus terminer la mission ni valider ses paiements.
+                        </div>
+                    </div>
+
+                    <!-- Informations Mission -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="card-subtitle mb-3 text-muted">
+                                <i class="fas fa-route me-1"></i>Détails de la mission
+                            </h6>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-hashtag me-2 text-primary"></i>ID Mission :</strong><br>
+                                        <span class="ms-4">{{ mission.pk_mission }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-map-marker-alt me-2 text-danger"></i>Origine :</strong><br>
+                                        <span class="ms-4">{{ mission.origine }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-calendar-day me-2 text-info"></i>Date départ :</strong><br>
+                                        <span class="ms-4">{{ mission.date_depart|date:"d/m/Y" }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-info-circle me-2 text-warning"></i>Statut actuel :</strong><br>
+                                        <span class="ms-4 badge bg-warning">{{ mission.statut }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-flag me-2 text-success"></i>Destination :</strong><br>
+                                        <span class="ms-4">{{ mission.destination }}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-file-contract me-2 text-secondary"></i>Contrat :</strong><br>
+                                        <span class="ms-4">{{ mission.contrat.numero_bl }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if mission.contrat %}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-user me-2 text-info"></i>Chauffeur :</strong><br>
+                                        <span class="ms-4">{{ mission.contrat.chauffeur.nom }} {{ mission.contrat.chauffeur.prenom }}</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-truck me-2 text-primary"></i>Camion :</strong><br>
+                                        <span class="ms-4">{{ mission.contrat.camion.immatriculation }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Formulaire d'annulation -->
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label for="raison" class="form-label fw-bold">
+                                <i class="fas fa-comment-alt me-2"></i>Raison de l'annulation
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="raison"
+                                name="raison"
+                                rows="4"
+                                placeholder="Expliquez pourquoi cette mission est annulée..."
+                                required
+                            ></textarea>
+                            <div class="form-text">
+                                Cette raison sera enregistrée dans l'historique de la mission
+                            </div>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'mission_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Retour
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-times-circle me-2"></i>Confirmer l'annulation
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validation Bootstrap
+(function () {
+    'use strict'
+    var forms = document.querySelectorAll('.needs-validation')
+    Array.prototype.slice.call(forms)
+        .forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+})()
+</script>
+{% endblock %}

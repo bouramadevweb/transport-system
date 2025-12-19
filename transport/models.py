@@ -640,6 +640,7 @@ STATUT_CAUTION_CHOICES = [
     ('remboursee', 'Remboursée'),
     ('non_remboursee', 'Non remboursée'),
     ('consommee', 'Consommée'),
+    ('annulee', 'Annulée'),
 ]
 
 class Cautions(models.Model):
@@ -810,8 +811,16 @@ class Mission(models.Model):
 
         super().save(*args, **kwargs)
 
-    def terminer_mission(self, date_retour=None):
-        """Méthode pour terminer proprement une mission avec validation de la date"""
+    def terminer_mission(self, date_retour=None, force=False):
+        """Méthode pour terminer proprement une mission avec validation de la date
+
+        Args:
+            date_retour: Date de retour effective (par défaut aujourd'hui)
+            force: Si True, force la terminaison même en retard
+
+        Returns:
+            dict: Informations sur la pénalité si en retard
+        """
         from django.utils import timezone
 
         if date_retour is None:
@@ -820,22 +829,102 @@ class Mission(models.Model):
         # Vérifier que la date de retour est cohérente
         if date_retour < self.date_depart:
             raise ValidationError(
-                f'La date de retour ({date_retour}) ne peut pas être avant la date de départ ({self.date_depart})'
+                f'❌ La date de retour ({date_retour}) ne peut pas être avant la date de départ ({self.date_depart})'
             )
+
+        info_penalite = {
+            'en_retard': False,
+            'jours_retard': 0,
+            'penalite': 0,
+            'message': ''
+        }
 
         # Vérifier si la date dépasse la limite du contrat
         if date_retour > self.contrat.date_limite_retour:
             jours_retard = (date_retour - self.contrat.date_limite_retour).days
             penalite = jours_retard * 25000  # 25 000 FCFA par jour
-            raise ValidationError(
-                f'⚠️ ATTENTION: La date de retour ({date_retour}) dépasse la date limite du contrat ({self.contrat.date_limite_retour}) '
-                f'de {jours_retard} jour(s). Pénalité estimée: {penalite} FCFA. '
-                f'Confirmez-vous cette date de retour?'
-            )
+
+            info_penalite = {
+                'en_retard': True,
+                'jours_retard': jours_retard,
+                'penalite': penalite,
+                'message': f'⚠️ Mission terminée avec {jours_retard} jour(s) de retard. Pénalité: {penalite} FCFA'
+            }
+
+            # Si force=False, lever une erreur avec les infos
+            if not force:
+                raise ValidationError(
+                    f'⚠️ ATTENTION: La date de retour ({date_retour}) dépasse la date limite du contrat ({self.contrat.date_limite_retour}) '
+                    f'de {jours_retard} jour(s). Pénalité: {penalite} FCFA. '
+                    f'Confirmez pour terminer quand même.'
+                )
 
         self.date_retour = date_retour
         self.statut = 'terminée'
         self.save()
+
+        return info_penalite
+
+    def annuler_mission(self, raison=''):
+        """Annule une mission et tous les objets liés en cascade
+
+        Args:
+            raison: Raison de l'annulation
+
+        Cette méthode annule automatiquement:
+        - La mission elle-même
+        - Le contrat de transport associé
+        - Les cautions associées
+        - Les paiements associés
+        """
+        if self.statut == 'terminée':
+            raise ValidationError('❌ Impossible d\'annuler une mission déjà terminée.')
+
+        if self.statut == 'annulée':
+            raise ValidationError('⚠️ Cette mission est déjà annulée.')
+
+        from django.utils import timezone
+        date_annulation = timezone.now()
+
+        # 1. Annuler la mission
+        self.statut = 'annulée'
+
+        # Ajouter la raison dans l'itinéraire si fournie
+        if raison:
+            if not self.itineraire:
+                self.itineraire = ''
+            self.itineraire += f'\n\n--- MISSION ANNULÉE ---\nRaison: {raison}\nDate annulation: {date_annulation.strftime("%d/%m/%Y %H:%M")}'
+        else:
+            if not self.itineraire:
+                self.itineraire = ''
+            self.itineraire += f'\n\n--- MISSION ANNULÉE ---\nDate annulation: {date_annulation.strftime("%d/%m/%Y %H:%M")}'
+
+        self.save()
+
+        # 2. Annuler le contrat de transport associé
+        if self.contrat:
+            if not self.contrat.commentaire:
+                self.contrat.commentaire = ''
+            self.contrat.commentaire += f'\n\n🚫 CONTRAT ANNULÉ\nMission annulée le {date_annulation.strftime("%d/%m/%Y %H:%M")}\nRaison: {raison if raison else "Non spécifiée"}'
+            self.contrat.save()
+
+        # 3. Annuler toutes les cautions associées
+        from .models import Cautions
+        cautions = Cautions.objects.filter(contrat=self.contrat)
+        for caution in cautions:
+            if caution.statut != 'annulee':
+                caution.statut = 'annulee'
+                caution.save()
+
+        # 4. Marquer les paiements associés comme annulés
+        from .models import PaiementMission
+        paiements = PaiementMission.objects.filter(mission=self)
+        for paiement in paiements:
+            if not paiement.est_valide:  # Seulement si pas encore validé
+                if not paiement.observation:
+                    paiement.observation = ''
+                paiement.observation += f'\n\n❌ PAIEMENT ANNULÉ\nMission annulée le {date_annulation.strftime("%d/%m/%Y %H:%M")}\nRaison: {raison if raison else "Non spécifiée"}'
+                paiement.save()
 
     # class Meta:
     #     unique_together = (
