@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from datetime import datetime
+from django.http import JsonResponse
 
 from .form import (
     EntrepriseForm, InscriptionUtilisateurForm, ConnexionForm, ChauffeurForm,
@@ -545,7 +546,6 @@ def get_chauffeur_from_camion(request, pk_camion):
     """
     Retourne le chauffeur actuellement affecté au camion spécifié
     """
-    from django.http import JsonResponse
 
     try:
         camion = Camion.objects.get(pk_camion=pk_camion)
@@ -580,7 +580,6 @@ def get_camion_from_chauffeur(request, pk_chauffeur):
     """
     Retourne le camion actuellement affecté au chauffeur spécifié
     """
-    from django.http import JsonResponse
 
     try:
         chauffeur = Chauffeur.objects.get(pk_chauffeur=pk_chauffeur)
