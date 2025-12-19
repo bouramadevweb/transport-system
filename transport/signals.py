@@ -5,10 +5,103 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 import logging
 
-from .models import ContratTransport, PrestationDeTransports, Cautions, Mission, PaiementMission
+from .models import (
+    ContratTransport, PrestationDeTransports, Cautions, Mission,
+    PaiementMission, Notification, Reparation
+)
 
 # Configuration du logger
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# SIGNAUX POUR LES NOTIFICATIONS AUTOMATIQUES
+# ============================================================================
+
+@receiver(post_save, sender=Mission)
+def notifier_mission_terminee(sender, instance, created, **kwargs):
+    """
+    Créer une notification quand une mission est terminée
+    """
+    if not created and instance.statut == 'terminée':
+        # Vérifier si une notification n'existe pas déjà
+        from .models import Notification
+        existing = Notification.objects.filter(
+            mission=instance,
+            type_notification='mission_terminee'
+        ).exists()
+
+        if not existing and instance.contrat and instance.contrat.chauffeur:
+            # Créer une notification pour le chauffeur
+            chauffeur = instance.contrat.chauffeur
+            if hasattr(chauffeur, 'utilisateur') and chauffeur.utilisateur:
+                Notification.objects.create(
+                    utilisateur=chauffeur.utilisateur,
+                    type_notification='mission_terminee',
+                    title=f"Mission terminée - {instance.destination}",
+                    message=f"La mission vers {instance.destination} a été marquée comme terminée. Vous pouvez maintenant procéder à la validation du paiement.",
+                    icon='check-circle',
+                    color='success',
+                    mission=instance
+                )
+                logger.info(f"✅ Notification créée pour le chauffeur {chauffeur.nom} {chauffeur.prenom}")
+
+
+@receiver(post_save, sender=PaiementMission)
+def notifier_paiement_valide(sender, instance, created, **kwargs):
+    """
+    Créer une notification quand un paiement est validé
+    """
+    if instance.est_valide and instance.mission and instance.mission.contrat:
+        # Vérifier si une notification n'existe pas déjà
+        from .models import Notification
+        existing = Notification.objects.filter(
+            paiement=instance,
+            type_notification='paiement_valide'
+        ).exists()
+
+        if not existing:
+            chauffeur = instance.mission.contrat.chauffeur
+            if hasattr(chauffeur, 'utilisateur') and chauffeur.utilisateur:
+                Notification.objects.create(
+                    utilisateur=chauffeur.utilisateur,
+                    type_notification='paiement_valide',
+                    title=f"Paiement validé - {instance.montant_total} FCFA",
+                    message=f"Le paiement de {instance.montant_total} FCFA pour la mission vers {instance.mission.destination} a été validé avec succès.",
+                    icon='check-circle',
+                    color='success',
+                    paiement=instance,
+                    mission=instance.mission
+                )
+                logger.info(f"✅ Notification de paiement créée pour le chauffeur {chauffeur.nom} {chauffeur.prenom}")
+
+
+@receiver(post_save, sender=Reparation)
+def notifier_reparation_urgente(sender, instance, created, **kwargs):
+    """
+    Créer une notification pour les réparations urgentes ou coûteuses
+    """
+    # Seuil pour considérer une réparation comme urgente
+    SEUIL_URGENCE = 500000  # 500,000 FCFA
+
+    if created and instance.cout and instance.cout >= SEUIL_URGENCE:
+        from .models import Notification, Utilisateur
+
+        # Notifier tous les admins et managers
+        admins_managers = Utilisateur.objects.filter(role__in=['admin', 'manager'])
+
+        for user in admins_managers:
+            Notification.objects.create(
+                utilisateur=user,
+                type_notification='reparation_urgente',
+                title=f"Réparation urgente - {instance.camion.immatriculation}",
+                message=f"Une réparation coûteuse ({instance.cout} FCFA) a été enregistrée pour le camion {instance.camion.immatriculation}. Motif: {instance.description or 'Non spécifié'}",
+                icon='exclamation-triangle',
+                color='warning',
+                reparation=instance
+            )
+
+        logger.info(f"⚠️ Notifications de réparation urgente créées pour {admins_managers.count()} utilisateurs")
 
 
 @receiver(post_save, sender=ContratTransport)

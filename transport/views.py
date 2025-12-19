@@ -1,16 +1,31 @@
-from django.shortcuts import render, redirect
-from .form import EntrepriseForm, InscriptionUtilisateurForm ,ConnexionForm,ChauffeurForm,CamionForm,AffectationForm,TransitaireForm,ClientForm,CompagnieConteneurForm,ConteneurForm,ContratTransportForm,PrestationDeTransportsForm,CautionsForm,FraisTrajetForm,MissionForm,MissionConteneurForm,PaiementMissionForm,MecanicienForm,FournisseurForm,ReparationForm,ReparationMecanicienForm,PieceRepareeForm
-from django.contrib.auth import authenticate, login
-from django.shortcuts import render, redirect,get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
 from django.db import IntegrityError
 from django.contrib import messages
-from .models import Chauffeur, Entreprise,Camion,Affectation,Transitaire,Client,CompagnieConteneur,Conteneur,ContratTransport,PrestationDeTransports,Cautions,FraisTrajet,Mission,MissionConteneur,PaiementMission,Mecanicien,Fournisseur,Reparation,ReparationMecanicien,PieceReparee
 from django.db.models import Count, Sum
 from django.db.models.functions import TruncMonth
 from datetime import datetime
-from django.contrib.auth.views import LogoutView
-from django.contrib.auth import logout
-from django.shortcuts import redirect
+
+from .form import (
+    EntrepriseForm, InscriptionUtilisateurForm, ConnexionForm, ChauffeurForm,
+    CamionForm, AffectationForm, TransitaireForm, ClientForm,
+    CompagnieConteneurForm, ConteneurForm, ContratTransportForm,
+    PrestationDeTransportsForm, CautionsForm, FraisTrajetForm, MissionForm,
+    MissionConteneurForm, PaiementMissionForm, MecanicienForm, FournisseurForm,
+    ReparationForm, ReparationMecanicienForm, PieceRepareeForm
+)
+from .models import (
+    Chauffeur, Entreprise, Camion, Affectation, Transitaire, Client,
+    CompagnieConteneur, Conteneur, ContratTransport, PrestationDeTransports,
+    Cautions, FraisTrajet, Mission, MissionConteneur, PaiementMission,
+    Mecanicien, Fournisseur, Reparation, ReparationMecanicien, PieceReparee
+)
+from .decorators import (
+    can_validate_payment, can_delete_data, admin_required,
+    manager_or_admin_required
+)
 
 from django.http import HttpResponse
 from reportlab.lib.pagesizes import A4
@@ -33,6 +48,7 @@ from utils.generate_contrat_pdf import generate_pdf_contrat
 
 
 # LISTE
+@login_required
 def liste_entreprises(request):
     entreprises = Entreprise.objects.all().order_by('-date_creation')
     return render(request, 'transport/entreprise/liste_entreprises.html', {
@@ -41,6 +57,7 @@ def liste_entreprises(request):
     })
 
 # CREATE
+@login_required
 def ajouter_entreprise(request):
     form = EntrepriseForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
@@ -50,6 +67,7 @@ def ajouter_entreprise(request):
     return render(request, 'transport/entreprise/ajouter_entreprise.html', {'form': form, 'title': 'Créer une entreprise'})
 
 # UPDATE
+@login_required
 def modifier_entreprise(request, pk):
     entreprise = get_object_or_404(Entreprise, pk_entreprise=pk)
     form = EntrepriseForm(request.POST or None, instance=entreprise)
@@ -65,6 +83,7 @@ def modifier_entreprise(request, pk):
     })
 
 # DELETE
+@can_delete_data
 def supprimer_entreprise(request, pk):
     entreprise = get_object_or_404(Entreprise, pk_entreprise=pk)
 
@@ -93,6 +112,7 @@ def inscription_utilisateur(request):
 
 
 
+@login_required
 def create_chauffeur(request):
     if request.method == "POST":
         form = ChauffeurForm(request.POST)
@@ -105,10 +125,12 @@ def create_chauffeur(request):
     
     return render(request, "transport/chauffeurs/chauffeur_form.html", {"form": form, "title": "Ajouter un chauffeur"})
 
+@login_required
 def chauffeur_list(request):
     chauffeurs = Chauffeur.objects.select_related("entreprise").all()
     return render(request, "transport/chauffeurs/chauffeur_list.html", {"chauffeurs": chauffeurs})
 
+@login_required
 def update_chauffeur(request, pk):
     chauffeur = get_object_or_404(Chauffeur, pk=pk)
 
@@ -123,6 +145,7 @@ def update_chauffeur(request, pk):
 
     return render(request, "transport/chauffeurs/chauffeur_form.html", {"form": form, "title": "Modifier un chauffeur"})
 
+@can_delete_data
 def chauffeur_delete(request, pk):
     chauffeur = get_object_or_404(Chauffeur, pk=pk)
     if request.method == "POST":
@@ -132,11 +155,13 @@ def chauffeur_delete(request, pk):
     return render(request, "transport/chauffeurs/chauffeur_confirm_delete.html", {"chauffeur": chauffeur})
 
 # Liste des camions
+@login_required
 def camion_list(request):
     camions = Camion.objects.all()
     return render(request, "transport/camions/camion_list.html", {"camions": camions, "title": "Liste des camions"})
 
 # Ajouter un camion
+@login_required
 def create_camion(request):
     if request.method == "POST":
         form = CamionForm(request.POST)
@@ -149,6 +174,7 @@ def create_camion(request):
     return render(request, "transport/camions/camion_form.html", {"form": form, "title": "Ajouter un camion"})
 
 # Modifier un camion
+@login_required
 def update_camion(request, pk):
     camion = get_object_or_404(Camion, pk=pk)
     if request.method == "POST":
@@ -162,6 +188,7 @@ def update_camion(request, pk):
     return render(request, "transport/camions/camion_form.html", {"form": form, "title": "Modifier le camion"})
 
 # Supprimer un camion
+@can_delete_data
 def delete_camion(request, pk):
     camion = get_object_or_404(Camion, pk=pk)
     if request.method == "POST":
@@ -172,6 +199,7 @@ def delete_camion(request, pk):
 
 
 # Liste des affectations
+@login_required
 def affectation_list(request):
     affectations = Affectation.objects.select_related('chauffeur', 'camion').order_by('-date_affectation')
 
@@ -187,6 +215,7 @@ def affectation_list(request):
     })
 
 # Ajouter une affectation
+@login_required
 def create_affectation(request):
     if request.method == "POST":
         form = AffectationForm(request.POST)
@@ -207,6 +236,7 @@ def create_affectation(request):
     return render(request, "transport/affectations/affectation_form.html", {"form": form, "title": "Ajouter une affectation"})
 
 # Modifier une affectation
+@login_required
 def update_affectation(request, pk):
     affectation = get_object_or_404(Affectation, pk=pk)
     if request.method == "POST":
@@ -228,6 +258,7 @@ def update_affectation(request, pk):
     return render(request, "transport/affectations/affectation_form.html", {"form": form, "title": "Modifier l'affectation"})
 
 # Terminer une affectation
+@login_required
 def terminer_affectation(request, pk):
     affectation = get_object_or_404(Affectation, pk=pk)
 
@@ -251,6 +282,7 @@ def terminer_affectation(request, pk):
     })
 
 # Supprimer une affectation
+@can_delete_data
 def delete_affectation(request, pk):
     affectation = get_object_or_404(Affectation, pk=pk)
     if request.method == "POST":
@@ -260,10 +292,12 @@ def delete_affectation(request, pk):
     return render(request, "transport/affectations/affectation_confirm_delete.html", {"affectation": affectation, "title": "Supprimer l'affectation"})
 
 
+@login_required
 def transitaire_list(request):
     transitaires = Transitaire.objects.all().order_by('nom')
     return render(request, "transport/transitaires/transitaire_list.html", {"transitaires": transitaires, "title": "Liste des transitaires"})
 
+@login_required
 def create_transitaire(request):
     if request.method == "POST":
         form = TransitaireForm(request.POST)
@@ -277,6 +311,7 @@ def create_transitaire(request):
 
 
  #Modification d'un transitaire
+@login_required
 def update_transitaire(request, pk):
     transitaire = get_object_or_404(Transitaire, pk=pk)
     if request.method == "POST":
@@ -290,6 +325,7 @@ def update_transitaire(request, pk):
     return render(request, "transport/transitaires/transitaire_form.html", {"form": form, "title": "Modifier le transitaire"})
 
 # Suppression d'un transitaire
+@can_delete_data
 def delete_transitaire(request, pk):
     transitaire = get_object_or_404(Transitaire, pk=pk)
     if request.method == "POST":
@@ -300,11 +336,13 @@ def delete_transitaire(request, pk):
 
 
 # Liste des clients
+@login_required
 def client_list(request):
     clients = Client.objects.all().order_by('nom')
     return render(request, "transport/clients/client_list.html", {"clients": clients, "title": "Liste des clients"})
 
 # Création d'un client
+@login_required
 def create_client(request):
     if request.method == "POST":
         form = ClientForm(request.POST)
@@ -316,6 +354,7 @@ def create_client(request):
     return render(request, "transport/clients/client_form.html", {"form": form, "title": "Ajouter un client"})
 
 # Modification d'un client
+@login_required
 def update_client(request, pk):
     client = get_object_or_404(Client, pk=pk)
     if request.method == "POST":
@@ -328,6 +367,7 @@ def update_client(request, pk):
     return render(request, "transport/clients/client_form.html", {"form": form, "title": "Modifier le client"})
 
 # Suppression d'un client
+@can_delete_data
 def delete_client(request, pk):
     client = get_object_or_404(Client, pk=pk)
     if request.method == "POST":
@@ -336,11 +376,13 @@ def delete_client(request, pk):
     return render(request, "transport/clients/client_confirm_delete.html", {"client": client, "title": "Supprimer le client"})
 
 # Liste des compagnies
+@login_required
 def compagnie_list(request):
     compagnies = CompagnieConteneur.objects.all().order_by('nom')
     return render(request, "transport/compagnies/compagnie_list.html", {"compagnies": compagnies, "title": "Liste des compagnies de conteneurs"})
 
 # Création d'une compagnie
+@login_required
 def create_compagnie(request):
     if request.method == "POST":
         form = CompagnieConteneurForm(request.POST)
@@ -352,6 +394,7 @@ def create_compagnie(request):
     return render(request, "transport/compagnies/compagnie_form.html", {"form": form, "title": "Ajouter une compagnie"})
 
 # Modification d'une compagnie
+@login_required
 def update_compagnie(request, pk):
     compagnie = get_object_or_404(CompagnieConteneur, pk=pk)
     if request.method == "POST":
@@ -364,6 +407,7 @@ def update_compagnie(request, pk):
     return render(request, "transport/compagnies/compagnie_form.html", {"form": form, "title": "Modifier la compagnie"})
 
 # Suppression d'une compagnie
+@can_delete_data
 def delete_compagnie(request, pk):
     compagnie = get_object_or_404(CompagnieConteneur, pk=pk)
     if request.method == "POST":
@@ -372,11 +416,13 @@ def delete_compagnie(request, pk):
     return render(request, "transport/compagnies/compagnie_confirm_delete.html", {"compagnie": compagnie, "title": "Supprimer la compagnie"})
 
 # Liste des conteneurs
+@login_required
 def conteneur_list(request):
     conteneurs = Conteneur.objects.all().order_by('numero_conteneur')
     return render(request, "transport/conteneurs/conteneur_list.html", {"conteneurs": conteneurs, "title": "Liste des conteneurs"})
 
 # Création d'un conteneur
+@login_required
 def create_conteneur(request):
     if request.method == "POST":
         form = ConteneurForm(request.POST)
@@ -388,6 +434,7 @@ def create_conteneur(request):
     return render(request, "transport/conteneurs/conteneur_form.html", {"form": form, "title": "Ajouter un conteneur"})
 
 # Modification d'un conteneur
+@login_required
 def update_conteneur(request, pk):
     conteneur = get_object_or_404(Conteneur, pk=pk)
     if request.method == "POST":
@@ -400,6 +447,7 @@ def update_conteneur(request, pk):
     return render(request, "transport/conteneurs/conteneur_form.html", {"form": form, "title": "Modifier le conteneur"})
 
 # Suppression d'un conteneur
+@can_delete_data
 def delete_conteneur(request, pk):
     conteneur = get_object_or_404(Conteneur, pk=pk)
     if request.method == "POST":
@@ -408,11 +456,13 @@ def delete_conteneur(request, pk):
     return render(request, "transport/conteneurs/conteneur_confirm_delete.html", {"conteneur": conteneur, "title": "Supprimer le conteneur"})
 
 # Liste des contrats
+@login_required
 def contrat_list(request):
     contrats = ContratTransport.objects.all().order_by('-date_debut')
     return render(request, "transport/contrat/contrat_list.html", {"contrats": contrats, "title": "Liste des contrats"})
 
 # Création d'un contrat
+@login_required
 def create_contrat(request):
     if request.method == "POST":
         form = ContratTransportForm(request.POST)
@@ -458,6 +508,7 @@ def create_contrat(request):
 
 
 # Modification d'un contrat
+@login_required
 def update_contrat(request, pk):
     contrat = get_object_or_404(ContratTransport, pk=pk)
     if request.method == "POST":
@@ -479,6 +530,7 @@ def update_contrat(request, pk):
     return render(request, "transport/contrat/contrat_form.html", {"form": form, "title": "Modifier le contrat"})
 
 # Suppression d'un contrat
+@can_delete_data
 def delete_contrat(request, pk):
     contrat = get_object_or_404(ContratTransport, pk=pk)
     if request.method == "POST":
@@ -488,6 +540,7 @@ def delete_contrat(request, pk):
 
 
 # API: Récupérer le chauffeur affecté à un camion
+@login_required
 def get_chauffeur_from_camion(request, pk_camion):
     """
     Retourne le chauffeur actuellement affecté au camion spécifié
@@ -522,6 +575,7 @@ def get_chauffeur_from_camion(request, pk_camion):
 
 
 # API: Récupérer le camion affecté à un chauffeur
+@login_required
 def get_camion_from_chauffeur(request, pk_chauffeur):
     """
     Retourne le camion actuellement affecté au chauffeur spécifié
@@ -556,11 +610,13 @@ def get_camion_from_chauffeur(request, pk_chauffeur):
 
 
 # Liste
+@login_required
 def presta_transport_list(request):
     prestations = PrestationDeTransports.objects.all()
     return render(request, "transport/prestations/prestation_transport_list.html", {"prestations": prestations, "title": "Prestations de transport"})
 
 # Création
+@login_required
 def create_presta_transport(request):
     if request.method == 'POST':
         form = PrestationDeTransportsForm(request.POST)
@@ -572,6 +628,7 @@ def create_presta_transport(request):
     return render(request, "transport/prestations/prestation_transport_form.html", {"form": form, "title": "Ajouter une prestation"})
 
 # Modification
+@login_required
 def update_presta_transport(request, pk):
     prestation = get_object_or_404(PrestationDeTransports, pk=pk)
     if request.method == 'POST':
@@ -584,6 +641,7 @@ def update_presta_transport(request, pk):
     return render(request, "transport/prestations/prestation_transport_form.html", {"form": form, "title": "Modifier la prestation"})
 
 # Suppression
+@can_delete_data
 def delete_presta_transport(request, pk):
     prestation = get_object_or_404(PrestationDeTransports, pk=pk)
     if request.method == 'POST':
@@ -592,11 +650,13 @@ def delete_presta_transport(request, pk):
     return render(request, "transport/prestations/prestation_transport_confirm_delete.html", {"prestation": prestation})
 
 # Liste des cautions
+@login_required
 def cautions_list(request):
     cautions = Cautions.objects.all()
     return render(request, "transport/cautions/cautions_list.html", {"cautions": cautions, "title": "Liste des cautions"})
 
 # Création
+@login_required
 def create_caution(request):
     if request.method == "POST":
         form = CautionsForm(request.POST)
@@ -608,6 +668,7 @@ def create_caution(request):
     return render(request, "transport/cautions/caution_form.html", {"form": form, "title": "Ajouter une caution"})
 
 # Modification
+@login_required
 def update_caution(request, pk):
     caution = get_object_or_404(Cautions, pk=pk)
     if request.method == "POST":
@@ -621,6 +682,7 @@ def update_caution(request, pk):
 
 
 # Suppression
+@can_delete_data
 def delete_caution(request, pk):
     caution = get_object_or_404(Cautions, pk=pk)
     if request.method == "POST":
@@ -630,11 +692,13 @@ def delete_caution(request, pk):
 
 
 
+@login_required
 def frais_list(request):
     frais = FraisTrajet.objects.all()
     return render(request, 'transport/frais/frais_list.html', {'frais': frais, 'title': 'Liste des frais de trajet'})
 
 
+@login_required
 def create_frais(request):
     form = FraisTrajetForm(request.POST or None)
     if form.is_valid():
@@ -642,6 +706,7 @@ def create_frais(request):
         return redirect('frais_list')
     return render(request, 'transport/frais/frais_form.html', {'form': form, 'title': 'Ajouter un frais de trajet'})
 
+@login_required
 def update_frais(request, pk):
     frais = get_object_or_404(FraisTrajet, pk=pk)
     form = FraisTrajetForm(request.POST or None, instance=frais)
@@ -650,6 +715,7 @@ def update_frais(request, pk):
         return redirect('frais_list')
     return render(request, 'transport/frais/frais_form.html', {'form': form, 'title': 'Modifier le frais de trajet'})
 
+@can_delete_data
 def delete_frais(request, pk):
     frais = get_object_or_404(FraisTrajet, pk=pk)
     if request.method == 'POST':
@@ -659,6 +725,7 @@ def delete_frais(request, pk):
 
 
 # Liste des missions
+@login_required
 def mission_list(request):
     from datetime import datetime
 
@@ -705,6 +772,7 @@ def mission_list(request):
         'title': 'Liste des missions'
     })
 # Créer une mission
+@login_required
 def create_mission(request):
     if request.method == 'POST':
         form = MissionForm(request.POST)
@@ -716,6 +784,7 @@ def create_mission(request):
     return render(request, 'transport/missions/mission_form.html', {'form': form, 'title': 'Créer une mission'})
 
 # Modifier une mission
+@login_required
 def update_mission(request, pk):
     mission = get_object_or_404(Mission, pk_mission=pk)
     if request.method == 'POST':
@@ -728,6 +797,7 @@ def update_mission(request, pk):
     return render(request, 'transport/missions/mission_form.html', {'form': form, 'title': 'Modifier une mission'})
 
 # Supprimer une mission
+@can_delete_data
 def delete_mission(request, pk):
     mission = get_object_or_404(Mission, pk_mission=pk)
     if request.method == 'POST':
@@ -736,6 +806,7 @@ def delete_mission(request, pk):
     return render(request, 'transport/missions/confirm_delete.html', {'object': mission, 'title': 'Supprimer une mission'})
 
 # Terminer une mission
+@login_required
 def terminer_mission(request, pk):
     mission = get_object_or_404(Mission, pk_mission=pk)
 
@@ -766,6 +837,7 @@ def terminer_mission(request, pk):
     })
 
 # LIST
+@login_required
 def mission_conteneur_list(request):
     mission_conteneurs = MissionConteneur.objects.all()
     return render(request, 'transport/missions/mission_conteneur_list.html', {
@@ -774,6 +846,7 @@ def mission_conteneur_list(request):
     })
 
 # CREATE
+@login_required
 def create_mission_conteneur(request):
     if request.method == 'POST':
         form = MissionConteneurForm(request.POST)
@@ -788,6 +861,7 @@ def create_mission_conteneur(request):
     })
 
 # UPDATE
+@login_required
 def update_mission_conteneur(request, pk):
     mc = get_object_or_404(MissionConteneur, pk=pk)
     if request.method == 'POST':
@@ -803,6 +877,7 @@ def update_mission_conteneur(request, pk):
     })
 
 # DELETE
+@can_delete_data
 def delete_mission_conteneur(request, pk):
     mc = get_object_or_404(MissionConteneur, pk=pk)
     if request.method == 'POST':
@@ -814,14 +889,45 @@ def delete_mission_conteneur(request, pk):
     })
 
 # Liste
+@login_required
 def paiement_mission_list(request):
+    from datetime import datetime
+
+    # ========== RÉCUPÉRATION DES FILTRES DE DATE ==========
+    date_debut_str = request.GET.get('date_debut', '')
+    date_fin_str = request.GET.get('date_fin', '')
+
+    date_debut = None
+    date_fin = None
+
+    if date_debut_str:
+        try:
+            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    if date_fin_str:
+        try:
+            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    # ========== APPLICATION DES FILTRES ==========
     paiements = PaiementMission.objects.select_related('mission', 'caution', 'prestation').order_by('-date_paiement')
+
+    # Apply date filters if provided
+    if date_debut:
+        paiements = paiements.filter(date_paiement__gte=date_debut)
+    if date_fin:
+        paiements = paiements.filter(date_paiement__lte=date_fin)
 
     # Séparer validés et en attente
     paiements_valides = paiements.filter(est_valide=True)
     paiements_attente = paiements.filter(est_valide=False)
 
     return render(request, 'transport/paiements-mission/paiement_mission_list.html', {
+        'date_debut': date_debut,
+        'date_fin': date_fin,
         'paiements': paiements,
         'paiements_valides': paiements_valides,
         'paiements_attente': paiements_attente,
@@ -829,6 +935,7 @@ def paiement_mission_list(request):
     })
 
 # Création
+@login_required
 def create_paiement_mission(request):
     if request.method == 'POST':
         form = PaiementMissionForm(request.POST)
@@ -840,6 +947,7 @@ def create_paiement_mission(request):
     return render(request, 'transport/paiements-mission/paiement_mission_form.html', {'form': form, 'title': 'Créer un paiement'})
 
 # Mise à jour
+@login_required
 def update_paiement_mission(request, pk):
     paiement = get_object_or_404(PaiementMission, pk=pk)
     if request.method == 'POST':
@@ -852,6 +960,7 @@ def update_paiement_mission(request, pk):
     return render(request, 'transport/paiements-mission/paiement_mission_form.html', {'form': form, 'title': 'Modifier un paiement'})
 
 # Suppression
+@can_delete_data
 def delete_paiement_mission(request, pk):
     paiement = get_object_or_404(PaiementMission, pk=pk)
     if request.method == 'POST':
@@ -860,6 +969,7 @@ def delete_paiement_mission(request, pk):
     return render(request, 'transport/paiements-mission/paiement_mission_confirm_delete.html', {'paiement': paiement, 'title': 'Supprimer un paiement'})
 
 # Valider un paiement
+@can_validate_payment
 def valider_paiement_mission(request, pk):
     paiement = get_object_or_404(PaiementMission, pk=pk)
 
@@ -913,6 +1023,7 @@ def valider_paiement_mission(request, pk):
     })
 
 # Liste
+@login_required
 def mecanicien_list(request):
     mecaniciens = Mecanicien.objects.all().order_by('-created_at')
     return render(request, 'transport/mecaniciens/mecanicien_list.html', {
@@ -921,6 +1032,7 @@ def mecanicien_list(request):
     })
 
 # Création
+@login_required
 def create_mecanicien(request):
     if request.method == 'POST':
         form = MecanicienForm(request.POST)
@@ -932,6 +1044,7 @@ def create_mecanicien(request):
     return render(request, 'transport/mecaniciens/mecanicien_form.html', {'form': form, 'title': 'Ajouter un mécanicien'})
 
 # Mise à jour
+@login_required
 def update_mecanicien(request, pk):
     mecanicien = get_object_or_404(Mecanicien, pk=pk)
     if request.method == 'POST':
@@ -944,6 +1057,7 @@ def update_mecanicien(request, pk):
     return render(request, 'transport/mecaniciens/mecanicien_form.html', {'form': form, 'title': 'Modifier un mécanicien'})
 
 # Suppression
+@can_delete_data
 def delete_mecanicien(request, pk):
     mecanicien = get_object_or_404(Mecanicien, pk=pk)
     if request.method == 'POST':
@@ -955,6 +1069,7 @@ def delete_mecanicien(request, pk):
     })
 
 # Liste
+@login_required
 def fournisseur_list(request):
     fournisseurs = Fournisseur.objects.all().order_by('-created_at')
     return render(request, 'transport/fournisseurs/fournisseur_list.html', {
@@ -963,6 +1078,7 @@ def fournisseur_list(request):
     })
 
 # Création
+@login_required
 def create_fournisseur(request):
     if request.method == 'POST':
         form = FournisseurForm(request.POST)
@@ -974,6 +1090,7 @@ def create_fournisseur(request):
     return render(request, 'transport/fournisseurs/fournisseur_form.html', {'form': form, 'title': 'Ajouter un fournisseur'})
 
 # Mise à jour
+@login_required
 def update_fournisseur(request, pk):
     fournisseur = get_object_or_404(Fournisseur, pk=pk)
     if request.method == 'POST':
@@ -986,6 +1103,7 @@ def update_fournisseur(request, pk):
     return render(request, 'transport/fournisseurs/fournisseur_form.html', {'form': form, 'title': 'Modifier un fournisseur'})
 
 # Suppression
+@can_delete_data
 def delete_fournisseur(request, pk):
     fournisseur = get_object_or_404(Fournisseur, pk=pk)
     if request.method == 'POST':
@@ -998,6 +1116,7 @@ def delete_fournisseur(request, pk):
 
 
 # Liste
+@login_required
 def reparation_list(request):
     from datetime import datetime
 
@@ -1037,6 +1156,7 @@ def reparation_list(request):
     })
 
 # Création
+@login_required
 def create_reparation(request):
     if request.method == 'POST':
         form = ReparationForm(request.POST)
@@ -1056,6 +1176,7 @@ def create_reparation(request):
     return render(request, 'transport/reparations/reparation_form.html', {'form': form, 'title': 'Ajouter une réparation'})
 
 # Modification
+@login_required
 def update_reparation(request, pk):
     reparation = get_object_or_404(Reparation, pk=pk)
     if request.method == 'POST':
@@ -1074,6 +1195,7 @@ def update_reparation(request, pk):
     return render(request, 'transport/reparations/reparation_form.html', {'form': form, 'title': 'Modifier une réparation'})
 
 # Suppression
+@can_delete_data
 def delete_reparation(request, pk):
     reparation = get_object_or_404(Reparation, pk=pk)
     if request.method == 'POST':
@@ -1085,6 +1207,7 @@ def delete_reparation(request, pk):
     })
 
 # Liste
+@login_required
 def reparation_mecanicien_list(request):
     relations = ReparationMecanicien.objects.select_related('reparation', 'mecanicien')
     return render(request, 'transport/reparations/reparation_mecanicien_list.html', {
@@ -1093,6 +1216,7 @@ def reparation_mecanicien_list(request):
     })
 
 # Création
+@login_required
 def create_reparation_mecanicien(request):
     if request.method == 'POST':
         form = ReparationMecanicienForm(request.POST)
@@ -1107,6 +1231,7 @@ def create_reparation_mecanicien(request):
     })
 
 # Modification
+@login_required
 def update_reparation_mecanicien(request, pk):
     relation = get_object_or_404(ReparationMecanicien, pk=pk)
     if request.method == 'POST':
@@ -1122,6 +1247,7 @@ def update_reparation_mecanicien(request, pk):
     })
 
 # Suppression
+@can_delete_data
 def delete_reparation_mecanicien(request, pk):
     relation = get_object_or_404(ReparationMecanicien, pk=pk)
     if request.method == 'POST':
@@ -1133,6 +1259,7 @@ def delete_reparation_mecanicien(request, pk):
     })
 
 # Liste
+@login_required
 def piece_reparee_list(request):
     pieces = PieceReparee.objects.select_related('reparation', 'fournisseur')
     return render(request, 'transport/reparations/piece_reparee_list.html', {
@@ -1141,6 +1268,7 @@ def piece_reparee_list(request):
     })
 
 # Création
+@login_required
 def create_piece_reparee(request, reparation_id=None):
     # Récupérer la réparation si un ID est fourni
     reparation_preselected = None
@@ -1169,6 +1297,7 @@ def create_piece_reparee(request, reparation_id=None):
     return render(request, 'transport/reparations/piece_reparee_form.html', context)
 
 # Modification
+@login_required
 def update_piece_reparee(request, pk):
     piece = get_object_or_404(PieceReparee, pk=pk)
     if request.method == 'POST':
@@ -1184,6 +1313,7 @@ def update_piece_reparee(request, pk):
     })
 
 # Suppression
+@can_delete_data
 def delete_piece_reparee(request, pk):
     piece = get_object_or_404(PieceReparee, pk=pk)
     if request.method == 'POST':
@@ -1214,6 +1344,7 @@ def connexion_utilisateur(request):
 
 #tableau de bord
 
+@login_required
 def dashboard(request):
     from .models import Chauffeur, Camion, Mission, Reparation, PaiementMission, Affectation, Client
     from datetime import timedelta, datetime
@@ -1364,6 +1495,128 @@ def dashboard(request):
 
 # handler500 = rediriger_erreur_serveur
 
+# ============================================================================
+# PROFIL UTILISATEUR ET SYSTÈME
+# ============================================================================
+
+@login_required
+def user_profile(request):
+    """
+    Affiche le profil de l'utilisateur connecté
+    """
+    return render(request, 'transport/user/profile.html', {
+        'title': 'Mon Profil',
+        'user': request.user
+    })
+
+@login_required
+def user_settings(request):
+    """
+    Affiche les paramètres du compte utilisateur et gère le changement de mot de passe
+    """
+    password_form = None
+
+    if request.method == 'POST':
+        if 'change_password' in request.POST:
+            # Changement de mot de passe
+            password_form = PasswordChangeForm(request.user, request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)  # Important pour ne pas déconnecter l'utilisateur
+                messages.success(request, '✅ Votre mot de passe a été changé avec succès!')
+                return redirect('user_settings')
+            else:
+                messages.error(request, '❌ Erreur lors du changement de mot de passe. Veuillez vérifier les informations.')
+
+        elif 'update_email' in request.POST:
+            # Mise à jour de l'email
+            new_email = request.POST.get('email')
+            if new_email and new_email != request.user.email:
+                request.user.email = new_email
+                request.user.save()
+                messages.success(request, '✅ Votre email a été mis à jour avec succès!')
+                return redirect('user_settings')
+
+    # Créer le formulaire de changement de mot de passe si pas déjà créé
+    if not password_form:
+        password_form = PasswordChangeForm(request.user)
+
+    return render(request, 'transport/user/settings.html', {
+        'title': 'Paramètres',
+        'user': request.user,
+        'password_form': password_form
+    })
+
+@login_required
+def help_page(request):
+    """
+    Affiche la page d'aide et documentation
+    """
+    return render(request, 'transport/user/help.html', {
+        'title': 'Aide'
+    })
+
+@login_required
+def notifications_list(request):
+    """
+    Affiche la liste des notifications de l'utilisateur
+    """
+    from .models import Notification
+
+    # Récupérer toutes les notifications de l'utilisateur
+    notifications = Notification.objects.filter(utilisateur=request.user).order_by('-created_at')
+
+    # Séparer les notifications lues et non lues
+    notifications_non_lues = notifications.filter(is_read=False)
+    notifications_lues = notifications.filter(is_read=True)[:10]  # Limiter les notifications lues
+
+    # Marquer comme lue une notification spécifique si demandé
+    notification_id = request.GET.get('mark_read')
+    if notification_id:
+        try:
+            notification = Notification.objects.get(pk_notification=notification_id, utilisateur=request.user)
+            notification.is_read = True
+            notification.save()
+            messages.success(request, "✅ Notification marquée comme lue.")
+            return redirect('notifications_list')
+        except Notification.DoesNotExist:
+            pass
+
+    return render(request, 'transport/user/notifications.html', {
+        'title': 'Notifications',
+        'notifications': notifications,
+        'notifications_non_lues': notifications_non_lues,
+        'notifications_lues': notifications_lues,
+        'total_non_lues': notifications_non_lues.count(),
+    })
+
+@login_required
+def mark_all_notifications_read(request):
+    """
+    Marque toutes les notifications comme lues
+    """
+    from .models import Notification
+
+    if request.method == 'POST':
+        # Marquer toutes les notifications de l'utilisateur comme lues
+        count = Notification.objects.filter(
+            utilisateur=request.user,
+            is_read=False
+        ).update(is_read=True)
+
+        if count > 0:
+            messages.success(request, f"✅ {count} notification(s) marquée(s) comme lue(s).")
+        else:
+            messages.info(request, "ℹ️ Aucune notification non lue.")
+
+        return redirect('notifications_list')
+
+    return redirect('notifications_list')
+
+# ============================================================================
+# GESTIONNAIRES D'ERREURS
+# ============================================================================
+
 def rediriger_vers_connexion(request, exception=None):
     return redirect('connexion')
 
@@ -1371,11 +1624,13 @@ def rediriger_erreur_serveur(request):
     return redirect('connexion')
 
 # deconnexion 
+@login_required
 def logout_utilisateur(request):
     logout(request)
     return redirect('connexion')
 
 
+@login_required
 def pdf_contrat(request, pk):
     contrat = get_object_or_404(ContratTransport, pk_contrat=pk)
 
@@ -1482,6 +1737,7 @@ def pdf_contrat(request, pk):
 # TABLEAU DE BORD STATISTIQUES
 # ============================================================================
 
+@login_required
 def tableau_bord_statistiques(request):
     """
     Affiche le tableau de bord avec toutes les statistiques avancées :

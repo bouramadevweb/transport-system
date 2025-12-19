@@ -77,27 +77,19 @@
           </div>
         </div>
 
-   
-
-
-<!-- Statistique -->
+        <!-- Statistiques -->
         <div class="menu-section">
           <div class="section-header" data-section="statistique">
-            <i class="fas fa-building"></i>
-            <span>Statistique</span>
+            <i class="fas fa-chart-line"></i>
+            <span>Statistiques</span>
             <i class="fas fa-chevron-down toggle-icon"></i>
           </div>
           <div class="section-content">
-            <a href="{% url 'statistiques' %}" class="{% if 'entreprise' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Entreprises">
-              <i class="fas fa-chart-bar"></i><span>Statistiques</span>
+            <a href="{% url 'statistiques' %}" class="{% if 'statistique' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Statistiques">
+              <i class="fas fa-chart-bar"></i><span>Statistiques avancées</span>
             </a>
-            
           </div>
         </div>
-
-
-
-
 
         <!-- Partenaires -->
         <div class="menu-section">
@@ -141,7 +133,9 @@
             </a>
             <a href="{% url 'mission_list' %}" class="{% if 'mission' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Missions">
               <i class="fas fa-route"></i><span>Missions</span>
-              <span class="badge badge-primary">3</span>
+              {% if missions_en_cours_count %}
+              <span class="badge badge-primary">{{ missions_en_cours_count }}</span>
+              {% endif %}
             </a>
           </div>
         </div>
@@ -223,68 +217,75 @@
           <div class="dropdown">
             <button class="icon-btn notification-btn" id="notificationBtn" title="Notifications">
               <i class="fas fa-bell"></i>
-              <span class="notification-badge">5</span>
+              {% if notifications_count > 0 %}
+              <span class="notification-badge">{{ notifications_count }}</span>
+              {% endif %}
             </button>
             <div class="dropdown-menu notification-dropdown" id="notificationDropdown">
               <div class="dropdown-header">
                 <h6>Notifications</h6>
-                <button class="btn-text">Tout marquer comme lu</button>
+                {% if notifications %}
+                <button class="btn-text" onclick="markAllAsRead()">Tout marquer comme lu</button>
+                {% endif %}
               </div>
               <div class="notification-list">
-                <div class="notification-item unread">
-                  <i class="fas fa-truck text-primary"></i>
-                  <div class="notification-content">
-                    <p><strong>Nouvelle mission</strong></p>
-                    <span class="text-muted">Il y a 5 minutes</span>
+                {% if notifications %}
+                  {% for notif in notifications %}
+                  <div class="notification-item {% if not notif.is_read %}unread{% endif %}">
+                    <i class="fas fa-{{ notif.icon }} text-{{ notif.color }}"></i>
+                    <div class="notification-content">
+                      <p><strong>{{ notif.title }}</strong></p>
+                      <span class="text-muted">{{ notif.created_at|timesince }}</span>
+                    </div>
                   </div>
-                </div>
-                <div class="notification-item">
-                  <i class="fas fa-money-bill-wave text-success"></i>
-                  <div class="notification-content">
-                    <p><strong>Paiement reçu</strong></p>
-                    <span class="text-muted">Il y a 1 heure</span>
+                  {% endfor %}
+                {% else %}
+                  <div class="notification-item">
+                    <div class="notification-content text-center py-3">
+                      <i class="fas fa-bell-slash text-muted fa-2x mb-2"></i>
+                      <p class="text-muted mb-0">Aucune notification</p>
+                    </div>
                   </div>
-                </div>
-                <div class="notification-item">
-                  <i class="fas fa-wrench text-warning"></i>
-                  <div class="notification-content">
-                    <p><strong>Réparation terminée</strong></p>
-                    <span class="text-muted">Il y a 3 heures</span>
-                  </div>
-                </div>
+                {% endif %}
               </div>
+              {% if notifications %}
               <div class="dropdown-footer">
-                <a href="#">Voir toutes les notifications</a>
+                <a href="{% url 'notifications_list' %}">Voir toutes les notifications</a>
               </div>
+              {% endif %}
             </div>
           </div>
 
           <!-- User Menu -->
           <div class="dropdown">
             <button class="user-menu-btn" id="userMenuBtn">
-              <img src="{% static 'images/avatar.png' %}" alt="Avatar" class="user-avatar">
+              <img src="https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username }}&background=3b82f6&color=fff"
+                   alt="Avatar" class="user-avatar"
+                   onerror="this.src='https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff'">
               <div class="user-info">
-                <span class="user-name">Admin</span>
-                <span class="user-role">Administrateur</span>
+                <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                <span class="user-role">{{ user.groups.first.name|default:"Utilisateur" }}</span>
               </div>
               <i class="fas fa-chevron-down"></i>
             </button>
             <div class="dropdown-menu user-dropdown" id="userDropdown">
               <div class="dropdown-header user-dropdown-header">
-                <img src="{% static 'images/avatar.png' %}" alt="Avatar">
+                <img src="https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username }}&background=3b82f6&color=fff"
+                     alt="Avatar"
+                     onerror="this.src='https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff'">
                 <div>
-                  <strong>Administrateur</strong>
-                  <p class="text-muted">admin@transport.com</p>
+                  <strong>{{ user.get_full_name|default:user.username }}</strong>
+                  <p class="text-muted">{{ user.email|default:"Email non défini" }}</p>
                 </div>
               </div>
               <div class="dropdown-divider"></div>
-              <a href="#" class="dropdown-item">
+              <a href="{% url 'user_profile' %}" class="dropdown-item">
                 <i class="fas fa-user"></i> Mon profil
               </a>
-              <a href="#" class="dropdown-item">
+              <a href="{% url 'user_settings' %}" class="dropdown-item">
                 <i class="fas fa-cog"></i> Paramètres
               </a>
-              <a href="#" class="dropdown-item">
+              <a href="{% url 'help_page' %}" class="dropdown-item">
                 <i class="fas fa-question-circle"></i> Aide
               </a>
               <div class="dropdown-divider"></div>

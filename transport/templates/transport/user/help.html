@@ -1,0 +1,145 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Aide | Gestion Transport{% endblock %}
+
+{% block title %}Aide{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-semibold mb-0 text-primary">
+      <i class="fas fa-question-circle"></i> Aide & Documentation
+    </h2>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-10 mx-auto">
+      <!-- Guide de démarrage -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-rocket me-2"></i>Guide de démarrage rapide</h5>
+        </div>
+        <div class="card-body">
+          <p class="lead">Bienvenue dans le système de gestion de transport!</p>
+          <ol>
+            <li class="mb-2">Consultez le <a href="{% url 'dashboard' %}">tableau de bord</a> pour une vue d'ensemble</li>
+            <li class="mb-2">Gérez vos <a href="{% url 'chauffeur_list' %}">chauffeurs</a> et <a href="{% url 'camion_list' %}">camions</a></li>
+            <li class="mb-2">Créez des <a href="{% url 'affectation_list' %}">affectations</a> entre chauffeurs et camions</li>
+            <li class="mb-2">Enregistrez vos <a href="{% url 'mission_list' %}">missions</a> de transport</li>
+            <li class="mb-2">Suivez les <a href="{% url 'paiement_mission_list' %}">paiements</a> et les finances</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Fonctionnalités principales -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Fonctionnalités principales</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <h6 class="fw-bold text-primary"><i class="fas fa-building me-2"></i>Gestion des entreprises</h6>
+              <p class="small text-muted">Créez et gérez les entreprises de transport.</p>
+            </div>
+            <div class="col-md-6 mb-3">
+              <h6 class="fw-bold text-primary"><i class="fas fa-users me-2"></i>Gestion des chauffeurs</h6>
+              <p class="small text-muted">Ajoutez, modifiez et suivez vos chauffeurs.</p>
+            </div>
+            <div class="col-md-6 mb-3">
+              <h6 class="fw-bold text-primary"><i class="fas fa-truck me-2"></i>Gestion des camions</h6>
+              <p class="small text-muted">Gérez votre flotte de véhicules.</p>
+            </div>
+            <div class="col-md-6 mb-3">
+              <h6 class="fw-bold text-primary"><i class="fas fa-link me-2"></i>Affectations</h6>
+              <p class="small text-muted">Affectez les chauffeurs aux camions.</p>
+            </div>
+            <div class="col-md-6 mb-3">
+              <h6 class="fw-bold text-primary"><i class="fas fa-box me-2"></i>Conteneurs & Contrats</h6>
+              <p class="small text-muted">Gérez les conteneurs et contrats de transport.</p>
+            </div>
+            <div class="col-md-6 mb-3">
+              <h6 class="fw-bold text-primary"><i class="fas fa-route me-2"></i>Missions</h6>
+              <p class="small text-muted">Créez et suivez vos missions de transport.</p>
+            </div>
+            <div class="col-md-6 mb-3">
+              <h6 class="fw-bold text-primary"><i class="fas fa-money-bill-wave me-2"></i>Paiements</h6>
+              <p class="small text-muted">Gérez les paiements et cautions.</p>
+            </div>
+            <div class="col-md-6 mb-3">
+              <h6 class="fw-bold text-primary"><i class="fas fa-tools me-2"></i>Réparations</h6>
+              <p class="small text-muted">Suivez les réparations et pièces détachées.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-info text-white">
+          <h5 class="mb-0"><i class="fas fa-question me-2"></i>Questions fréquentes</h5>
+        </div>
+        <div class="card-body">
+          <div class="accordion" id="faqAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingOne">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                  Comment créer une nouvelle mission?
+                </button>
+              </h2>
+              <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                  Allez dans <strong>Missions > Ajouter une mission</strong>, remplissez le formulaire avec les détails du trajet, sélectionnez le contrat associé et validez.
+                </div>
+              </div>
+            </div>
+
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingTwo">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                  Comment affecter un chauffeur à un camion?
+                </button>
+              </h2>
+              <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                  Rendez-vous dans <strong>Affectations > Ajouter une affectation</strong>, choisissez le chauffeur et le camion, puis validez. Le système vérifiera automatiquement la disponibilité.
+                </div>
+              </div>
+            </div>
+
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingThree">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                  Comment valider un paiement?
+                </button>
+              </h2>
+              <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                <div class="accordion-body">
+                  Assurez-vous que la mission est terminée et que la caution est remboursée, puis cliquez sur <strong>Valider</strong> dans la liste des paiements.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Support -->
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0"><i class="fas fa-headset me-2"></i>Besoin d'aide?</h5>
+        </div>
+        <div class="card-body">
+          <p>Si vous avez des questions ou rencontrez des problèmes, contactez le support:</p>
+          <ul class="list-unstyled">
+            <li class="mb-2"><i class="fas fa-envelope text-primary me-2"></i>Email: support@transport-system.com</li>
+            <li class="mb-2"><i class="fas fa-phone text-success me-2"></i>Téléphone: +221 XX XXX XX XX</li>
+          </ul>
+          <a href="{% url 'dashboard' %}" class="btn btn-primary mt-3">
+            <i class="fas fa-arrow-left me-2"></i>Retour au tableau de bord
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

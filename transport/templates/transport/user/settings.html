@@ -1,0 +1,139 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Paramètres | Gestion Transport{% endblock %}
+
+{% block title %}Paramètres{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-semibold mb-0 text-primary">
+      <i class="fas fa-cog"></i> Paramètres
+    </h2>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <!-- Changement de mot de passe -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-key me-2"></i>Sécurité du compte</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted">Modifiez votre mot de passe pour sécuriser votre compte.</p>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="change_password" value="1">
+
+            {% if password_form.errors %}
+              <div class="alert alert-danger">
+                {% for field in password_form %}
+                  {% for error in field.errors %}
+                    <p class="mb-0">{{ error }}</p>
+                  {% endfor %}
+                {% endfor %}
+                {% for error in password_form.non_field_errors %}
+                  <p class="mb-0">{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div class="mb-3">
+              <label for="{{ password_form.old_password.id_for_label }}" class="form-label fw-semibold">
+                <i class="fas fa-lock me-1"></i>{{ password_form.old_password.label }}
+              </label>
+              {{ password_form.old_password }}
+              {% if password_form.old_password.help_text %}
+                <small class="form-text text-muted">{{ password_form.old_password.help_text }}</small>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ password_form.new_password1.id_for_label }}" class="form-label fw-semibold">
+                <i class="fas fa-lock me-1"></i>{{ password_form.new_password1.label }}
+              </label>
+              {{ password_form.new_password1 }}
+              {% if password_form.new_password1.help_text %}
+                <small class="form-text text-muted">{{ password_form.new_password1.help_text|safe }}</small>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="{{ password_form.new_password2.id_for_label }}" class="form-label fw-semibold">
+                <i class="fas fa-lock me-1"></i>{{ password_form.new_password2.label }}
+              </label>
+              {{ password_form.new_password2 }}
+              {% if password_form.new_password2.help_text %}
+                <small class="form-text text-muted">{{ password_form.new_password2.help_text }}</small>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save me-2"></i>Modifier le mot de passe
+            </button>
+          </form>
+
+          <style>
+            /* Style les champs du formulaire Django */
+            #id_old_password,
+            #id_new_password1,
+            #id_new_password2 {
+              width: 100%;
+              padding: 0.375rem 0.75rem;
+              font-size: 1rem;
+              line-height: 1.5;
+              color: #212529;
+              background-color: #fff;
+              background-clip: padding-box;
+              border: 1px solid #ced4da;
+              border-radius: 0.25rem;
+              transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+            }
+          </style>
+        </div>
+      </div>
+
+      <!-- Préférences -->
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Préférences</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted">Personnalisez votre expérience.</p>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="update_email" value="1">
+
+            <div class="mb-3">
+              <label for="email" class="form-label fw-semibold">
+                <i class="fas fa-envelope me-1"></i>Email
+              </label>
+              <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+            </div>
+
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="email_notifications" name="email_notifications" checked>
+              <label class="form-check-label" for="email_notifications">
+                <i class="fas fa-bell me-1"></i>Recevoir des notifications par email
+              </label>
+            </div>
+
+            <button type="submit" class="btn btn-secondary">
+              <i class="fas fa-save me-2"></i>Enregistrer les préférences
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <a href="{% url 'user_profile' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Retour au profil
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

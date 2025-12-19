@@ -1187,3 +1187,66 @@ class PieceReparee(models.Model):
 
     def __str__(self):
         return f"{self.nom_piece} x{self.quantite} ({self.reparation})"
+
+
+class Notification(models.Model):
+    """Modèle pour gérer les notifications utilisateur"""
+    NOTIFICATION_TYPES = [
+        ('mission_terminee', 'Mission terminée'),
+        ('paiement_valide', 'Paiement validé'),
+        ('mission_retard', 'Mission en retard'),
+        ('reparation_urgente', 'Réparation urgente'),
+        ('caution_bloquee', 'Caution bloquée'),
+        ('info', 'Information'),
+        ('alerte', 'Alerte'),
+    ]
+
+    ICON_CHOICES = [
+        ('check-circle', 'Succès'),
+        ('exclamation-triangle', 'Avertissement'),
+        ('info-circle', 'Information'),
+        ('times-circle', 'Erreur'),
+        ('bell', 'Notification'),
+    ]
+
+    COLOR_CHOICES = [
+        ('success', 'Vert'),
+        ('warning', 'Orange'),
+        ('info', 'Bleu'),
+        ('danger', 'Rouge'),
+        ('primary', 'Bleu primaire'),
+    ]
+
+    pk_notification = models.CharField(max_length=250, primary_key=True, editable=False)
+    utilisateur = models.ForeignKey('Utilisateur', on_delete=models.CASCADE, related_name='notifications')
+    type_notification = models.CharField(max_length=50, choices=NOTIFICATION_TYPES, default='info')
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    icon = models.CharField(max_length=50, choices=ICON_CHOICES, default='bell')
+    color = models.CharField(max_length=20, choices=COLOR_CHOICES, default='info')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Relations optionnelles pour lier la notification à un objet spécifique
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, null=True, blank=True)
+    paiement = models.ForeignKey(PaiementMission, on_delete=models.CASCADE, null=True, blank=True)
+    reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['utilisateur', '-created_at']),
+            models.Index(fields=['utilisateur', 'is_read']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.pk_notification:
+            base = f"{self.utilisateur.pk_utilisateur}{self.type_notification}{self.created_at or now()}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
+            slug = slugify(base)[:240]
+            self.pk_notification = f"{slug}-{uuid4().hex[:8]}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.title} - {self.utilisateur.email} ({'Lu' if self.is_read else 'Non lu'})"

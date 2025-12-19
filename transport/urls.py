@@ -1,10 +1,7 @@
 from django.urls import path
 from . import views
-from django.contrib.auth.views import LogoutView
 from django.conf import settings
 from django.conf.urls.static import static
-from django.conf.urls import handler404, handler500
-from .views import rediriger_vers_connexion, rediriger_erreur_serveur
 
 urlpatterns = [
     path('inscription_utilisateur/', views.inscription_utilisateur, name='inscription_utilisateur'),
@@ -127,6 +124,13 @@ urlpatterns = [
 
     # Tableau de bord statistiques
     path('statistiques/', views.tableau_bord_statistiques, name='statistiques'),
+
+    # Profil utilisateur et système
+    path('profil/', views.user_profile, name='user_profile'),
+    path('parametres/', views.user_settings, name='user_settings'),
+    path('aide/', views.help_page, name='help_page'),
+    path('notifications/', views.notifications_list, name='notifications_list'),
+    path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
 
     path('logout/', views.logout_utilisateur, name='logout'),
 

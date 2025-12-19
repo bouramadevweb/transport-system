@@ -1,0 +1,129 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Notifications | Gestion Transport{% endblock %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-semibold mb-0 text-primary">
+      <i class="fas fa-bell"></i> Notifications
+      {% if total_non_lues > 0 %}
+        <span class="badge bg-danger">{{ total_non_lues }}</span>
+      {% endif %}
+    </h2>
+    {% if total_non_lues > 0 %}
+    <form method="post" action="{% url 'mark_all_notifications_read' %}" style="display: inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-check-double me-2"></i>Tout marquer comme lu
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="row">
+    <div class="col-lg-10 mx-auto">
+      {% if notifications_non_lues %}
+        <!-- Notifications non lues -->
+        <h5 class="mb-3"><i class="fas fa-exclamation-circle text-warning me-2"></i>Non lues ({{ total_non_lues }})</h5>
+        <div class="card shadow-sm border-0 mb-4">
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+              {% for notification in notifications_non_lues %}
+              <div class="list-group-item bg-light border-start border-{{ notification.color }} border-4">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1">
+                      <i class="fas fa-{{ notification.icon }} text-{{ notification.color }} me-2"></i>
+                      {{ notification.title }}
+                      <span class="badge bg-{{ notification.color }} ms-2">{{ notification.get_type_notification_display }}</span>
+                    </h6>
+                    <p class="mb-2">{{ notification.message }}</p>
+                    <div class="d-flex gap-2 align-items-center">
+                      <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>{{ notification.created_at|timesince }}
+                      </small>
+                      {% if notification.mission %}
+                        <small class="text-muted">
+                          <i class="fas fa-route me-1"></i>Mission #{{ notification.mission.pk_mission|slice:":8" }}
+                        </small>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <a href="?mark_read={{ notification.pk_notification }}" class="btn btn-sm btn-outline-success ms-3">
+                    <i class="fas fa-check"></i>
+                  </a>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if notifications_lues %}
+        <!-- Notifications lues -->
+        <h5 class="mb-3"><i class="fas fa-check-circle text-success me-2"></i>Notifications lues (récentes)</h5>
+        <div class="card shadow-sm border-0 mb-4">
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+              {% for notification in notifications_lues %}
+              <div class="list-group-item opacity-75">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1 text-muted">
+                      <i class="fas fa-{{ notification.icon }} me-2"></i>
+                      {{ notification.title }}
+                    </h6>
+                    <p class="mb-1 small text-muted">{{ notification.message }}</p>
+                    <small class="text-muted">
+                      <i class="fas fa-clock me-1"></i>{{ notification.created_at|timesince }}
+                    </small>
+                  </div>
+                  <i class="fas fa-check-circle text-success"></i>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if not notifications %}
+        <!-- Aucune notification -->
+        <div class="card shadow-sm border-0">
+          <div class="card-body text-center py-5">
+            <i class="fas fa-bell-slash fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">Aucune notification</h4>
+            <p class="text-muted">Vous n'avez aucune notification pour le moment.</p>
+            <a href="{% url 'dashboard' %}" class="btn btn-primary mt-3">
+              <i class="fas fa-arrow-left me-2"></i>Retour au tableau de bord
+            </a>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Informations -->
+      <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-info text-white">
+          <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>À propos des notifications</h6>
+        </div>
+        <div class="card-body">
+          <p class="mb-0 small text-muted">
+            Les notifications vous permettent de rester informé des événements importants dans le système:
+          </p>
+          <ul class="small text-muted mt-2 mb-0">
+            <li>Nouvelles missions assignées</li>
+            <li>Paiements en attente de validation</li>
+            <li>Affectations expirées</li>
+            <li>Réparations urgentes</li>
+            <li>Alertes système</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
