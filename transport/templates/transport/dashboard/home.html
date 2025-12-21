@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .kpi-card {
+        text-align: center;
+        padding: 15px;
+        border-radius: 8px;
+        color: white;
+        transition: transform 0.2s;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .kpi-card h3 {
+        font-size: 2.5em;
+        margin: 10px 0;
+        font-weight: bold;
+    }
+
+    .kpi-card p {
+        font-size: 1em;
+        opacity: 0.9;
+        margin: 0;
+    }
+
+    .bg-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .bg-success { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .bg-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .bg-warning { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .bg-danger { background: linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%); }
+    .bg-dark { background: linear-gradient(135deg, #434343 0%, #000000 100%); }
+
+    .alert-item {
+        padding: 10px;
+        border-left: 4px solid #f5576c;
+        background: #fff5f5;
+        margin-bottom: 10px;
+        border-radius: 4px;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 20px 0;
+    }
+
+    .filter-bar {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .progress-bar-custom {
+        height: 25px;
+        border-radius: 5px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-chart-line"></i> {{ title }}</h1>
+
+        <!-- Filtres de période -->
+        <div class="filter-bar">
+            <form method="get" class="d-flex align-items-center gap-2">
+                <label class="mb-0">Période:</label>
+                <select name="period" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
+                    <option value="7" {% if filter_period == '7' %}selected{% endif %}>7 jours</option>
+                    <option value="30" {% if filter_period == '30' %}selected{% endif %}>30 jours</option>
+                    <option value="90" {% if filter_period == '90' %}selected{% endif %}>90 jours</option>
+                    <option value="365" {% if filter_period == '365' %}selected{% endif %}>1 an</option>
+                    <option value="all" {% if filter_period == 'all' %}selected{% endif %}>Tout</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <!-- KPIs Principaux -->
+    <div class="stats-grid">
+        <div class="kpi-card bg-primary">
+            <p>Missions en cours</p>
+            <h3>{{ missions_en_cours }}</h3>
+            <small>/ {{ total_missions }} total</small>
+        </div>
+
+        <div class="kpi-card bg-success">
+            <p>CA Total</p>
+            <h3>{{ ca_total|floatformat:0 }} FCFA</h3>
+            <small>CA Net: {{ ca_net|floatformat:0 }} FCFA</small>
+        </div>
+
+        <div class="kpi-card bg-info">
+            <p>Taux de réussite</p>
+            <h3>{{ taux_reussite }}%</h3>
+            <small>{{ missions_terminees }} missions terminées</small>
+        </div>
+
+        <div class="kpi-card bg-warning">
+            <p>Conteneurs disponibles</p>
+            <h3>{{ conteneurs_disponibles }}</h3>
+            <small>/ {{ total_conteneurs }} total</small>
+        </div>
+    </div>
+
+    <!-- Alertes -->
+    {% if nb_missions_retard > 0 %}
+    <div class="dashboard-card">
+        <h4><i class="fas fa-exclamation-triangle text-danger"></i> Alertes ({{ nb_missions_retard }})</h4>
+        <div class="mt-3">
+            {% for mission in missions_retard|slice:":5" %}
+            <div class="alert-item">
+                <strong>Mission {{ mission.pk_mission|slice:":15" }}</strong> en retard
+                - Départ: {{ mission.date_depart|date:"d/m/Y" }}
+                - Chauffeur: {{ mission.contrat.chauffeur.nom }} {{ mission.contrat.chauffeur.prenom }}
+                - Destination: {{ mission.destination }}
+            </div>
+            {% endfor %}
+            {% if nb_missions_retard > 5 %}
+            <p class="text-muted">... et {{ nb_missions_retard|add:"-5" }} autre(s)</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Graphique: Évolution des missions -->
+        <div class="col-md-6">
+            <div class="dashboard-card">
+                <h4>Évolution des missions (6 derniers mois)</h4>
+                <div class="chart-container">
+                    <canvas id="chartMissions"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique: Chiffre d'affaires -->
+        <div class="col-md-6">
+            <div class="dashboard-card">
+                <h4>Chiffre d'affaires (6 derniers mois)</h4>
+                <div class="chart-container">
+                    <canvas id="chartCA"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Statut des missions -->
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <h4>Statut des missions</h4>
+                <div class="chart-container">
+                    <canvas id="chartStatutMissions"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Occupation des ressources -->
+        <div class="col-md-8">
+            <div class="dashboard-card">
+                <h4>Taux d'occupation des ressources</h4>
+
+                <div class="mb-3">
+                    <label>Conteneurs ({{ taux_occupation_conteneurs }}%)</label>
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" style="width: {{ taux_occupation_conteneurs }}%">
+                            {{ conteneurs_en_mission }} / {{ total_conteneurs }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label>Camions ({{ taux_occupation_camions }}%)</label>
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" style="width: {{ taux_occupation_camions }}%">
+                            {{ camions_affectes }} / {{ total_camions }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label>Chauffeurs ({% widthratio chauffeurs_affectes total_chauffeurs 100 %}%)</label>
+                    <div class="progress-bar-custom">
+                        <div class="progress-fill" style="width: {% widthratio chauffeurs_affectes total_chauffeurs 100 %}%">
+                            {{ chauffeurs_affectes }} / {{ total_chauffeurs }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top clients -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="dashboard-card">
+                <h4>Top 5 Clients</h4>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Client</th>
+                            <th>Type</th>
+                            <th class="text-end">Missions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in top_clients %}
+                        <tr>
+                            <td>{{ client.nom }}</td>
+                            <td><span class="badge bg-secondary">{{ client.get_type_client_display }}</span></td>
+                            <td class="text-end"><strong>{{ client.nb_missions }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Statistiques financières -->
+        <div class="col-md-6">
+            <div class="dashboard-card">
+                <h4>Statistiques financières</h4>
+                <table class="table table-sm">
+                    <tr>
+                        <td>CA Total</td>
+                        <td class="text-end"><strong>{{ ca_total|floatformat:0 }} FCFA</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Commissions</td>
+                        <td class="text-end">{{ commission_total|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr class="table-success">
+                        <td><strong>CA Net</strong></td>
+                        <td class="text-end"><strong>{{ ca_net|floatformat:0 }} FCFA</strong></td>
+                    </tr>
+                    <tr class="table-warning">
+                        <td>CA en attente</td>
+                        <td class="text-end">{{ ca_en_attente|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr class="table-info">
+                        <td>Cautions bloquées</td>
+                        <td class="text-end">{{ cautions_bloquees|floatformat:0 }} FCFA</td>
+                    </tr>
+                    <tr>
+                        <td>Coût réparations</td>
+                        <td class="text-end text-danger">{{ cout_reparations|floatformat:0 }} FCFA</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// Graphique: Évolution des missions
+const ctxMissions = document.getElementById('chartMissions').getContext('2d');
+new Chart(ctxMissions, {
+    type: 'line',
+    data: {
+        labels: {{ chart_missions_labels|safe }},
+        datasets: [
+            {
+                label: 'Total',
+                data: {{ chart_missions_total|safe }},
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4
+            },
+            {
+                label: 'Terminées',
+                data: {{ chart_missions_terminees|safe }},
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4
+            },
+            {
+                label: 'Annulées',
+                data: {{ chart_missions_annulees|safe }},
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                tension: 0.4
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
+});
+
+// Graphique: CA
+const ctxCA = document.getElementById('chartCA').getContext('2d');
+new Chart(ctxCA, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_ca_labels|safe }},
+        datasets: [
+            {
+                label: 'CA Total',
+                data: {{ chart_ca_data|safe }},
+                backgroundColor: 'rgba(102, 126, 234, 0.8)'
+            },
+            {
+                label: 'Commissions',
+                data: {{ chart_commission_data|safe }},
+                backgroundColor: 'rgba(245, 87, 108, 0.8)'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
+});
+
+// Graphique: Statut missions (pie)
+const ctxStatut = document.getElementById('chartStatutMissions').getContext('2d');
+new Chart(ctxStatut, {
+    type: 'doughnut',
+    data: {
+        labels: ['En cours', 'Terminées', 'Annulées'],
+        datasets: [{
+            data: [
+                {{ missions_statut.en_cours }},
+                {{ missions_statut.terminees }},
+                {{ missions_statut.annulees }}
+            ],
+            backgroundColor: [
+                'rgba(102, 126, 234, 0.8)',
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(239, 68, 68, 0.8)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom' }
+        }
+    }
+});
+</script>
+{% endblock %}

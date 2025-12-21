@@ -186,6 +186,10 @@
           <i class="fas fa-user-plus"></i>
           <span>Utilisateurs</span>
         </a>
+        <a href="{% url 'audit_log_list' %}" class="menu-item {% if 'audit' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Historique d'audit">
+          <i class="fas fa-history"></i>
+          <span>Historique d'audit</span>
+        </a>
         <a href="{% url 'logout' %}" class="menu-item logout-btn" data-tooltip="Déconnexion">
           <i class="fas fa-sign-out-alt"></i>
           <span>Déconnexion</span>

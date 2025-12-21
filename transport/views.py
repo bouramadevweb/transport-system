@@ -4,11 +4,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import PasswordChangeForm
 from django.db import IntegrityError
 from django.contrib import messages
-from django.db.models import Count, Sum
-from django.db.models.functions import TruncMonth
-from datetime import datetime
+from django.db.models import Count, Sum, F
+from django.db.models.functions import TruncMonth, TruncYear
 from django.http import JsonResponse
-
+from datetime import datetime
 from .form import (
     EntrepriseForm, InscriptionUtilisateurForm, ConnexionForm, ChauffeurForm,
     CamionForm, AffectationForm, TransitaireForm, ClientForm,
@@ -24,8 +23,7 @@ from .models import (
     Mecanicien, Fournisseur, Reparation, ReparationMecanicien, PieceReparee
 )
 from .decorators import (
-    can_validate_payment, can_delete_data, admin_required,
-    manager_or_admin_required
+    can_validate_payment, can_delete_data, manager_or_admin_required
 )
 
 from django.http import HttpResponse
@@ -34,7 +32,6 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
 from io import BytesIO
-from utils.generate_contrat_pdf import generate_pdf_contrat
 from django.conf import settings
 import os
 from utils.generate_contrat_pdf import generate_pdf_contrat
@@ -726,49 +723,45 @@ def delete_frais(request, pk):
 # Liste des missions
 @login_required
 def mission_list(request):
-    from datetime import datetime
+    from .filters import MissionFilter
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-    # ========== RÉCUPÉRATION DES FILTRES DE DATE ==========
-    date_debut_str = request.GET.get('date_debut', '')
-    date_fin_str = request.GET.get('date_fin', '')
+    # Récupérer toutes les missions avec relations
+    missions = Mission.objects.select_related('contrat', 'prestation_transport', 'contrat__chauffeur', 'contrat__client').order_by('-date_depart')
 
-    date_debut = None
-    date_fin = None
+    # Appliquer les filtres
+    missions = MissionFilter.apply(missions, request)
 
-    if date_debut_str:
-        try:
-            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-
-    if date_fin_str:
-        try:
-            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-
-    # ========== APPLICATION DES FILTRES ==========
-    missions = Mission.objects.select_related('contrat', 'prestation_transport').order_by('-date_depart')
-
-    # Apply date filters if provided
-    if date_debut:
-        missions = missions.filter(date_depart__gte=date_debut)
-    if date_fin:
-        missions = missions.filter(date_depart__lte=date_fin)
-
-    # Séparer par statut
+    # Séparer par statut (counts uniquement)
     missions_en_cours = missions.filter(statut='en cours')
     missions_terminees = missions.filter(statut='terminée')
     missions_annulees = missions.filter(statut='annulée')
 
+    # Pagination - 20 missions par page
+    paginator = Paginator(missions, 20)
+    page = request.GET.get('page', 1)
+
+    try:
+        missions_page = paginator.page(page)
+    except PageNotAnInteger:
+        missions_page = paginator.page(1)
+    except EmptyPage:
+        missions_page = paginator.page(paginator.num_pages)
+
+    # Récupérer les données pour les filtres
+    chauffeurs = Chauffeur.objects.all().order_by('nom')
+    clients = Client.objects.all().order_by('nom')
+
     return render(request, 'transport/missions/mission_list.html', {
-        'date_debut': date_debut,
-        'date_fin': date_fin,
-        'missions': missions,
+        'missions': missions_page,
         'missions_en_cours': missions_en_cours,
         'missions_terminees': missions_terminees,
         'missions_annulees': missions_annulees,
-        'title': 'Liste des missions'
+        'chauffeurs': chauffeurs,
+        'clients': clients,
+        'title': 'Liste des missions',
+        # Conserver les valeurs des filtres pour les afficher dans le formulaire
+        'filters': request.GET
     })
 # Créer une mission
 @login_required
@@ -1035,47 +1028,44 @@ def delete_mission_conteneur(request, pk):
 # Liste
 @login_required
 def paiement_mission_list(request):
-    from datetime import datetime
+    from .filters import PaiementMissionFilter
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-    # ========== RÉCUPÉRATION DES FILTRES DE DATE ==========
-    date_debut_str = request.GET.get('date_debut', '')
-    date_fin_str = request.GET.get('date_fin', '')
+    # Récupérer tous les paiements avec relations
+    paiements = PaiementMission.objects.select_related(
+        'mission', 'caution', 'prestation',
+        'mission__contrat__chauffeur', 'mission__contrat__client'
+    ).order_by('-date_paiement')
 
-    date_debut = None
-    date_fin = None
+    # Appliquer les filtres
+    paiements = PaiementMissionFilter.apply(paiements, request)
 
-    if date_debut_str:
-        try:
-            date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-
-    if date_fin_str:
-        try:
-            date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-
-    # ========== APPLICATION DES FILTRES ==========
-    paiements = PaiementMission.objects.select_related('mission', 'caution', 'prestation').order_by('-date_paiement')
-
-    # Apply date filters if provided
-    if date_debut:
-        paiements = paiements.filter(date_paiement__gte=date_debut)
-    if date_fin:
-        paiements = paiements.filter(date_paiement__lte=date_fin)
-
-    # Séparer validés et en attente
+    # Séparer validés et en attente (counts uniquement)
     paiements_valides = paiements.filter(est_valide=True)
     paiements_attente = paiements.filter(est_valide=False)
 
+    # Pagination - 20 paiements par page
+    paginator = Paginator(paiements, 20)
+    page = request.GET.get('page', 1)
+
+    try:
+        paiements_page = paginator.page(page)
+    except PageNotAnInteger:
+        paiements_page = paginator.page(1)
+    except EmptyPage:
+        paiements_page = paginator.page(paginator.num_pages)
+
+    # Récupérer les données pour les filtres
+    chauffeurs = Chauffeur.objects.all().order_by('nom')
+
     return render(request, 'transport/paiements-mission/paiement_mission_list.html', {
-        'date_debut': date_debut,
-        'date_fin': date_fin,
-        'paiements': paiements,
+        'paiements': paiements_page,
         'paiements_valides': paiements_valides,
         'paiements_attente': paiements_attente,
-        'title': 'Liste des paiements'
+        'chauffeurs': chauffeurs,
+        'title': 'Liste des paiements',
+        # Conserver les valeurs des filtres pour les afficher dans le formulaire
+        'filters': request.GET
     })
 
 # Création
@@ -1150,7 +1140,25 @@ def valider_paiement_mission(request, pk):
             return redirect('paiement_mission_list')
 
         try:
+            from .models import AuditLog
+
+            # Valider le paiement
             paiement.valider_paiement()
+
+            # Enregistrer l'action dans l'historique d'audit
+            AuditLog.log_action(
+                utilisateur=request.user,
+                action='VALIDER_PAIEMENT',
+                model_name='PaiementMission',
+                object_id=paiement.pk_paiement,
+                object_repr=f"Paiement de {paiement.montant_total} FCFA pour mission {paiement.mission.destination}",
+                changes={
+                    'est_valide': {'old': False, 'new': True},
+                    'montant_total': paiement.montant_total
+                },
+                request=request
+            )
+
             messages.success(request, f"✅ Paiement validé avec succès! Montant: {paiement.montant_total} FCFA")
             return redirect('paiement_mission_list')
         except Exception as e:
@@ -2146,4 +2154,80 @@ def tableau_bord_statistiques(request):
     }
 
     return render(request, 'transport/statistiques/tableau_bord.html', context)
+
+
+# ============================================================================
+# AUDIT LOG / HISTORIQUE
+# ============================================================================
+
+@manager_or_admin_required
+def audit_log_list(request):
+    """
+    Affiche l'historique complet des actions effectuées dans le système
+    Accessible uniquement aux managers et admins
+    """
+    from .models import AuditLog, Utilisateur
+
+    # Récupérer tous les logs
+    logs = AuditLog.objects.select_related('utilisateur').order_by('-timestamp')
+
+    # Filtrage
+    action_filter = request.GET.get('action')
+    if action_filter and action_filter != 'tous':
+        logs = logs.filter(action=action_filter)
+
+    model_filter = request.GET.get('model')
+    if model_filter:
+        logs = logs.filter(model_name__icontains=model_filter)
+
+    user_filter = request.GET.get('utilisateur')
+    if user_filter:
+        logs = logs.filter(utilisateur__pk_utilisateur=user_filter)
+
+    date_debut = request.GET.get('date_debut')
+    if date_debut:
+        try:
+            logs = logs.filter(timestamp__date__gte=date_debut)
+        except ValueError:
+            pass
+
+    date_fin = request.GET.get('date_fin')
+    if date_fin:
+        try:
+            logs = logs.filter(timestamp__date__lte=date_fin)
+        except ValueError:
+            pass
+
+    # Pagination: limiter à 100 derniers logs par défaut
+    limit = int(request.GET.get('limit', 100))
+    logs = logs[:limit]
+
+    # Récupérer les utilisateurs pour le filtre
+    utilisateurs = Utilisateur.objects.all().order_by('email')
+
+    # Types d'actions disponibles
+    action_choices = AuditLog.ACTION_CHOICES
+
+    return render(request, 'transport/audit/audit_log_list.html', {
+        'logs': logs,
+        'utilisateurs': utilisateurs,
+        'action_choices': action_choices,
+        'filters': request.GET,
+        'title': "Historique d'audit"
+    })
+
+
+@manager_or_admin_required
+def audit_log_detail(request, pk):
+    """
+    Affiche le détail d'un log d'audit spécifique
+    """
+    from .models import AuditLog
+
+    log = get_object_or_404(AuditLog, pk_audit=pk)
+
+    return render(request, 'transport/audit/audit_log_detail.html', {
+        'log': log,
+        'title': "Détail de l'audit"
+    })
 

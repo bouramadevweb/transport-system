@@ -1,0 +1,245 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Historique d'audit | Gestion Transport{% endblock %}
+
+{% block title %}Historique d'audit{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-semibold mb-0 text-primary">
+            <i class="fas fa-history me-2"></i>Historique d'audit
+        </h2>
+        <div>
+            <span class="badge bg-info">{{ logs|length }} enregistrement(s)</span>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0">
+                <i class="fas fa-filter me-2"></i>Filtres
+                <button class="btn btn-sm btn-link float-end" type="button" data-bs-toggle="collapse" data-bs-target="#filterForm">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </h6>
+        </div>
+        <div class="collapse show" id="filterForm">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <!-- Action -->
+                    <div class="col-md-3">
+                        <label for="action" class="form-label">Type d'action</label>
+                        <select name="action" id="action" class="form-select">
+                            <option value="tous" {% if not filters.action or filters.action == 'tous' %}selected{% endif %}>Toutes les actions</option>
+                            {% for value, label in action_choices %}
+                            <option value="{{ value }}" {% if filters.action == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Utilisateur -->
+                    <div class="col-md-3">
+                        <label for="utilisateur" class="form-label">Utilisateur</label>
+                        <select name="utilisateur" id="utilisateur" class="form-select">
+                            <option value="">Tous les utilisateurs</option>
+                            {% for user in utilisateurs %}
+                            <option value="{{ user.pk_utilisateur }}" {% if filters.utilisateur == user.pk_utilisateur %}selected{% endif %}>
+                                {{ user.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Modèle -->
+                    <div class="col-md-2">
+                        <label for="model" class="form-label">Modèle</label>
+                        <input type="text" name="model" id="model" class="form-control"
+                               placeholder="Ex: Mission" value="{{ filters.model }}">
+                    </div>
+
+                    <!-- Date début -->
+                    <div class="col-md-2">
+                        <label for="date_debut" class="form-label">Du</label>
+                        <input type="date" name="date_debut" id="date_debut" class="form-control"
+                               value="{{ filters.date_debut }}">
+                    </div>
+
+                    <!-- Date fin -->
+                    <div class="col-md-2">
+                        <label for="date_fin" class="form-label">Au</label>
+                        <input type="date" name="date_fin" id="date_fin" class="form-control"
+                               value="{{ filters.date_fin }}">
+                    </div>
+
+                    <!-- Limite résultats -->
+                    <div class="col-md-2">
+                        <label for="limit" class="form-label">Limite</label>
+                        <select name="limit" id="limit" class="form-select">
+                            <option value="100" {% if filters.limit == '100' or not filters.limit %}selected{% endif %}>100 derniers</option>
+                            <option value="500" {% if filters.limit == '500' %}selected{% endif %}>500 derniers</option>
+                            <option value="1000" {% if filters.limit == '1000' %}selected{% endif %}>1000 derniers</option>
+                        </select>
+                    </div>
+
+                    <!-- Boutons -->
+                    <div class="col-md-10">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Filtrer
+                        </button>
+                        <a href="{% url 'audit_log_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-redo me-2"></i>Réinitialiser
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des logs -->
+    {% if logs %}
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 180px;">Date/Heure</th>
+                            <th style="width: 150px;">Utilisateur</th>
+                            <th style="width: 150px;">Action</th>
+                            <th style="width: 120px;">Modèle</th>
+                            <th>Objet</th>
+                            <th style="width: 120px;">IP</th>
+                            <th style="width: 80px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="far fa-clock me-1"></i>{{ log.timestamp|date:"d/m/Y H:i" }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if log.utilisateur %}
+                                    <span class="badge bg-secondary">{{ log.utilisateur.email|truncatewords:1 }}</span>
+                                {% else %}
+                                    <span class="badge bg-dark">Système</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.action == 'CREATE' %}
+                                    <span class="badge bg-success"><i class="fas fa-plus me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'UPDATE' %}
+                                    <span class="badge bg-warning"><i class="fas fa-edit me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'DELETE' %}
+                                    <span class="badge bg-danger"><i class="fas fa-trash me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'VALIDER_PAIEMENT' %}
+                                    <span class="badge bg-info"><i class="fas fa-check-circle me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'TERMINER_MISSION' %}
+                                    <span class="badge bg-primary"><i class="fas fa-flag-checkered me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'ANNULER_MISSION' %}
+                                    <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>{{ log.get_action_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ log.get_action_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ log.model_name }}</small>
+                            </td>
+                            <td>
+                                <small>
+                                    <strong>#{{ log.object_id|slice:":12" }}{% if log.object_id|length > 12 %}...{% endif %}</strong>
+                                    {% if log.object_repr %}
+                                    <br><span class="text-muted">{{ log.object_repr|truncatechars:50 }}</span>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                {% if log.ip_address %}
+                                    <small class="text-muted">{{ log.ip_address }}</small>
+                                {% else %}
+                                    <small class="text-muted">-</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'audit_log_detail' log.pk_audit %}"
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="Voir détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info pagination -->
+    <div class="text-muted mt-3 text-center">
+        <small>
+            <i class="fas fa-info-circle me-1"></i>
+            Affichage des {{ logs|length }} derniers enregistrements
+            {% if filters.limit %}(limite: {{ filters.limit }}){% endif %}
+        </small>
+    </div>
+
+    {% else %}
+    <!-- Aucun résultat -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">Aucun enregistrement trouvé</h4>
+            <p class="text-muted">Aucune action n'a été enregistrée avec ces critères.</p>
+            <a href="{% url 'audit_log_list' %}" class="btn btn-primary mt-3">
+                <i class="fas fa-redo me-2"></i>Réinitialiser les filtres
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Légende -->
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-info text-white">
+            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>À propos de l'audit</h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-2 small text-muted">
+                L'historique d'audit enregistre toutes les actions importantes effectuées dans le système :
+            </p>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="small text-muted mb-0">
+                        <li><span class="badge bg-success">Création</span> - Nouveaux objets créés</li>
+                        <li><span class="badge bg-warning">Modification</span> - Objets modifiés</li>
+                        <li><span class="badge bg-danger">Suppression</span> - Objets supprimés</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="small text-muted mb-0">
+                        <li><span class="badge bg-info">Validation paiement</span> - Paiements validés</li>
+                        <li><span class="badge bg-primary">Terminer mission</span> - Missions terminées</li>
+                        <li><span class="badge bg-danger">Annuler mission</span> - Missions annulées</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+        .badge {
+            font-size: 0.7rem;
+        }
+    }
+</style>
+{% endblock %}

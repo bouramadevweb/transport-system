@@ -23,6 +23,7 @@
                             <th><i class="fas fa-hashtag me-2"></i>Numéro</th>
                             <th><i class="fas fa-ship me-2"></i>Compagnie</th>
                             <th><i class="fas fa-tag me-2"></i>Type</th>
+                            <th><i class="fas fa-info-circle me-2"></i>Statut</th>
                             <th><i class="fas fa-weight me-2"></i>Poids</th>
                             <th><i class="fas fa-user me-2"></i>Client</th>
                             <th><i class="fas fa-dolly me-2"></i>Transitaire</th>
@@ -35,6 +36,23 @@
                             <td>{{ c.numero_conteneur }}</td>
                             <td>{{ c.compagnie.nom }}</td>
                             <td>{{ c.type_conteneur }}</td>
+                            <td>
+                                {% if c.statut == 'au_port' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-anchor me-1"></i>Au port
+                                    </span>
+                                {% elif c.statut == 'en_mission' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-truck-moving me-1"></i>En mission
+                                    </span>
+                                {% elif c.statut == 'en_maintenance' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-tools me-1"></i>En maintenance
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ c.statut }}</span>
+                                {% endif %}
+                            </td>
                             <td>{{ c.poids }}</td>
                             <td>{{ c.client.nom }}</td>
                             <td>{{ c.transitaire.nom }}</td>

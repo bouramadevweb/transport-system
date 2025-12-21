@@ -42,7 +42,13 @@ TYPE_CLIENT_CHOICES = [
     ('particulier', 'Particulier'),
 ]
 
-STATUT_CAUTION_CHOICES = [
+STATUT_CONTENEUR_CHOICES = [
+    ('au_port', 'Au port (disponible)'),
+    ('en_mission', 'En mission'),
+    ('en_maintenance', 'En maintenance'),
+]
+
+STATUT_CAUTION_CONTRAT_CHOICES = [
     ('bloquée', 'Bloquée'),
     ('débloquée', 'Débloquée'),
 ]
@@ -404,6 +410,14 @@ class Conteneur(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
 
+    # Statut du conteneur pour éviter les attributions multiples
+    statut = models.CharField(
+        max_length=20,
+        choices=STATUT_CONTENEUR_CHOICES,
+        default='au_port',
+        help_text="Statut actuel du conteneur"
+    )
+
     def save(self, *args, **kwargs):
         if not self.pk_conteneur:
             base = f"{self.numero_conteneur}{self.compagnie.nom}{self.compagnie.pk_compagnie}{self.client.nom}{self.client.pk_client}"
@@ -423,10 +437,31 @@ class Conteneur(models.Model):
         ]  
 
     def __str__(self):
-        return f"{self.compagnie}"
+        return f"{self.numero_conteneur} - {self.compagnie.nom}"
+
+    def est_disponible(self):
+        """Vérifie si le conteneur est disponible pour une nouvelle mission"""
+        return self.statut == 'au_port'
+
+    def mettre_en_mission(self):
+        """Marque le conteneur comme étant en mission"""
+        self.statut = 'en_mission'
+        self.save(update_fields=['statut'])
+
+    def retourner_au_port(self):
+        """Marque le conteneur comme retourné au port (disponible)"""
+        self.statut = 'au_port'
+        self.save(update_fields=['statut'])
+
+    def get_mission_en_cours(self):
+        """Retourne la mission en cours pour ce conteneur (si existe)"""
+        from .models import Mission
+        return Mission.objects.filter(
+            contrat__conteneur=self,
+            statut='en cours'
+        ).first()
 
 
-    
 class ContratTransport(models.Model):
     pk_contrat = models.CharField(max_length=250, primary_key=True, editable=False)
 
@@ -464,7 +499,7 @@ class ContratTransport(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0'))]
     )
-    statut_caution = models.CharField(max_length=10, choices=STATUT_CAUTION_CHOICES, default='bloquee')
+    statut_caution = models.CharField(max_length=10, choices=STATUT_CAUTION_CONTRAT_CHOICES, default='bloquee')
 
     date_debut = models.DateField()
     date_limite_retour = models.DateField()
@@ -863,6 +898,13 @@ class Mission(models.Model):
         self.statut = 'terminée'
         self.save()
 
+        # 🆕 RETOURNER LE CONTENEUR AU PORT
+        if self.contrat and self.contrat.conteneur:
+            self.contrat.conteneur.retourner_au_port()
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"🚢 Conteneur {self.contrat.conteneur.numero_conteneur} retourné au port (disponible)")
+
         return info_penalite
 
     def annuler_mission(self, raison=''):
@@ -925,6 +967,13 @@ class Mission(models.Model):
                     paiement.observation = ''
                 paiement.observation += f'\n\n❌ PAIEMENT ANNULÉ\nMission annulée le {date_annulation.strftime("%d/%m/%Y %H:%M")}\nRaison: {raison if raison else "Non spécifiée"}'
                 paiement.save()
+
+        # 🆕 5. RETOURNER LE CONTENEUR AU PORT (car mission annulée)
+        if self.contrat and self.contrat.conteneur:
+            self.contrat.conteneur.retourner_au_port()
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"🚢 Conteneur {self.contrat.conteneur.numero_conteneur} retourné au port (mission annulée)")
 
     # class Meta:
     #     unique_together = (
@@ -1339,3 +1388,160 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.utilisateur.email} ({'Lu' if self.is_read else 'Non lu'})"
+
+
+class AuditLog(models.Model):
+    """
+    Modèle pour enregistrer l'historique des actions importantes
+    ============================================================
+
+    Ce modèle permet de tracer toutes les opérations critiques effectuées
+    dans le système (création, modification, suppression d'objets).
+
+    Utilisation:
+    - Automatique via signals pour les modèles critiques
+    - Manuelle dans les vues pour les actions spécifiques
+
+    Exemple:
+        AuditLog.objects.create(
+            utilisateur=request.user,
+            action='VALIDER_PAIEMENT',
+            model_name='PaiementMission',
+            object_id=paiement.pk_paiement,
+            object_repr=str(paiement),
+            changes={'est_valide': {'old': False, 'new': True}}
+        )
+    """
+
+    ACTION_CHOICES = [
+        ('CREATE', 'Création'),
+        ('UPDATE', 'Modification'),
+        ('DELETE', 'Suppression'),
+        ('VALIDER_PAIEMENT', 'Validation de paiement'),
+        ('TERMINER_MISSION', 'Terminer mission'),
+        ('ANNULER_MISSION', 'Annuler mission'),
+        ('BLOQUER_CAUTION', 'Bloquer caution'),
+        ('DEBLOQUER_CAUTION', 'Débloquer caution'),
+        ('LOGIN', 'Connexion'),
+        ('LOGOUT', 'Déconnexion'),
+        ('CHANGE_PASSWORD', 'Changement de mot de passe'),
+    ]
+
+    pk_audit = models.CharField(max_length=250, primary_key=True, editable=False)
+
+    # Qui a fait l'action
+    utilisateur = models.ForeignKey(
+        'Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_logs',
+        help_text="Utilisateur qui a effectué l'action"
+    )
+
+    # Quand
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    # Quoi
+    action = models.CharField(
+        max_length=50,
+        choices=ACTION_CHOICES,
+        help_text="Type d'action effectuée"
+    )
+
+    # Sur quel objet
+    model_name = models.CharField(
+        max_length=100,
+        help_text="Nom du modèle concerné (ex: Mission, PaiementMission)"
+    )
+    object_id = models.CharField(
+        max_length=250,
+        help_text="ID de l'objet concerné"
+    )
+    object_repr = models.TextField(
+        help_text="Représentation textuelle de l'objet",
+        blank=True
+    )
+
+    # Détails
+    changes = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Dictionnaire des changements effectués (format: {'champ': {'old': valeur, 'new': valeur}})"
+    )
+
+    # Métadonnées supplémentaires
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text="Adresse IP de l'utilisateur"
+    )
+    user_agent = models.TextField(
+        blank=True,
+        help_text="User agent du navigateur"
+    )
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['utilisateur', '-timestamp']),
+            models.Index(fields=['model_name', 'object_id']),
+            models.Index(fields=['-timestamp']),
+            models.Index(fields=['action']),
+        ]
+        verbose_name = "Journal d'audit"
+        verbose_name_plural = "Journaux d'audit"
+
+    def save(self, *args, **kwargs):
+        if not self.pk_audit:
+            base = f"audit{self.utilisateur.pk_utilisateur if self.utilisateur else 'system'}{self.action}{self.timestamp or now()}"
+            base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '').replace(':', '')
+            slug = slugify(base)[:240]
+            self.pk_audit = f"{slug}-{uuid4().hex[:8]}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        user = self.utilisateur.email if self.utilisateur else 'Système'
+        return f"{self.get_action_display()} - {self.model_name} #{self.object_id[:8]}... par {user} le {self.timestamp.strftime('%d/%m/%Y %H:%M')}"
+
+    @classmethod
+    def log_action(cls, utilisateur, action, model_name, object_id, object_repr='', changes=None, request=None):
+        """
+        Méthode helper pour créer facilement un log d'audit
+
+        Args:
+            utilisateur: Instance de Utilisateur
+            action: Code de l'action (voir ACTION_CHOICES)
+            model_name: Nom du modèle (str)
+            object_id: ID de l'objet (str)
+            object_repr: Représentation textuelle de l'objet (str)
+            changes: Dictionnaire des changements (dict)
+            request: HttpRequest pour récupérer IP et user agent
+
+        Returns:
+            Instance AuditLog créée
+        """
+        ip_address = None
+        user_agent = ''
+
+        if request:
+            # Récupérer l'IP
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip_address = x_forwarded_for.split(',')[0]
+            else:
+                ip_address = request.META.get('REMOTE_ADDR')
+
+            # Récupérer le user agent
+            user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+
+        return cls.objects.create(
+            utilisateur=utilisateur,
+            action=action,
+            model_name=model_name,
+            object_id=object_id,
+            object_repr=object_repr,
+            changes=changes or {},
+            ip_address=ip_address,
+            user_agent=user_agent
+        )

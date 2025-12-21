@@ -104,6 +104,48 @@ def notifier_reparation_urgente(sender, instance, created, **kwargs):
         logger.info(f"⚠️ Notifications de réparation urgente créées pour {admins_managers.count()} utilisateurs")
 
 
+@receiver(post_save, sender=Cautions)
+def notifier_caution_bloquee(sender, instance, created, **kwargs):
+    """
+    Créer une notification quand une caution est bloquée (statut passe de débloquée à bloquée)
+    """
+    # Vérifier si le statut a changé vers 'non_remboursee' ou 'consommee'
+    if not created and instance.statut in ['non_remboursee', 'consommee']:
+        from .models import Notification, Utilisateur
+
+        # Vérifier qu'une notification n'existe pas déjà
+        existing = Notification.objects.filter(
+            type_notification='caution_bloquee'
+        ).filter(
+            message__contains=f"Caution #{instance.pk_caution[:8]}"
+        ).exists()
+
+        if not existing:
+            # Notifier les admins, managers et le chauffeur concerné
+            users_to_notify = []
+
+            # Admins et managers
+            admins_managers = Utilisateur.objects.filter(role__in=['admin', 'manager'])
+            users_to_notify.extend(list(admins_managers))
+
+            # Chauffeur concerné
+            if instance.chauffeur and hasattr(instance.chauffeur, 'utilisateur') and instance.chauffeur.utilisateur:
+                users_to_notify.append(instance.chauffeur.utilisateur)
+
+            for user in users_to_notify:
+                status_label = dict(STATUT_CAUTION_CHOICES).get(instance.statut, instance.statut)
+                Notification.objects.create(
+                    utilisateur=user,
+                    type_notification='caution_bloquee',
+                    title=f"Caution {status_label} - {instance.montant} FCFA",
+                    message=f"La caution #{instance.pk_caution[:8]} d'un montant de {instance.montant} FCFA a été marquée comme '{status_label}'. Camion: {instance.camion.immatriculation if instance.camion else 'N/A'}, Chauffeur: {instance.chauffeur.nom if instance.chauffeur else 'N/A'}",
+                    icon='exclamation-triangle',
+                    color='danger'
+                )
+
+            logger.info(f"⚠️ Notifications de caution bloquée créées pour {len(users_to_notify)} utilisateurs")
+
+
 @receiver(post_save, sender=ContratTransport)
 def creer_workflow_complet_contrat(sender, instance, created, **kwargs):  # noqa: ARG001
     """
@@ -154,6 +196,28 @@ def creer_workflow_complet_contrat(sender, instance, created, **kwargs):  # noqa
 
         if missions_en_cours_chauffeur.exists():
             logger.warning(f"⚠️ Le chauffeur {instance.chauffeur.nom} {instance.chauffeur.prenom} est déjà affecté à une mission en cours")
+
+        # 🆕 VÉRIFICATION CRITIQUE: Le conteneur doit être disponible
+        if instance.conteneur and not instance.conteneur.est_disponible():
+            mission_en_cours = instance.conteneur.get_mission_en_cours()
+            if mission_en_cours:
+                logger.error(
+                    f"❌ CONTENEUR DÉJÀ EN MISSION! Le conteneur {instance.conteneur.numero_conteneur} "
+                    f"est déjà assigné à la mission #{mission_en_cours.pk_mission[:8]} "
+                    f"(statut: {mission_en_cours.statut}, destination: {mission_en_cours.destination}). "
+                    f"Le conteneur doit d'abord être retourné au port."
+                )
+                raise ValidationError(
+                    f"🚫 Impossible de créer le contrat: le conteneur {instance.conteneur.numero_conteneur} "
+                    f"est déjà en mission vers {mission_en_cours.destination}. "
+                    f"Attendez que la mission se termine et que le conteneur soit retourné au port."
+                )
+            else:
+                logger.error(f"❌ Le conteneur {instance.conteneur.numero_conteneur} n'est pas disponible (statut: {instance.conteneur.get_statut_display()})")
+                raise ValidationError(
+                    f"🚫 Le conteneur {instance.conteneur.numero_conteneur} n'est pas disponible "
+                    f"(statut actuel: {instance.conteneur.get_statut_display()})"
+                )
 
         # Utiliser une transaction atomique pour garantir la cohérence
         try:
@@ -218,6 +282,11 @@ def creer_workflow_complet_contrat(sender, instance, created, **kwargs):  # noqa
                     statut='en cours'
                 )
                 logger.info(f"✅ Mission créée: {mission.pk_mission}")
+
+                # 🆕 MARQUER LE CONTENEUR COMME EN MISSION
+                if instance.conteneur:
+                    instance.conteneur.mettre_en_mission()
+                    logger.info(f"🚢 Conteneur {instance.conteneur.numero_conteneur} marqué comme 'en_mission'")
 
                 # 4. Créer le PaiementMission (prérempli mais non validé)
                 # Calculer la commission du transitaire si disponible

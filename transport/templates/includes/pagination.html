@@ -1,0 +1,102 @@
+{% if page_obj.has_other_pages %}
+<nav aria-label="Navigation de page" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <!-- Bouton Première page -->
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" aria-label="Première">
+                <i class="fas fa-angle-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" aria-label="Précédent">
+                <i class="fas fa-angle-left"></i>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link"><i class="fas fa-angle-double-left"></i></span>
+        </li>
+        <li class="page-item disabled">
+            <span class="page-link"><i class="fas fa-angle-left"></i></span>
+        </li>
+        {% endif %}
+
+        <!-- Numéros de page -->
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <li class="page-item active" aria-current="page">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Bouton Dernière page -->
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" aria-label="Suivant">
+                <i class="fas fa-angle-right"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" aria-label="Dernière">
+                <i class="fas fa-angle-double-right"></i>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link"><i class="fas fa-angle-right"></i></span>
+        </li>
+        <li class="page-item disabled">
+            <span class="page-link"><i class="fas fa-angle-double-right"></i></span>
+        </li>
+        {% endif %}
+    </ul>
+
+    <!-- Info pagination -->
+    <div class="text-center text-muted small mt-2">
+        <i class="fas fa-info-circle me-1"></i>
+        Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+        ({{ page_obj.paginator.count }} résultat{{ page_obj.paginator.count|pluralize }})
+    </div>
+</nav>
+
+<style>
+    .pagination .page-link {
+        color: var(--primary, #3b82f6);
+        border-color: var(--border, #e2e8f0);
+        padding: 0.5rem 0.75rem;
+        transition: all 0.2s;
+    }
+
+    .pagination .page-link:hover {
+        background-color: var(--hover, #f1f5f9);
+        border-color: var(--primary, #3b82f6);
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: var(--primary, #3b82f6);
+        border-color: var(--primary, #3b82f6);
+        font-weight: 600;
+    }
+
+    .pagination .page-item.disabled .page-link {
+        color: var(--text-muted, #64748b);
+        background-color: transparent;
+    }
+
+    @media (max-width: 576px) {
+        .pagination {
+            font-size: 0.875rem;
+        }
+
+        .pagination .page-link {
+            padding: 0.375rem 0.5rem;
+        }
+    }
+</style>
+{% endif %}

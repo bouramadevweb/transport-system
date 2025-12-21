@@ -1,5 +1,8 @@
 from django.urls import path
 from . import views
+from . import export_views
+from . import pdf_reports
+from . import dashboard_views
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -94,6 +97,16 @@ urlpatterns = [
     path('paiement-missions/<str:pk>/delete/', views.delete_paiement_mission, name='delete_paiement_mission'),
     path('paiement-missions/<str:pk>/valider/', views.valider_paiement_mission, name='valider_paiement_mission'),
 
+    # Exports Excel/CSV
+    path('missions/export/excel/', export_views.export_missions_excel, name='export_missions_excel'),
+    path('missions/export/csv/', export_views.export_missions_csv, name='export_missions_csv'),
+    path('paiements/export/excel/', export_views.export_paiements_excel, name='export_paiements_excel'),
+    path('paiements/export/csv/', export_views.export_paiements_csv, name='export_paiements_csv'),
+
+    # Rapports PDF avancés
+    path('missions/rapport/pdf/', pdf_reports.generate_missions_report_pdf, name='rapport_missions_pdf'),
+    path('paiements/rapport/pdf/', pdf_reports.generate_paiements_report_pdf, name='rapport_paiements_pdf'),
+
     path('mecaniciens/', views.mecanicien_list, name='mecanicien_list'),
     path('mecaniciens/create/', views.create_mecanicien, name='create_mecanicien'),
     path('mecaniciens/<str:pk>/update/', views.update_mecanicien, name='update_mecanicien'),
@@ -123,7 +136,11 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path('dashboard/', views.dashboard, name='dashboard'),
 
-    # Tableau de bord statistiques
+    # Nouveaux dashboards avancés avec KPIs
+    path('dashboard/home/', dashboard_views.dashboard_home, name='dashboard_home'),
+    path('dashboard/financier/', dashboard_views.dashboard_financier, name='dashboard_financier'),
+
+    # Tableau de bord statistiques (ancien)
     path('statistiques/', views.tableau_bord_statistiques, name='statistiques'),
 
     # Profil utilisateur et système
@@ -132,6 +149,10 @@ urlpatterns = [
     path('aide/', views.help_page, name='help_page'),
     path('notifications/', views.notifications_list, name='notifications_list'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+
+    # Historique d'audit
+    path('audit/', views.audit_log_list, name='audit_log_list'),
+    path('audit/<str:pk>/', views.audit_log_detail, name='audit_log_detail'),
 
     path('logout/', views.logout_utilisateur, name='logout'),
 
