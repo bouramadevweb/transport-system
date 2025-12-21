@@ -1,0 +1,138 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Assigner un Rôle | Gestion Transport{% endblock %}
+
+{% block title %}Assigner un Rôle{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-semibold mb-0">
+            <i class="fas fa-user-shield"></i> Assigner un Rôle
+        </h2>
+        <a href="{% url 'user_permissions_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user"></i> {{ user.display_name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if user.is_superuser %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Attention:</strong> Cet utilisateur est un Super Admin et possède déjà tous les droits.
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <p><strong>Email:</strong> {{ user.email|default:"Non renseigné" }}</p>
+                        <p><strong>Rôle actuel:</strong>
+                            {% if current_role %}
+                                <span class="badge bg-primary">{{ roles|get_item:current_role|get_item:'name' }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Aucun rôle</span>
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <hr>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-shield-alt"></i> Sélectionner un rôle
+                            </label>
+
+                            <div class="list-group">
+                                <label class="list-group-item">
+                                    <input class="form-check-input me-2" type="radio" name="role" value="NONE"
+                                           {% if not current_role %}checked{% endif %}>
+                                    <div>
+                                        <strong>Aucun rôle</strong>
+                                        <p class="small text-muted mb-0">Retirer tous les rôles de cet utilisateur</p>
+                                    </div>
+                                </label>
+
+                                {% for role_code, role_data in roles.items %}
+                                <label class="list-group-item">
+                                    <input class="form-check-input me-2" type="radio" name="role" value="{{ role_code }}"
+                                           {% if current_role == role_code %}checked{% endif %}>
+                                    <div>
+                                        <strong class="text-primary">
+                                            <i class="fas fa-shield-alt"></i> {{ role_data.name }}
+                                        </strong>
+                                        <p class="small text-muted mb-0">{{ role_data.description }}</p>
+
+                                        {% if role_data.permissions == '*' %}
+                                            <span class="badge bg-danger mt-2">Toutes les permissions</span>
+                                        {% else %}
+                                            <span class="badge bg-info mt-2">{{ role_data.permissions|length }} permissions</span>
+                                        {% endif %}
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'user_permissions_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Informations supplémentaires -->
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Description des rôles</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Administrateur</dt>
+                        <dd class="col-sm-8">Accès complet à toutes les fonctionnalités du système</dd>
+
+                        <dt class="col-sm-4">Gestionnaire</dt>
+                        <dd class="col-sm-8">Gestion des missions, affectations, conteneurs, chauffeurs et camions</dd>
+
+                        <dt class="col-sm-4">Comptable</dt>
+                        <dd class="col-sm-8">Gestion des paiements, factures, cautions et rapports financiers</dd>
+
+                        <dt class="col-sm-4">Chauffeur</dt>
+                        <dd class="col-sm-8">Consultation de ses propres missions et paiements uniquement</dd>
+
+                        <dt class="col-sm-4">Lecteur</dt>
+                        <dd class="col-sm-8 mb-0">Accès en lecture seule (pour stagiaires, auditeurs, etc.)</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.list-group-item {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+.list-group-item input[type="radio"]:checked + div {
+    color: #0d6efd;
+}
+</style>
+{% endblock %}

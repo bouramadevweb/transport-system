@@ -3,6 +3,9 @@ from . import views
 from . import export_views
 from . import pdf_reports
 from . import dashboard_views
+from . import permissions_views
+from . import invoice_views
+from . import reports_views
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -153,6 +156,25 @@ urlpatterns = [
     # Historique d'audit
     path('audit/', views.audit_log_list, name='audit_log_list'),
     path('audit/<str:pk>/', views.audit_log_detail, name='audit_log_detail'),
+
+    # Gestion des permissions et rôles
+    path('permissions/', permissions_views.permissions_dashboard, name='permissions_dashboard'),
+    path('permissions/users/', permissions_views.user_permissions_list, name='user_permissions_list'),
+    path('permissions/users/<str:user_id>/assign/', permissions_views.assign_user_role, name='assign_user_role'),
+    path('permissions/groups/<int:group_id>/', permissions_views.group_details, name='group_details'),
+    path('permissions/my-permissions/', permissions_views.my_permissions, name='my_permissions'),
+
+    # Gestion des factures
+    path('invoices/', invoice_views.invoices_list, name='invoices_list'),
+    path('invoices/generate/<str:paiement_id>/', invoice_views.generate_invoice, name='generate_invoice'),
+    path('invoices/preview/<str:paiement_id>/', invoice_views.preview_invoice, name='preview_invoice'),
+    path('invoices/send/<str:paiement_id>/', invoice_views.send_invoice_email, name='send_invoice_email'),
+    path('invoices/bulk-send/', invoice_views.bulk_send_invoices, name='bulk_send_invoices'),
+
+    # Rapports financiers avancés
+    path('reports/financial/', reports_views.financial_reports, name='financial_reports'),
+    path('reports/financial/export/', reports_views.export_financial_report_excel, name='export_financial_report_excel'),
+    path('reports/client/<str:client_id>/', reports_views.client_report, name='client_report'),
 
     path('logout/', views.logout_utilisateur, name='logout'),
 

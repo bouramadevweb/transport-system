@@ -157,8 +157,14 @@
             <a href="{% url 'dashboard_financier' %}" class="{% if request.resolver_match.url_name == 'dashboard_financier' %}active{% endif %}" data-tooltip="Tableau de Bord Financier">
               <i class="fas fa-chart-line"></i><span>Tableau de Bord</span>
             </a>
+            <a href="{% url 'financial_reports' %}" class="{% if request.resolver_match.url_name == 'financial_reports' %}active{% endif %}" data-tooltip="Rapports Financiers">
+              <i class="fas fa-file-invoice-dollar"></i><span>Rapports Avancés</span>
+            </a>
             <a href="{% url 'paiement_mission_list' %}" class="{% if 'paiement' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Paiements">
               <i class="fas fa-money-bill-wave"></i><span>Paiements</span>
+            </a>
+            <a href="{% url 'invoices_list' %}" class="{% if 'invoices' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Factures">
+              <i class="fas fa-file-invoice"></i><span>Factures</span>
             </a>
             <a href="{% url 'cautions_list' %}" class="{% if 'caution' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Cautions">
               <i class="fas fa-shield-alt"></i><span>Cautions</span>
@@ -185,6 +191,26 @@
             </a>
             <a href="{% url 'piece_reparee_list' %}" class="{% if 'piece_reparee' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Pièces">
               <i class="fas fa-cog"></i><span>Pièces réparées</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Permissions -->
+        <div class="menu-section">
+          <div class="section-header" data-section="permissions">
+            <i class="fas fa-shield-alt"></i>
+            <span>Sécurité</span>
+            <i class="fas fa-chevron-down toggle-icon"></i>
+          </div>
+          <div class="section-content">
+            <a href="{% url 'permissions_dashboard' %}" class="{% if request.resolver_match.url_name == 'permissions_dashboard' %}active{% endif %}" data-tooltip="Dashboard Permissions">
+              <i class="fas fa-tachometer-alt"></i><span>Dashboard Permissions</span>
+            </a>
+            <a href="{% url 'user_permissions_list' %}" class="{% if request.resolver_match.url_name == 'user_permissions_list' %}active{% endif %}" data-tooltip="Gestion des Rôles">
+              <i class="fas fa-users-cog"></i><span>Gestion des Rôles</span>
+            </a>
+            <a href="{% url 'my_permissions' %}" class="{% if request.resolver_match.url_name == 'my_permissions' %}active{% endif %}" data-tooltip="Mes Permissions">
+              <i class="fas fa-key"></i><span>Mes Permissions</span>
             </a>
           </div>
         </div>

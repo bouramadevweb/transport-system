@@ -1,0 +1,145 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Détails du Groupe | Gestion Transport{% endblock %}
+
+{% block title %}Détails du Groupe{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-semibold mb-0">
+            <i class="fas fa-shield-alt"></i> {{ group.name }}
+        </h2>
+        <a href="{% url 'permissions_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Statistiques du groupe -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="card-body text-white">
+                            <h6 class="text-white-50 mb-2">Total Permissions</h6>
+                            <h2 class="fw-bold mb-0">{{ total_permissions }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <div class="card-body text-white">
+                            <h6 class="text-white-50 mb-2">Membres</h6>
+                            <h2 class="fw-bold mb-0">{{ members_count }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions du groupe -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-key"></i> Permissions ({{ total_permissions }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if permissions_by_model %}
+                    <div class="accordion" id="permissionsAccordion">
+                        {% for model, perms in permissions_by_model.items %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                                <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#collapse{{ forloop.counter }}">
+                                    <strong>{{ model|title }}</strong>
+                                    <span class="badge bg-primary ms-2">{{ perms|length }}</span>
+                                </button>
+                            </h2>
+                            <div id="collapse{{ forloop.counter }}"
+                                 class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                                 data-bs-parent="#permissionsAccordion">
+                                <div class="accordion-body">
+                                    <ul class="list-group list-group-flush">
+                                        {% for perm in perms %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <i class="fas fa-check-circle text-success me-2"></i>
+                                                {{ perm.name }}
+                                            </div>
+                                            <code class="text-muted small">{{ perm.codename }}</code>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Aucune permission assignée à ce groupe.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Membres du groupe -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Membres ({{ members_count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if members %}
+                    <div class="list-group">
+                        {% for member in members %}
+                        <div class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle me-3">
+                                    {{ member.nom_utilisateur|first|upper }}{{ member.nom_utilisateur|slice:"1:2"|upper }}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>{{ member.nom_utilisateur }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ member.email|default:"Email non renseigné" }}</small>
+                                </div>
+                                {% if member.is_superuser %}
+                                <span class="badge bg-danger">Super Admin</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        {% if members_count > 10 %}
+                        <div class="list-group-item text-center">
+                            <small class="text-muted">
+                                ... et {{ members_count|add:"-10" }} autre{{ members_count|add:"-10"|pluralize }} membre{{ members_count|add:"-10"|pluralize }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">Aucun membre dans ce groupe.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+</style>
+{% endblock %}

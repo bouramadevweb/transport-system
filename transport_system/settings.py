@@ -143,3 +143,26 @@ LOGIN_REDIRECT_URL = 'dashboard'
 
 # Où rediriger après déconnexion
 LOGOUT_REDIRECT_URL = 'connexion'
+
+
+# Configuration Email
+# Pour développement: affiche les emails dans la console
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Pour production: décommenter et configurer avec vos credentials SMTP
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'  # ou votre serveur SMTP
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'votre-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'votre-mot-de-passe-application'
+# EMAIL_USE_SSL = False
+
+# Email par défaut pour l'envoi
+DEFAULT_FROM_EMAIL = 'Transport System <noreply@transportsystem.com>'
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Email des administrateurs (pour les alertes système)
+ADMINS = [
+    ('Admin Transport', 'admin@transportsystem.com'),
+]

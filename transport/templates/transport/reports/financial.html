@@ -1,0 +1,350 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Rapports Financiers | Gestion Transport{% endblock %}
+
+{% block title %}Rapports Financiers{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-semibold mb-0">
+            <i class="fas fa-chart-line"></i> Rapports Financiers
+        </h2>
+        <div>
+            <a href="{% url 'export_financial_report_excel' %}?period={{ period }}" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres de période -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+                <label class="me-3"><strong>Période :</strong></label>
+                <div class="btn-group" role="group">
+                    <a href="?period=7" class="btn btn-sm {% if period == '7' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        7 jours
+                    </a>
+                    <a href="?period=30" class="btn btn-sm {% if period == '30' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        30 jours
+                    </a>
+                    <a href="?period=90" class="btn btn-sm {% if period == '90' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        90 jours
+                    </a>
+                    <a href="?period=365" class="btn btn-sm {% if period == '365' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        1 an
+                    </a>
+                    <a href="?period=all" class="btn btn-sm {% if period == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Tout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-white-50 mb-2">CA Total</h6>
+                            <h3 class="fw-bold mb-0">{{ stats.total_ca|floatformat:0 }}</h3>
+                            <small>FCFA</small>
+                        </div>
+                        <div class="icon-box">
+                            <i class="fas fa-money-bill-wave fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-white-50 mb-2">CA Net</h6>
+                            <h3 class="fw-bold mb-0">{{ stats.ca_net|floatformat:0 }}</h3>
+                            <small>FCFA</small>
+                        </div>
+                        <div class="icon-box">
+                            <i class="fas fa-hand-holding-usd fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Commissions</h6>
+                            <h3 class="fw-bold mb-0">{{ stats.total_commissions|floatformat:0 }}</h3>
+                            <small>FCFA</small>
+                        </div>
+                        <div class="icon-box">
+                            <i class="fas fa-percent fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                <div class="card-body text-white">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="text-white-50 mb-2">Paiements</h6>
+                            <h3 class="fw-bold mb-0">{{ stats.nombre_paiements }}</h3>
+                            <small>Moyenne: {{ stats.montant_moyen|floatformat:0 }} FCFA</small>
+                        </div>
+                        <div class="icon-box">
+                            <i class="fas fa-receipt fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> Évolution du CA (6 derniers mois)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="caChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> Modes de Paiement
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="modeChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Top 10 Clients
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Client</th>
+                                    <th>Type</th>
+                                    <th class="text-end">CA</th>
+                                    <th class="text-center">Missions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for client in ca_par_client %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ client.mission__contrat__client__nom|default:"N/A"|truncatewords:3 }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ client.mission__contrat__client__type_client|default:"N/A" }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>{{ client.total|floatformat:0 }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ client.count }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">Aucune donnée</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-tie"></i> Top 10 Chauffeurs
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Chauffeur</th>
+                                    <th class="text-end">CA</th>
+                                    <th class="text-center">Missions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for chauffeur in ca_par_chauffeur %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <strong>{{ chauffeur.mission__contrat__chauffeur__nom|default:"N/A" }}
+                                        {{ chauffeur.mission__contrat__chauffeur__prenom|default:"" }}</strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>{{ chauffeur.total|floatformat:0 }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ chauffeur.count }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">Aucune donnée</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertes -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 border-start border-warning border-4">
+                <div class="card-body">
+                    <h6 class="text-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Missions en attente de paiement
+                    </h6>
+                    <h3 class="mb-0">{{ missions_en_attente }}</h3>
+                    <small class="text-muted">missions terminées non payées</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 border-start border-info border-4">
+                <div class="card-body">
+                    <h6 class="text-info">
+                        <i class="fas fa-lock"></i> Cautions en cours
+                    </h6>
+                    <h3 class="mb-0">{{ cautions_en_cours|floatformat:0 }} FCFA</h3>
+                    <small class="text-muted">cautions retenues</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Graphique CA mensuel
+    const caCtx = document.getElementById('caChart').getContext('2d');
+    new Chart(caCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for month in monthly_data %}'{{ month.label }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'CA (FCFA)',
+                data: [{% for month in monthly_data %}{{ month.ca }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(102, 126, 234, 0.5)',
+                borderColor: 'rgba(102, 126, 234, 1)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' FCFA';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y.toLocaleString() + ' FCFA';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique modes de paiement
+    const modeCtx = document.getElementById('modeChart').getContext('2d');
+    new Chart(modeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [{% for mode in mode_paiement %}'{{ mode.mode_paiement|upper }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for mode in mode_paiement %}{{ mode.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.8)',
+                    'rgba(118, 75, 162, 0.8)',
+                    'rgba(240, 147, 251, 0.8)',
+                    'rgba(245, 87, 108, 0.8)',
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed.toLocaleString() + ' FCFA';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
