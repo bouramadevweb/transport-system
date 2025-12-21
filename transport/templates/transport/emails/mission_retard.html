@@ -1,0 +1,111 @@
+{% extends "transport/emails/base_email.html" %}
+
+{% block title %}⚠️ Mission en Retard{% endblock %}
+
+{% block header_subtitle %}Alerte Mission en Retard{% endblock %}
+
+{% block content %}
+<div class="alert-box alert-warning">
+    <h2 style="margin-top: 0;">⚠️ MISSION EN RETARD</h2>
+    <p><strong>{{ jours_retard }} jour(s) de retard détecté(s)</strong></p>
+</div>
+
+<h3>Informations de la Mission</h3>
+
+<table class="info-table">
+    <tr>
+        <td>ID Mission</td>
+        <td><strong>{{ mission.pk_mission|slice:":20" }}</strong></td>
+    </tr>
+    <tr>
+        <td>Statut</td>
+        <td><span class="badge badge-danger">{{ mission.statut|upper }}</span></td>
+    </tr>
+    <tr>
+        <td>Origine</td>
+        <td>{{ mission.origine }}</td>
+    </tr>
+    <tr>
+        <td>Destination</td>
+        <td>{{ mission.destination }}</td>
+    </tr>
+    <tr>
+        <td>Date de départ</td>
+        <td>{{ mission.date_depart|date:"d/m/Y" }}</td>
+    </tr>
+    {% if mission.contrat %}
+    <tr>
+        <td>Date limite retour</td>
+        <td>{{ mission.contrat.date_limite_retour|date:"d/m/Y" }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+        <td><strong>Jours de retard</strong></td>
+        <td><strong style="color: #dc3545;">{{ jours_retard }} jour(s)</strong></td>
+    </tr>
+</table>
+
+{% if chauffeur %}
+<h3>Chauffeur</h3>
+<table class="info-table">
+    <tr>
+        <td>Nom</td>
+        <td>{{ chauffeur.nom }} {{ chauffeur.prenom }}</td>
+    </tr>
+    <tr>
+        <td>Téléphone</td>
+        <td>{{ chauffeur.telephone|default:"Non renseigné" }}</td>
+    </tr>
+</table>
+{% endif %}
+
+{% if camion %}
+<h3>Camion</h3>
+<table class="info-table">
+    <tr>
+        <td>Immatriculation</td>
+        <td>{{ camion.immatriculation }}</td>
+    </tr>
+    <tr>
+        <td>Modèle</td>
+        <td>{{ camion.modele|default:"Non renseigné" }}</td>
+    </tr>
+</table>
+{% endif %}
+
+{% if conteneur %}
+<h3>Conteneur</h3>
+<table class="info-table">
+    <tr>
+        <td>Numéro</td>
+        <td>{{ conteneur.numero_conteneur }}</td>
+    </tr>
+    <tr>
+        <td>Compagnie</td>
+        <td>{{ conteneur.compagnie.nom }}</td>
+    </tr>
+</table>
+{% endif %}
+
+{% if penalite > 0 %}
+<div class="alert-box alert-warning">
+    <h3 style="margin-top: 0;">💰 Pénalité de Retard</h3>
+    <p style="font-size: 18px;">
+        <strong>{{ penalite|floatformat:0 }} FCFA</strong><br>
+        <small>({{ jours_retard }} jour(s) × 25 000 FCFA)</small>
+    </p>
+</div>
+{% endif %}
+
+<h3>🚨 Actions Requises</h3>
+<ol>
+    <li>Contacter immédiatement le chauffeur</li>
+    <li>Vérifier la position du conteneur</li>
+    <li>Estimer la date de retour effective</li>
+    <li>Informer le client du retard</li>
+</ol>
+
+<p style="margin-top: 30px;">
+    <strong>Veuillez régulariser cette situation dans les plus brefs délais.</strong>
+</p>
+{% endblock %}

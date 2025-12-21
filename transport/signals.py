@@ -10,6 +10,13 @@ from .models import (
     PaiementMission, Notification, Reparation
 )
 
+# Import du système de notifications email
+from .email_notifications import (
+    send_mission_terminee_notification,
+    send_paiement_valide_notification,
+    send_caution_debloquee_notification
+)
+
 # Configuration du logger
 logger = logging.getLogger(__name__)
 
@@ -46,6 +53,13 @@ def notifier_mission_terminee(sender, instance, created, **kwargs):
                 )
                 logger.info(f"✅ Notification créée pour le chauffeur {chauffeur.nom} {chauffeur.prenom}")
 
+            # 📧 NOUVEAU: Envoyer email de notification
+            try:
+                send_mission_terminee_notification(instance)
+                logger.info(f"📧 Email envoyé pour mission terminée: {instance.pk_mission}")
+            except Exception as e:
+                logger.error(f"❌ Erreur envoi email mission terminée: {str(e)}")
+
 
 @receiver(post_save, sender=PaiementMission)
 def notifier_paiement_valide(sender, instance, created, **kwargs):
@@ -74,6 +88,13 @@ def notifier_paiement_valide(sender, instance, created, **kwargs):
                     mission=instance.mission
                 )
                 logger.info(f"✅ Notification de paiement créée pour le chauffeur {chauffeur.nom} {chauffeur.prenom}")
+
+            # 📧 NOUVEAU: Envoyer email de confirmation paiement
+            try:
+                send_paiement_valide_notification(instance)
+                logger.info(f"📧 Email envoyé pour paiement validé: {instance.pk_paiement}")
+            except Exception as e:
+                logger.error(f"❌ Erreur envoi email paiement validé: {str(e)}")
 
 
 @receiver(post_save, sender=Reparation)
@@ -144,6 +165,14 @@ def notifier_caution_bloquee(sender, instance, created, **kwargs):
                 )
 
             logger.info(f"⚠️ Notifications de caution bloquée créées pour {len(users_to_notify)} utilisateurs")
+
+    # 📧 NOUVEAU: Envoyer email quand caution est débloquée/remboursée
+    if not created and instance.statut == 'remboursee':
+        try:
+            send_caution_debloquee_notification(instance)
+            logger.info(f"📧 Email envoyé pour caution remboursée: {instance.pk_caution}")
+        except Exception as e:
+            logger.error(f"❌ Erreur envoi email caution remboursée: {str(e)}")
 
 
 @receiver(post_save, sender=ContratTransport)

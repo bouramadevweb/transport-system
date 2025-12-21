@@ -1,0 +1,43 @@
+{% extends "transport/emails/base_email.html" %}
+
+{% block title %}🔔 Alerte Système{% endblock %}
+
+{% block header_subtitle %}Alerte Administrateur{% endblock %}
+
+{% block content %}
+<div class="alert-box alert-warning">
+    <h2 style="margin-top: 0;">🔔 {{ titre|upper }}</h2>
+    <p>Une alerte système nécessite votre attention</p>
+</div>
+
+<h3>Description</h3>
+<p style="background: #f8f9fa; padding: 15px; border-left: 4px solid #667eea;">
+    {{ message }}
+</p>
+
+{% if data %}
+<h3>Informations Supplémentaires</h3>
+<table class="info-table">
+    {% for key, value in data.items %}
+    <tr>
+        <td>{{ key }}</td>
+        <td><strong>{{ value }}</strong></td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+<div class="alert-box alert-info">
+    <h3 style="margin-top: 0;">🚨 Action Requise</h3>
+    <p>
+        Veuillez vous connecter au système pour vérifier et traiter cette alerte.<br>
+        <strong>Cette notification a été envoyée automatiquement.</strong>
+    </p>
+</div>
+
+<p style="margin-top: 30px; text-align: center;">
+    <a href="http://localhost:8000/dashboard/home/" class="button">
+        Accéder au Dashboard
+    </a>
+</p>
+{% endblock %}

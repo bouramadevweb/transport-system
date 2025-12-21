@@ -1,0 +1,87 @@
+{% extends "transport/emails/base_email.html" %}
+
+{% block title %}💰 Caution Remboursée{% endblock %}
+
+{% block header_subtitle %}Notification de Remboursement{% endblock %}
+
+{% block content %}
+<div class="alert-box alert-success">
+    <h2 style="margin-top: 0;">💰 CAUTION REMBOURSÉE</h2>
+    <p>Votre caution a été débloquée et remboursée</p>
+</div>
+
+<h3>Détails de la Caution</h3>
+
+<table class="info-table">
+    <tr>
+        <td>ID Caution</td>
+        <td><strong>{{ caution.pk_caution|slice:":20" }}</strong></td>
+    </tr>
+    <tr>
+        <td>Statut</td>
+        <td><span class="badge badge-success">{{ statut|upper }}</span></td>
+    </tr>
+    <tr>
+        <td>Montant Initial</td>
+        <td>{{ montant|floatformat:0 }} FCFA</td>
+    </tr>
+    <tr>
+        <td>Montant Remboursé</td>
+        <td><strong style="font-size: 18px; color: #28a745;">{{ montant_rembourse|floatformat:0 }} FCFA</strong></td>
+    </tr>
+</table>
+
+{% if conteneur %}
+<h3>Conteneur Concerné</h3>
+<table class="info-table">
+    <tr>
+        <td>Numéro</td>
+        <td>{{ conteneur.numero_conteneur }}</td>
+    </tr>
+    <tr>
+        <td>Compagnie</td>
+        <td>{{ conteneur.compagnie.nom }}</td>
+    </tr>
+</table>
+{% endif %}
+
+{% if chauffeur %}
+<h3>Chauffeur</h3>
+<table class="info-table">
+    <tr>
+        <td>Nom</td>
+        <td>{{ chauffeur.nom }} {{ chauffeur.prenom }}</td>
+    </tr>
+    <tr>
+        <td>Téléphone</td>
+        <td>{{ chauffeur.telephone|default:"Non renseigné" }}</td>
+    </tr>
+</table>
+{% endif %}
+
+{% if client %}
+<h3>Client</h3>
+<table class="info-table">
+    <tr>
+        <td>Nom</td>
+        <td>{{ client.nom }}</td>
+    </tr>
+    <tr>
+        <td>Type</td>
+        <td>{{ client.get_type_client_display }}</td>
+    </tr>
+</table>
+{% endif %}
+
+<div class="alert-box alert-info">
+    <h3 style="margin-top: 0;">ℹ️ Modalités de Remboursement</h3>
+    <p>
+        Le montant de <strong>{{ montant_rembourse|floatformat:0 }} FCFA</strong> sera crédité selon les modalités convenues.<br>
+        Délai habituel : 3 à 5 jours ouvrables.
+    </p>
+</div>
+
+<p style="margin-top: 30px; text-align: center;">
+    <strong>Merci de votre confiance !</strong>
+</p>
+{% endblock %}

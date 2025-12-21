@@ -1,0 +1,86 @@
+{% extends "transport/emails/base_email.html" %}
+
+{% block title %}✅ Paiement Validé{% endblock %}
+
+{% block header_subtitle %}Confirmation de Paiement{% endblock %}
+
+{% block content %}
+<div class="alert-box alert-success">
+    <h2 style="margin-top: 0;">✅ PAIEMENT VALIDÉ</h2>
+    <p>Votre paiement a été validé avec succès</p>
+</div>
+
+<h3>Détails du Paiement</h3>
+
+<table class="info-table">
+    <tr>
+        <td>ID Paiement</td>
+        <td><strong>{{ paiement.pk_paiement|slice:":20" }}</strong></td>
+    </tr>
+    <tr>
+        <td>Statut</td>
+        <td><span class="badge badge-success">VALIDÉ</span></td>
+    </tr>
+    <tr>
+        <td>Montant Total</td>
+        <td><strong style="font-size: 18px; color: #28a745;">{{ montant_total|floatformat:0 }} FCFA</strong></td>
+    </tr>
+    <tr>
+        <td>Commission Transitaire</td>
+        <td>{{ commission|floatformat:0 }} FCFA</td>
+    </tr>
+    <tr>
+        <td>Montant Net</td>
+        <td><strong>{{ montant_total|floatformat:0 }} FCFA</strong></td>
+    </tr>
+    <tr>
+        <td>Date de validation</td>
+        <td>{{ date_validation|date:"d/m/Y à H:i"|default:"Aujourd'hui" }}</td>
+    </tr>
+</table>
+
+{% if mission %}
+<h3>Mission Associée</h3>
+<table class="info-table">
+    <tr>
+        <td>ID Mission</td>
+        <td>{{ mission.pk_mission|slice:":20" }}</td>
+    </tr>
+    <tr>
+        <td>Trajet</td>
+        <td>{{ mission.origine }} → {{ mission.destination }}</td>
+    </tr>
+    <tr>
+        <td>Statut Mission</td>
+        <td><span class="badge badge-success">{{ mission.statut|upper }}</span></td>
+    </tr>
+</table>
+{% endif %}
+
+{% if chauffeur %}
+<h3>Chauffeur</h3>
+<table class="info-table">
+    <tr>
+        <td>Nom</td>
+        <td>{{ chauffeur.nom }} {{ chauffeur.prenom }}</td>
+    </tr>
+    <tr>
+        <td>Téléphone</td>
+        <td>{{ chauffeur.telephone|default:"Non renseigné" }}</td>
+    </tr>
+</table>
+{% endif %}
+
+<div class="alert-box alert-info">
+    <h3 style="margin-top: 0;">ℹ️ Informations Importantes</h3>
+    <ul>
+        <li>Ce paiement a été définitivement validé</li>
+        <li>Un reçu officiel sera généré dans votre espace</li>
+        <li>Conservez ce mail comme preuve de paiement</li>
+    </ul>
+</div>
+
+<p style="margin-top: 30px; text-align: center;">
+    <strong>Merci pour votre confiance !</strong>
+</p>
+{% endblock %}

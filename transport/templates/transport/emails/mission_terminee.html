@@ -1,0 +1,94 @@
+{% extends "transport/emails/base_email.html" %}
+
+{% block title %}✅ Mission Terminée{% endblock %}
+
+{% block header_subtitle %}Confirmation de Fin de Mission{% endblock %}
+
+{% block content %}
+{% if jours_retard > 0 %}
+<div class="alert-box alert-warning">
+    <h2 style="margin-top: 0;">⚠️ MISSION TERMINÉE AVEC RETARD</h2>
+    <p>La mission est terminée mais avec {{ jours_retard }} jour(s) de retard</p>
+</div>
+{% else %}
+<div class="alert-box alert-success">
+    <h2 style="margin-top: 0;">✅ MISSION TERMINÉE</h2>
+    <p>La mission s'est terminée à temps</p>
+</div>
+{% endif %}
+
+<h3>Informations de la Mission</h3>
+
+<table class="info-table">
+    <tr>
+        <td>ID Mission</td>
+        <td><strong>{{ mission.pk_mission|slice:":20" }}</strong></td>
+    </tr>
+    <tr>
+        <td>Statut</td>
+        <td><span class="badge badge-success">TERMINÉE</span></td>
+    </tr>
+    <tr>
+        <td>Trajet</td>
+        <td>{{ mission.origine }} → {{ mission.destination }}</td>
+    </tr>
+    <tr>
+        <td>Date de départ</td>
+        <td>{{ mission.date_depart|date:"d/m/Y" }}</td>
+    </tr>
+    <tr>
+        <td>Date de retour</td>
+        <td>{{ date_retour|date:"d/m/Y" }}</td>
+    </tr>
+    {% if jours_retard > 0 %}
+    <tr>
+        <td><strong>Jours de retard</strong></td>
+        <td><strong style="color: #dc3545;">{{ jours_retard }} jour(s)</strong></td>
+    </tr>
+    {% endif %}
+</table>
+
+{% if chauffeur %}
+<h3>Chauffeur</h3>
+<table class="info-table">
+    <tr>
+        <td>Nom</td>
+        <td>{{ chauffeur.nom }} {{ chauffeur.prenom }}</td>
+    </tr>
+    <tr>
+        <td>Téléphone</td>
+        <td>{{ chauffeur.telephone|default:"Non renseigné" }}</td>
+    </tr>
+</table>
+{% endif %}
+
+{% if jours_retard > 0 and penalite > 0 %}
+<div class="alert-box alert-warning">
+    <h3 style="margin-top: 0;">💰 Pénalité de Retard</h3>
+    <p style="font-size: 18px;">
+        <strong>{{ penalite|floatformat:0 }} FCFA</strong><br>
+        <small>({{ jours_retard }} jour(s) × 25 000 FCFA)</small>
+    </p>
+    <p><small>Cette pénalité sera déduite du paiement final.</small></p>
+</div>
+{% endif %}
+
+<h3>📋 Prochaines Étapes</h3>
+<ol>
+    {% if jours_retard > 0 %}
+    <li>Vérifier les raisons du retard</li>
+    <li>Calculer la pénalité exacte</li>
+    {% endif %}
+    <li>Valider le paiement de la mission</li>
+    <li>Rembourser la caution si applicable</li>
+    <li>Archiver les documents</li>
+</ol>
+
+<p style="margin-top: 30px; text-align: center;">
+    {% if jours_retard == 0 %}
+    <strong>Félicitations pour cette mission réussie !</strong>
+    {% else %}
+    <strong>Merci d'être plus ponctuel pour les prochaines missions.</strong>
+    {% endif %}
+</p>
+{% endblock %}
