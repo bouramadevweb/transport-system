@@ -55,12 +55,15 @@ function calculerDateLimiteRetour() {
         const jour = String(dateDebut.getDate()).padStart(2, '0');
         const dateLimiteRetour = `${annee}-${mois}-${jour}`;
 
-        // Mettre à jour le champ date limite retour
-        dateLimiteRetourInput.value = dateLimiteRetour;
+        // Mettre à jour le champ date limite retour SEULEMENT si vide
+        // ou si l'utilisateur le souhaite (on suggère la nouvelle date)
+        if (!dateLimiteRetourInput.value) {
+            dateLimiteRetourInput.value = dateLimiteRetour;
+        }
 
         // Ajouter une indication visuelle
-        dateLimiteRetourInput.style.backgroundColor = '#d1ecf1';
-        dateLimiteRetourInput.title = 'Calculée automatiquement : Date début + 23 jours';
+        dateLimiteRetourInput.style.backgroundColor = '#fff9e6';
+        dateLimiteRetourInput.title = 'Date suggérée : Date début + 23 jours. Vous pouvez la modifier manuellement.';
     }
 }
 

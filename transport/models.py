@@ -523,6 +523,14 @@ class ContratTransport(models.Model):
         """Validation personnalisée des montants et champs obligatoires"""
         super().clean()
 
+        # Calcul automatique de la date limite de retour AVANT validation
+        # UNIQUEMENT si on crée un nouveau contrat (pas de pk_contrat)
+        # ou si date_limite_retour n'est pas définie
+        # En mode édition, on garde la valeur saisie par l'utilisateur
+        if self.date_debut and not self.date_limite_retour:
+            from datetime import timedelta
+            self.date_limite_retour = self.date_debut + timedelta(days=23)
+
         # Vérifier les champs obligatoires en utilisant les IDs
         errors = {}
 
@@ -582,6 +590,8 @@ class ContratTransport(models.Model):
                 errors['caution'] = 'La caution ne peut pas dépasser 50% du montant total'
 
         # Vérifier que la date de retour est après la date de début
+        # Note: Cette validation est maintenant redondante car date_limite_retour est auto-calculée ci-dessus
+        # mais on la garde pour sécurité au cas où le calcul échoue
         if self.date_debut and self.date_limite_retour:
             if self.date_limite_retour < self.date_debut:
                 errors['date_limite_retour'] = 'La date limite de retour doit être après la date de début'
@@ -604,7 +614,9 @@ class ContratTransport(models.Model):
             self.pk_contrat = slugify(base)[:250]
 
         # Calcul automatique de la date limite de retour : date_debut + 23 jours
-        if self.date_debut:
+        # Note: Ce calcul est maintenant fait dans clean() mais on le garde ici
+        # comme sécurité au cas où clean() n'est pas appelé (ex: bulk_create, update)
+        if self.date_debut and not self.date_limite_retour:
             from datetime import timedelta
             self.date_limite_retour = self.date_debut + timedelta(days=23)
 

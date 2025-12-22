@@ -86,9 +86,16 @@ class ChauffeurForm(forms.ModelForm):
         email = cleaned_data.get("email")
         entreprise = cleaned_data.get("entreprise")
 
-        if Chauffeur.objects.filter(
+        # Créer une requête de base
+        chauffeurs = Chauffeur.objects.filter(
             nom=nom, prenom=prenom, email=email, entreprise=entreprise
-        ).exists():
+        )
+
+        # En mode édition, exclure l'instance actuelle
+        if self.instance and self.instance.pk:
+            chauffeurs = chauffeurs.exclude(pk=self.instance.pk)
+
+        if chauffeurs.exists():
             raise forms.ValidationError("❌ Ce chauffeur existe déjà pour cette entreprise.")
 
         return cleaned_data
@@ -269,19 +276,23 @@ class ContratTransportForm(forms.ModelForm):
             'caution': forms.NumberInput(attrs={'class': 'form-control'}),
             'statut_caution': forms.Select(attrs={'class': 'form-select'}),
 
-            'date_debut': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'form-control',
-                'id': 'id_date_debut',
-                'onchange': 'calculerDateLimiteRetour()'
-            }),
-            'date_limite_retour': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'form-control',
-                'id': 'id_date_limite_retour',
-                'readonly': True,
-                'style': 'background-color: #e9ecef;'
-            }),
+            'date_debut': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'type': 'date',
+                    'class': 'form-control',
+                    'id': 'id_date_debut',
+                    'onchange': 'calculerDateLimiteRetour()'
+                }
+            ),
+            'date_limite_retour': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={
+                    'type': 'date',
+                    'class': 'form-control',
+                    'id': 'id_date_limite_retour',
+                }
+            ),
 
             'commentaire': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
 
@@ -292,6 +303,10 @@ class ContratTransportForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        # Définir le format d'entrée pour les champs de date
+        self.fields['date_debut'].input_formats = ['%Y-%m-%d']
+        self.fields['date_limite_retour'].input_formats = ['%Y-%m-%d']
 
         # Filtrer pour afficher uniquement les camions disponibles (pas en mission en cours)
         from .models import Camion, Mission, ContratTransport

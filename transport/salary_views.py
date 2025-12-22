@@ -105,7 +105,7 @@ def salaire_create(request):
             for error in errors:
                 messages.error(request, error)
             context = {
-                'chauffeurs': Chauffeur.objects.filter(statut='ACTIF').order_by('nom'),
+                'chauffeurs': Chauffeur.objects.all().order_by('nom'),
                 'utilisateurs': Utilisateur.objects.filter(is_active=True).exclude(pk_utilisateur='').order_by('nom_utilisateur'),
                 'mois_choices': Salaire._meta.get_field('mois').choices,
                 'mode_paiement_choices': Salaire._meta.get_field('mode_paiement').choices,
@@ -133,14 +133,57 @@ def salaire_create(request):
 
             salaire.save()
 
-            messages.success(request, f"✅ Salaire créé pour {salaire.get_employe_nom()} - {salaire.get_periode()}")
+            # Traiter les primes
+            primes_created = 0
+            for key, value in request.POST.items():
+                if key.startswith('prime_type_'):
+                    prime_id = key.replace('prime_type_', '')
+                    type_prime = value
+                    montant_prime = request.POST.get(f'prime_montant_{prime_id}')
+                    description_prime = request.POST.get(f'prime_description_{prime_id}', '')
+
+                    if type_prime and montant_prime:
+                        Prime.objects.create(
+                            salaire=salaire,
+                            type_prime=type_prime,
+                            montant=Decimal(montant_prime),
+                            description=description_prime
+                        )
+                        primes_created += 1
+
+            # Traiter les déductions
+            deductions_created = 0
+            for key, value in request.POST.items():
+                if key.startswith('deduction_type_'):
+                    deduction_id = key.replace('deduction_type_', '')
+                    type_deduction = value
+                    montant_deduction = request.POST.get(f'deduction_montant_{deduction_id}')
+                    description_deduction = request.POST.get(f'deduction_description_{deduction_id}', '')
+
+                    if type_deduction and montant_deduction:
+                        Deduction.objects.create(
+                            salaire=salaire,
+                            type_deduction=type_deduction,
+                            montant=Decimal(montant_deduction),
+                            description=description_deduction
+                        )
+                        deductions_created += 1
+
+            # Message de succès avec détails
+            success_msg = f"✅ Salaire créé pour {salaire.get_employe_nom()} - {salaire.get_periode()}"
+            if primes_created > 0:
+                success_msg += f" avec {primes_created} prime(s)"
+            if deductions_created > 0:
+                success_msg += f" et {deductions_created} déduction(s)"
+
+            messages.success(request, success_msg)
             return redirect('salaire_detail', pk=salaire.pk_salaire)
 
         except Exception as e:
             messages.error(request, f"❌ Erreur: {str(e)}")
 
     context = {
-        'chauffeurs': Chauffeur.objects.filter(statut='ACTIF').order_by('nom'),
+        'chauffeurs': Chauffeur.objects.all().order_by('nom'),
         'utilisateurs': Utilisateur.objects.filter(is_active=True).exclude(pk_utilisateur='').order_by('nom_utilisateur'),
         'mois_choices': Salaire._meta.get_field('mois').choices,
         'mode_paiement_choices': Salaire._meta.get_field('mode_paiement').choices,

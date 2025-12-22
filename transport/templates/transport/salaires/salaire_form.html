@@ -124,6 +124,30 @@
                             </select>
                         </div>
 
+                        {% if not is_update %}
+                        <!-- Section Primes -->
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-gift me-1"></i>Primes (optionnel)</label>
+                            <div id="primesContainer">
+                                <!-- Les primes seront ajoutées ici dynamiquement -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-success mt-2" onclick="ajouterPrime()">
+                                <i class="fas fa-plus me-1"></i>Ajouter une prime
+                            </button>
+                        </div>
+
+                        <!-- Section Déductions -->
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-minus-circle me-1"></i>Déductions (optionnel)</label>
+                            <div id="deductionsContainer">
+                                <!-- Les déductions seront ajoutées ici dynamiquement -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-warning mt-2" onclick="ajouterDeduction()">
+                                <i class="fas fa-plus me-1"></i>Ajouter une déduction
+                            </button>
+                        </div>
+                        {% endif %}
+
                         <div class="mb-3">
                             <label class="form-label"><i class="fas fa-sticky-note me-1"></i>Notes</label>
                             <textarea class="form-control" name="notes" rows="3">{% if is_update %}{{ salaire.notes }}{% else %}{{ form_data.notes }}{% endif %}</textarea>
@@ -147,7 +171,12 @@
                     <p class="small mb-2"><strong>Salaire de base:</strong> Montant mensuel fixe</p>
                     <p class="small mb-2"><strong>Heures supp:</strong> Nombre d'heures supplémentaires</p>
                     <p class="small mb-2"><strong>Taux heure supp:</strong> Prix d'une heure supplémentaire</p>
-                    <p class="small mb-0"><strong>Note:</strong> Les primes et déductions s'ajoutent après création</p>
+                    {% if not is_update %}
+                    <p class="small mb-2"><strong>Primes:</strong> Cliquez sur "Ajouter une prime" pour en créer</p>
+                    <p class="small mb-0"><strong>Déductions:</strong> Cliquez sur "Ajouter une déduction" pour en créer</p>
+                    {% else %}
+                    <p class="small mb-0"><strong>Note:</strong> Gérez les primes et déductions depuis la page de détails</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -155,11 +184,101 @@
 </div>
 
 <script>
+let primeCounter = 0;
+let deductionCounter = 0;
+
 function toggleEmployeSelect() {
     const type = document.getElementById('typeEmploye').value;
     document.getElementById('chauffeurSelect').style.display = type === 'chauffeur' ? 'block' : 'none';
     document.getElementById('utilisateurSelect').style.display = type === 'utilisateur' ? 'block' : 'none';
 }
+
+function ajouterPrime() {
+    primeCounter++;
+    const container = document.getElementById('primesContainer');
+    const primeDiv = document.createElement('div');
+    primeDiv.className = 'card mb-2 border-success';
+    primeDiv.id = `prime_${primeCounter}`;
+    primeDiv.innerHTML = `
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-success"><i class="fas fa-gift me-1"></i>Prime #${primeCounter}</strong>
+                <button type="button" class="btn btn-sm btn-danger" onclick="supprimerPrime(${primeCounter})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small">Type de prime</label>
+                    <input type="text" class="form-control form-control-sm" name="prime_type_${primeCounter}"
+                           placeholder="Ex: Prime de performance" required>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small">Montant (FCFA)</label>
+                    <input type="number" class="form-control form-control-sm" name="prime_montant_${primeCounter}"
+                           placeholder="0" min="0" step="0.01" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label small">Description (optionnel)</label>
+                    <input type="text" class="form-control form-control-sm" name="prime_description_${primeCounter}"
+                           placeholder="Description de la prime">
+                </div>
+            </div>
+        </div>
+    `;
+    container.appendChild(primeDiv);
+}
+
+function supprimerPrime(id) {
+    const element = document.getElementById(`prime_${id}`);
+    if (element) {
+        element.remove();
+    }
+}
+
+function ajouterDeduction() {
+    deductionCounter++;
+    const container = document.getElementById('deductionsContainer');
+    const deductionDiv = document.createElement('div');
+    deductionDiv.className = 'card mb-2 border-warning';
+    deductionDiv.id = `deduction_${deductionCounter}`;
+    deductionDiv.innerHTML = `
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong class="text-warning"><i class="fas fa-minus-circle me-1"></i>Déduction #${deductionCounter}</strong>
+                <button type="button" class="btn btn-sm btn-danger" onclick="supprimerDeduction(${deductionCounter})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small">Type de déduction</label>
+                    <input type="text" class="form-control form-control-sm" name="deduction_type_${deductionCounter}"
+                           placeholder="Ex: Avance sur salaire, CSS, IPRES" required>
+                </div>
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small">Montant (FCFA)</label>
+                    <input type="number" class="form-control form-control-sm" name="deduction_montant_${deductionCounter}"
+                           placeholder="0" min="0" step="0.01" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label small">Description (optionnel)</label>
+                    <input type="text" class="form-control form-control-sm" name="deduction_description_${deductionCounter}"
+                           placeholder="Description de la déduction">
+                </div>
+            </div>
+        </div>
+    `;
+    container.appendChild(deductionDiv);
+}
+
+function supprimerDeduction(id) {
+    const element = document.getElementById(`deduction_${id}`);
+    if (element) {
+        element.remove();
+    }
+}
+
 // Initialiser l'affichage au chargement
 window.addEventListener('DOMContentLoaded', toggleEmployeSelect);
 </script>
