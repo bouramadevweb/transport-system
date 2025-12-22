@@ -101,8 +101,6 @@ class ContratTransportForm(forms.ModelForm):
         self.fields['date_limite_retour'].input_formats = ['%Y-%m-%d']
 
         # Filtrer pour afficher uniquement les camions disponibles (pas en mission en cours)
-        from .models import Camion, Mission, ContratTransport
-
         # Récupérer tous les camions
         all_camions = Camion.objects.all()
 

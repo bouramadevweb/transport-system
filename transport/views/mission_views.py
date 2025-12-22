@@ -9,14 +9,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse
-from ..models import (Mission, MissionConteneur)
+from ..models import (Mission, MissionConteneur, Chauffeur, Client, PaiementMission, Cautions)
 from ..forms import (MissionForm, MissionConteneurForm)
 from ..decorators import (can_delete_data, manager_or_admin_required)
+from ..filters import MissionFilter
 
 
 @login_required
 def mission_list(request):
-    from .filters import MissionFilter
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
     # Récupérer toutes les missions avec relations
@@ -238,7 +238,6 @@ def annuler_mission(request, pk):
 
         try:
             # Compter les objets qui seront annulés
-            from .models import Cautions, PaiementMission
             nb_cautions = Cautions.objects.filter(contrat=mission.contrat).count()
             nb_paiements = PaiementMission.objects.filter(mission=mission, est_valide=False).count()
 

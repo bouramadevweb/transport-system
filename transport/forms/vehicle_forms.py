@@ -127,7 +127,6 @@ class PieceRepareeForm(forms.ModelForm):
 
         # Si une réparation est pré-sélectionnée
         if reparation_id:
-            from .models import Reparation
             try:
                 reparation = Reparation.objects.get(pk_reparation=reparation_id)
                 # Pré-remplir le champ réparation

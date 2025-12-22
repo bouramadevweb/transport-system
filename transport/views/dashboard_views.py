@@ -8,14 +8,18 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Sum, F
+from django.db.models.functions import TruncMonth, TruncYear
 from django.http import JsonResponse
-from ..models import (Chauffeur, Camion, Mission, Reparation, PaiementMission, Affectation, Client, Notification, AuditLog, Entreprise)
+from ..models import (
+    Chauffeur, Camion, Mission, Reparation, PaiementMission, Affectation,
+    Client, Notification, AuditLog, Entreprise, ContratTransport,
+    PieceReparee, Utilisateur
+)
 from ..decorators import manager_or_admin_required
 
 
 @login_required
 def dashboard(request):
-    from .models import Chauffeur, Camion, Mission, Reparation, PaiementMission, Affectation, Client
     from datetime import timedelta, datetime
     from django.utils import timezone
 
@@ -117,7 +121,6 @@ def dashboard(request):
 
     # Statistiques par entreprise
     entreprises_stats = []
-    from .models import Entreprise
     entreprises = Entreprise.objects.all()
     for entreprise in entreprises:
         entreprises_stats.append({
@@ -182,8 +185,6 @@ def notifications_list(request):
     """
     Affiche la liste des notifications de l'utilisateur
     """
-    from .models import Notification
-
     # Récupérer toutes les notifications de l'utilisateur
     notifications = Notification.objects.filter(utilisateur=request.user).order_by('-created_at')
 
@@ -216,8 +217,6 @@ def mark_all_notifications_read(request):
     """
     Marque toutes les notifications comme lues
     """
-    from .models import Notification
-
     if request.method == 'POST':
         # Marquer toutes les notifications de l'utilisateur comme lues
         count = Notification.objects.filter(
@@ -246,8 +245,6 @@ def tableau_bord_statistiques(request):
     - Évolution temporelle (par mois/année)
     - Top et bottom performers
     """
-    from django.db.models import Count, Sum, F, Max, Min, Q
-    from django.db.models.functions import TruncMonth, TruncYear
     from datetime import datetime
 
     # ========== RÉCUPÉRATION DES FILTRES DE DATE ==========
@@ -515,8 +512,6 @@ def audit_log_list(request):
     Affiche l'historique complet des actions effectuées dans le système
     Accessible uniquement aux managers et admins
     """
-    from .models import AuditLog, Utilisateur
-
     # Récupérer tous les logs
     logs = AuditLog.objects.select_related('utilisateur').order_by('-timestamp')
 
@@ -570,8 +565,6 @@ def audit_log_detail(request, pk):
     """
     Affiche le détail d'un log d'audit spécifique
     """
-    from .models import AuditLog
-
     log = get_object_or_404(AuditLog, pk_audit=pk)
 
     return render(request, 'transport/audit/audit_log_detail.html', {

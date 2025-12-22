@@ -9,9 +9,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse
-from ..models import (Cautions, PaiementMission)
+from ..models import (Cautions, PaiementMission, Chauffeur, AuditLog)
 from ..forms import (CautionsForm, PaiementMissionForm)
 from ..decorators import (can_delete_data, can_validate_payment)
+from ..filters import PaiementMissionFilter
 
 
 @login_required
@@ -59,7 +60,6 @@ def delete_caution(request, pk):
 
 @login_required
 def paiement_mission_list(request):
-    from .filters import PaiementMissionFilter
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
     # Récupérer tous les paiements avec relations
@@ -175,8 +175,6 @@ def valider_paiement_mission(request, pk):
             return redirect('paiement_mission_list')
 
         try:
-            from .models import AuditLog
-
             # Valider le paiement
             paiement.valider_paiement()
 
