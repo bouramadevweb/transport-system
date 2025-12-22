@@ -2,6 +2,8 @@ asgiref==3.8.1
 charset-normalizer==3.4.4
 Django==5.0.2
 django-bootstrap5==25.2
+et_xmlfile==2.0.0
+openpyxl==3.1.5
 pillow==12.0.0
 reportlab==4.4.4
 sqlparse==0.5.3
