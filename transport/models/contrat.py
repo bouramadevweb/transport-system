@@ -5,13 +5,13 @@ Modèles pour contrat
 """
 
 from django.db import models
-from django.utils.timezone import now
 from django.utils.text import slugify
-from uuid import uuid4
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from decimal import Decimal
-from models  import Mission ,Camion, Chauffeur
+from .mission import Mission
+from .vehicle import Camion
+from .personnel import Chauffeur
 from .choices import *
 # Imports circulaires gérés dans les méthodes
 
