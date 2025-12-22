@@ -11,7 +11,7 @@ from uuid import uuid4
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from decimal import Decimal
-
+from models  import Mission ,Camion, Chauffeur
 from .choices import *
 # Imports circulaires gérés dans les méthodes
 
@@ -182,10 +182,10 @@ class ContratTransport(models.Model):
 
 class PrestationDeTransports(models.Model):
     pk_presta_transport = models.CharField(max_length=250, primary_key=True)
-    contrat_transport = models.ForeignKey(ContratTransport, on_delete=models.CASCADE)
-    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
+    contrat_transport = models.ForeignKey("ContratTransport", on_delete=models.CASCADE)
+    camion = models.ForeignKey("Camion", on_delete=models.CASCADE)
+    client = models.ForeignKey("Client", on_delete=models.CASCADE)
+    transitaire = models.ForeignKey("Transitaire", on_delete=models.CASCADE)
 
     prix_transport = models.DecimalField(
         max_digits=10,

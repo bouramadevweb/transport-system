@@ -46,7 +46,7 @@ class FraisTrajet(models.Model):
 
 class Mission(models.Model):
     pk_mission = models.CharField(max_length=250, primary_key=True, editable=False)
-    prestation_transport = models.ForeignKey(PrestationDeTransports, on_delete=models.CASCADE)
+    prestation_transport = models.ForeignKey("PrestationDeTransports", on_delete=models.CASCADE)
     date_depart = models.DateField()
     date_retour = models.DateField(blank=True, null=True)
     origine = models.CharField(max_length=200)
@@ -56,8 +56,8 @@ class Mission(models.Model):
         # default='Itinéraire à compléter',
         help_text="Décrivez l'itinéraire détaillé de la mission"
     )
-    frais_trajet = models.ForeignKey(FraisTrajet, on_delete=models.SET_NULL, blank=True, null=True)
-    contrat = models.ForeignKey(ContratTransport, on_delete=models.CASCADE)
+    frais_trajet = models.ForeignKey("FraisTrajet", on_delete=models.SET_NULL, blank=True, null=True)
+    contrat = models.ForeignKey("ContratTransport", on_delete=models.CASCADE)
     statut = models.CharField(max_length=10, choices=STATUT_MISSION_CHOICES, default='en cours')
 
     def clean(self):
@@ -216,7 +216,7 @@ class Mission(models.Model):
             self.contrat.save()
 
         # 3. Annuler toutes les cautions associées
-        from .models import Cautions
+        from models import Cautions
         cautions = Cautions.objects.filter(contrat=self.contrat)
         for caution in cautions:
             if caution.statut != 'annulee':
@@ -224,7 +224,7 @@ class Mission(models.Model):
                 caution.save()
 
         # 4. Marquer les paiements associés comme annulés
-        from .models import PaiementMission
+        from models import PaiementMission
         paiements = PaiementMission.objects.filter(mission=self)
         for paiement in paiements:
             if not paiement.est_valide:  # Seulement si pas encore validé
@@ -269,8 +269,8 @@ class Mission(models.Model):
 # ici nest pas encore faite
 
 class MissionConteneur(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
-    conteneur = models.ForeignKey(Conteneur, on_delete=models.CASCADE)
+    mission = models.ForeignKey("Mission", on_delete=models.CASCADE)
+    conteneur = models.ForeignKey("Conteneur", on_delete=models.CASCADE)
 
     class Meta:
         # Supprime l'ID auto

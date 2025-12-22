@@ -17,7 +17,7 @@ from .choices import *
 
 class Chauffeur(models.Model):
     pk_chauffeur = models.CharField(max_length=250, primary_key=True, editable=False)
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE)
     nom = models.CharField(max_length=50)
     prenom = models.CharField(max_length=50)
     telephone = models.CharField(max_length=20, blank=True, null=True)
@@ -62,8 +62,8 @@ class Mecanicien(models.Model):
 
 class Affectation(models.Model):
     pk_affectation = models.CharField(max_length=250, primary_key=True, editable=False)
-    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
-    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
+    chauffeur = models.ForeignKey("Chauffeur", on_delete=models.CASCADE)
+    camion = models.ForeignKey("Camion", on_delete=models.CASCADE)
     date_affectation = models.DateField(default=now)
     date_fin_affectation = models.DateField(blank=True, null=True)
 

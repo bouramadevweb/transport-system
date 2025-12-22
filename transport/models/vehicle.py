@@ -16,7 +16,7 @@ from .choices import *
 
 class Camion(models.Model):
     pk_camion = models.CharField(max_length=250, primary_key=True)
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE)
     immatriculation = models.CharField(max_length=20, unique=True)
     modele = models.CharField(max_length=50, blank=True, null=True)
     capacite_tonnes = models.DecimalField(max_digits=5, decimal_places=2, default=0)
@@ -74,11 +74,11 @@ class CompagnieConteneur(models.Model):
 class Conteneur(models.Model):
     pk_conteneur = models.CharField(max_length=250, primary_key=True)
     numero_conteneur = models.CharField(max_length=30, unique=True)
-    compagnie = models.ForeignKey(CompagnieConteneur, on_delete=models.CASCADE)
+    compagnie = models.ForeignKey("CompagnieConteneur", on_delete=models.CASCADE)
     type_conteneur = models.CharField(max_length=50, blank=True, null=True)
     poids = models.DecimalField(max_digits=6, decimal_places=2, default=0)
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    transitaire = models.ForeignKey(Transitaire, on_delete=models.CASCADE)
+    client = models.ForeignKey("Client", on_delete=models.CASCADE)
+    transitaire = models.ForeignKey("Transitaire", on_delete=models.CASCADE)
 
     # Statut du conteneur pour éviter les attributions multiples
     statut = models.CharField(
@@ -125,7 +125,7 @@ class Conteneur(models.Model):
 
     def get_mission_en_cours(self):
         """Retourne la mission en cours pour ce conteneur (si existe)"""
-        from .models import Mission
+        from models import Mission
         return Mission.objects.filter(
             contrat__conteneur=self,
             statut='en cours'
@@ -133,8 +133,8 @@ class Conteneur(models.Model):
 
 class Reparation(models.Model):
     pk_reparation = models.CharField(max_length=250, primary_key=True)
-    camion = models.ForeignKey(Camion, on_delete=models.CASCADE)
-    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.SET_NULL, blank=True, null=True)
+    camion = models.ForeignKey("Camion", on_delete=models.CASCADE)
+    chauffeur = models.ForeignKey("Chauffeur", on_delete=models.SET_NULL, blank=True, null=True)
     date_reparation = models.DateField()
     cout = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True, null=True)
@@ -153,6 +153,7 @@ class Reparation(models.Model):
         return ReparationMecanicien.objects.filter(reparation=self).exists()
 
     def get_mecaniciens(self):
+        from models import Mecanicien
         """Retourne la liste des mécaniciens assignés à cette réparation"""
         return Mecanicien.objects.filter(
             reparationmecanicien__reparation=self
@@ -169,8 +170,8 @@ class Reparation(models.Model):
         return f"Réparation {self.pk_reparation} - {self.camion}"
 
 class ReparationMecanicien(models.Model):
-    reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
-    mecanicien = models.ForeignKey(Mecanicien, on_delete=models.CASCADE)
+    reparation = models.ForeignKey("Reparation", on_delete=models.CASCADE)
+    mecanicien = models.ForeignKey("Mecanicien", on_delete=models.CASCADE)
 
     # class Meta:
     #     unique_together = ('reparation', 'mecanicien')
@@ -201,13 +202,13 @@ class PieceReparee(models.Model):
         ('alimentation', "Système d'alimentation"),
     ]
     pk_piece = models.CharField(max_length=250, primary_key=True)
-    reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE)
+    reparation = models.ForeignKey("Reparation", on_delete=models.CASCADE)
     nom_piece = models.CharField(max_length=100)
     categorie = models.CharField(max_length=20, choices=CATEGORIES)
     reference = models.CharField(max_length=50, blank=True, null=True, help_text="Référence fabricant")
     quantite = models.PositiveIntegerField(default=1)
     cout_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
-    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.SET_NULL, null=True, blank=True)
+    fournisseur = models.ForeignKey("Fournisseur", on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

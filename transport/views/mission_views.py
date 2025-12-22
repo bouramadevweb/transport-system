@@ -11,7 +11,7 @@ from django.db.models import Count, Sum, F
 from django.http import JsonResponse
 from ..models import (Mission, MissionConteneur)
 from ..forms import (MissionForm, MissionConteneurForm)
-from ..decorators import (can_delete_data)
+from ..decorators import (can_delete_data, manager_or_admin_required)
 
 
 @login_required

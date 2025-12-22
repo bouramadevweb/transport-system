@@ -76,7 +76,7 @@ class Entreprise(models.Model):
 
 class Utilisateur(AbstractUser):
     pk_utilisateur = models.CharField(max_length=250, primary_key=True)
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE,null=True, blank=True)
+    entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE,null=True, blank=True)
     nom_utilisateur = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=50, choices=ROLE_UTILISATEUR_CHOICES, default='utilisateur')

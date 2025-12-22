@@ -23,14 +23,14 @@ class Salaire(models.Model):
     
     # Employé (soit chauffeur, soit utilisateur)
     chauffeur = models.ForeignKey(
-        Chauffeur,
+        "Chauffeur",
         on_delete=models.CASCADE,
         related_name='salaires',
         null=True,
         blank=True
     )
     utilisateur = models.ForeignKey(
-        Utilisateur,
+        "Utilisateur",
         on_delete=models.CASCADE,
         related_name='salaires_employe',
         null=True,
@@ -61,7 +61,7 @@ class Salaire(models.Model):
     date_creation = models.DateTimeField(auto_now_add=True)
     date_modification = models.DateTimeField(auto_now=True)
     cree_par = models.ForeignKey(
-        Utilisateur,
+        "Utilisateur",
         on_delete=models.SET_NULL,
         related_name='salaires_crees',
         null=True
@@ -125,7 +125,7 @@ class Prime(models.Model):
     Modèle pour gérer les primes et bonus
     """
     pk_prime = models.CharField(max_length=255, primary_key=True)
-    salaire = models.ForeignKey(Salaire, on_delete=models.CASCADE, related_name='primes')
+    salaire = models.ForeignKey("Salaire", on_delete=models.CASCADE, related_name='primes')
     type_prime = models.CharField(max_length=100)  # ex: Prime de performance, Prime d'ancienneté, etc.
     montant = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True, default='')
@@ -160,7 +160,7 @@ class Deduction(models.Model):
     Modèle pour gérer les déductions et retenues sur salaire
     """
     pk_deduction = models.CharField(max_length=255, primary_key=True)
-    salaire = models.ForeignKey(Salaire, on_delete=models.CASCADE, related_name='deductions')
+    salaire = models.ForeignKey("Salaire", on_delete=models.CASCADE, related_name='deductions')
     type_deduction = models.CharField(max_length=100)  # ex: Avance, CSS, IPRES, etc.
     montant = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True, default='')

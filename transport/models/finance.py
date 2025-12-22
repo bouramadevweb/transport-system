@@ -17,12 +17,12 @@ from .choices import *
 
 class Cautions(models.Model):
     pk_caution = models.CharField(max_length=250, primary_key=True)
-    conteneur = models.ForeignKey(Conteneur, on_delete=models.SET_NULL, blank=True, null=True)
-    contrat = models.ForeignKey(ContratTransport, on_delete=models.SET_NULL, blank=True, null=True)
-    transitaire = models.ForeignKey(Transitaire, on_delete=models.SET_NULL, blank=True, null=True)
-    client = models.ForeignKey(Client, on_delete=models.SET_NULL, blank=True, null=True)
-    chauffeur = models.ForeignKey(Chauffeur, on_delete=models.SET_NULL, blank=True, null=True)
-    camion = models.ForeignKey(Camion, on_delete=models.SET_NULL, blank=True, null=True)
+    conteneur = models.ForeignKey("Conteneur", on_delete=models.SET_NULL, blank=True, null=True)
+    contrat = models.ForeignKey("ContratTransport", on_delete=models.SET_NULL, blank=True, null=True)
+    transitaire = models.ForeignKey("Transitaire", on_delete=models.SET_NULL, blank=True, null=True)
+    client = models.ForeignKey("Client", on_delete=models.SET_NULL, blank=True, null=True)
+    chauffeur = models.ForeignKey("Chauffeur", on_delete=models.SET_NULL, blank=True, null=True)
+    camion = models.ForeignKey("Camion", on_delete=models.SET_NULL, blank=True, null=True)
     montant = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -88,9 +88,9 @@ class Cautions(models.Model):
 
 class PaiementMission(models.Model):
     pk_paiement = models.CharField(max_length=250,primary_key=True)
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE)
-    caution = models.ForeignKey(Cautions, on_delete=models.CASCADE)
-    prestation = models.ForeignKey(PrestationDeTransports, on_delete=models.CASCADE)
+    mission = models.ForeignKey("Mission", on_delete=models.CASCADE)
+    caution = models.ForeignKey("Cautions", on_delete=models.CASCADE)
+    prestation = models.ForeignKey("PrestationDeTransports", on_delete=models.CASCADE)
 
     montant_total = models.DecimalField(
         max_digits=10,

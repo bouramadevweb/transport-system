@@ -54,9 +54,9 @@ class Notification(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # Relations optionnelles pour lier la notification à un objet spécifique
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, null=True, blank=True)
-    paiement = models.ForeignKey(PaiementMission, on_delete=models.CASCADE, null=True, blank=True)
-    reparation = models.ForeignKey(Reparation, on_delete=models.CASCADE, null=True, blank=True)
+    mission = models.ForeignKey("Mission", on_delete=models.CASCADE, null=True, blank=True)
+    paiement = models.ForeignKey("PaiementMission", on_delete=models.CASCADE, null=True, blank=True)
+    reparation = models.ForeignKey("Reparation", on_delete=models.CASCADE, null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']

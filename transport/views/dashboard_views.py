@@ -10,6 +10,7 @@ from django.contrib import messages
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse
 from ..models import (Chauffeur, Camion, Mission, Reparation, PaiementMission, Affectation, Client, Notification, AuditLog, Entreprise)
+from ..decorators import manager_or_admin_required
 
 
 @login_required
