@@ -1,0 +1,136 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Payer Salaire | Gestion Transport{% endblock %}
+
+{% block title %}Enregistrer un Paiement{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{% url 'salaire_list' %}">Salaires</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'salaire_detail' salaire.pk_salaire %}">{{ salaire.get_periode }}</a></li>
+            <li class="breadcrumb-item active">Payer</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Enregistrer le paiement</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Vous êtes sur le point de marquer ce salaire comme payé.
+                    </div>
+
+                    <!-- Résumé du salaire -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="mb-3">Récapitulatif</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="text-muted small">Employé</label>
+                                    <p class="mb-2 fw-medium">{{ salaire.get_employe_nom }}</p>
+                                </div>
+                                <div class="col-6">
+                                    <label class="text-muted small">Période</label>
+                                    <p class="mb-2 fw-medium">{{ salaire.get_periode }}</p>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Salaire de base</span>
+                                <span>{{ salaire.salaire_base|floatformat:0 }} FCFA</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-success">
+                                <span><i class="fas fa-plus-circle me-1"></i>Primes</span>
+                                <span>+{{ salaire.total_primes|floatformat:0 }} FCFA</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-danger">
+                                <span><i class="fas fa-minus-circle me-1"></i>Déductions</span>
+                                <span>-{{ salaire.total_deductions|floatformat:0 }} FCFA</span>
+                            </div>
+
+                            <hr>
+
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold fs-5">Montant à payer</span>
+                                <span class="fw-bold fs-5 text-primary">{{ salaire.salaire_net|floatformat:0 }} FCFA</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire de paiement -->
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-calendar me-1"></i>
+                                Date de paiement <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" name="date_paiement"
+                                   value="{% now 'Y-m-d' %}" required>
+                            <small class="text-muted">Date à laquelle le paiement a été effectué</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-credit-card me-1"></i>
+                                Mode de paiement <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" name="mode_paiement" required>
+                                <option value="">Sélectionner...</option>
+                                {% for value, label in mode_paiement_choices %}
+                                <option value="{{ value }}" {% if salaire.mode_paiement == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Important :</strong> Une fois marqué comme payé, le statut ne pourra plus être modifié.
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'salaire_detail' salaire.pk_salaire %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i>Confirmer le paiement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Aide -->
+            <div class="card shadow-sm border-0 mt-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>Informations</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2">
+                        <i class="fas fa-check text-success me-1"></i>
+                        Le statut du salaire passera de "Validé" à "Payé"
+                    </p>
+                    <p class="small mb-2">
+                        <i class="fas fa-check text-success me-1"></i>
+                        La date et le mode de paiement seront enregistrés
+                    </p>
+                    <p class="small mb-0">
+                        <i class="fas fa-check text-success me-1"></i>
+                        L'historique de paiement sera conservé
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

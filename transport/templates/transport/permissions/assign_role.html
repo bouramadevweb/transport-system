@@ -34,8 +34,10 @@
                     <div class="mb-3">
                         <p><strong>Email:</strong> {{ user.email|default:"Non renseigné" }}</p>
                         <p><strong>Rôle actuel:</strong>
-                            {% if current_role %}
-                                <span class="badge bg-primary">{{ roles|get_item:current_role|get_item:'name' }}</span>
+                            {% if current_role == 'SUPERUSER' %}
+                                <span class="badge bg-danger">Super Admin</span>
+                            {% elif role_info %}
+                                <span class="badge bg-primary">{{ role_info.name }}</span>
                             {% else %}
                                 <span class="badge bg-secondary">Aucun rôle</span>
                             {% endif %}

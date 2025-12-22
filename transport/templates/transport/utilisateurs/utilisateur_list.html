@@ -1,0 +1,251 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Liste des Utilisateurs | Gestion Transport{% endblock %}
+
+{% block title %}Liste des Utilisateurs{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header with Title and Action Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+                    <li class="breadcrumb-item active">Utilisateurs</li>
+                </ol>
+            </nav>
+            <h2 class="mb-0"><i class="fas fa-users text-primary me-2"></i>Gestion des Utilisateurs</h2>
+        </div>
+        <a href="{% url 'utilisateur_create' %}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-1"></i> Ajouter un utilisateur
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if utilisateurs %}
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-users fa-2x text-primary"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Total Utilisateurs</p>
+                            <h3 class="mb-0 fw-bold">{{ utilisateurs|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Actifs</p>
+                            <h3 class="mb-0 fw-bold">{{ stats.actifs }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-crown fa-2x text-warning"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Administrateurs</p>
+                            <h3 class="mb-0 fw-bold">{{ stats.staff }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-info bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-shield-alt fa-2x text-info"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Groupes de rôles</p>
+                            <h3 class="mb-0 fw-bold">{{ roles|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text"
+                               class="form-control table-search"
+                               id="searchUtilisateurs"
+                               data-table="utilisateurTable"
+                               placeholder="Rechercher par nom, email, rôle...">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-outline-success w-100" onclick="exportTableToExcel('utilisateurTable', 'utilisateurs')">
+                        <i class="fas fa-file-excel me-2"></i>Exporter Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="utilisateurTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="sortable" onclick="sortTable(0, 'utilisateurTable')">
+                                <i class="fas fa-user me-1"></i>Nom <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable" onclick="sortTable(1, 'utilisateurTable')">
+                                <i class="fas fa-envelope me-1"></i>Email <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable" onclick="sortTable(2, 'utilisateurTable')">
+                                <i class="fas fa-shield-alt me-1"></i>Rôle <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="text-center"><i class="fas fa-toggle-on me-1"></i>Statut</th>
+                            <th class="text-center"><i class="fas fa-user-shield me-1"></i>Staff</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in utilisateurs %}
+                        <tr>
+                            <td class="fw-medium">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-2">
+                                        {{ user.display_name|first|upper }}{{ user.display_name|slice:"1:2"|upper }}
+                                    </div>
+                                    <div>
+                                        {{ user.display_name }}
+                                        {% if user.is_superuser %}
+                                        <span class="badge bg-danger ms-2">Super Admin</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                {% if user.role_code == 'SUPERUSER' %}
+                                    <span class="badge bg-danger">Super Admin</span>
+                                {% elif user.role_code %}
+                                    <span class="badge bg-primary">{{ user.role_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Aucun rôle</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactif</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if user.is_staff %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                {% else %}
+                                    <i class="fas fa-times-circle text-muted"></i>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'utilisateur_update' user.pk_utilisateur %}"
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if not user.is_superuser or user.email != 'bcoul2002@yahoo.fr' %}
+                                    <a href="{% url 'utilisateur_delete' user.pk_utilisateur %}"
+                                       class="btn btn-sm btn-outline-danger"
+                                       title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white border-top-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <span id="rowCount">{{ utilisateurs|length }}</span> utilisateur(s) affiché(s)
+                </small>
+                <small class="text-muted">
+                    <i class="fas fa-keyboard me-1"></i>Astuce: Appuyez sur <kbd>Ctrl</kbd> + <kbd>K</kbd> pour rechercher
+                </small>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <i class="fas fa-user-slash"></i>
+        <h4>Aucun utilisateur enregistré</h4>
+        <p>Commencez par ajouter votre premier utilisateur pour gérer les accès au système.</p>
+        <a href="{% url 'utilisateur_create' %}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-2"></i>Ajouter le premier utilisateur
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.avatar-circle {
+    width: 35px;
+    height: 35px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+</style>
+{% endblock %}

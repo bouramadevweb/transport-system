@@ -1,0 +1,166 @@
+{% extends "admin.html" %}
+
+{% block page_title %}{% if is_update %}Modifier{% else %}Nouveau{% endif %} Salaire | Gestion Transport{% endblock %}
+
+{% block title %}{% if is_update %}Modifier{% else %}Nouveau{% endif %} Salaire{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{% url 'salaire_list' %}">Salaires</a></li>
+            <li class="breadcrumb-item active">{% if is_update %}Modifier{% else %}Nouveau{% endif %}</li>
+        </ol>
+    </nav>
+
+    <div class="mb-4">
+        <h2 class="mb-0"><i class="fas fa-money-bill-wave text-primary me-2"></i>{% if is_update %}Modifier le salaire{% else %}Nouveau salaire{% endif %}</h2>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations du salaire</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if not is_update %}
+                        <!-- Type d'employé -->
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-user-tag me-1"></i>Type d'employé <span class="text-danger">*</span></label>
+                            <select class="form-select" name="type_employe" id="typeEmploye" required onchange="toggleEmployeSelect()">
+                                <option value="">Sélectionner...</option>
+                                <option value="chauffeur" {% if form_data.type_employe == 'chauffeur' %}selected{% endif %}>Chauffeur</option>
+                                <option value="utilisateur" {% if form_data.type_employe == 'utilisateur' %}selected{% endif %}>Autre employé</option>
+                            </select>
+                        </div>
+
+                        <!-- Sélection chauffeur -->
+                        <div class="mb-3" id="chauffeurSelect" style="display:none;">
+                            <label class="form-label"><i class="fas fa-user me-1"></i>Chauffeur <span class="text-danger">*</span></label>
+                            <select class="form-select" name="chauffeur">
+                                <option value="">Sélectionner un chauffeur...</option>
+                                {% for chauffeur in chauffeurs %}
+                                <option value="{{ chauffeur.pk_chauffeur }}" {% if form_data.chauffeur == chauffeur.pk_chauffeur %}selected{% endif %}>
+                                    {{ chauffeur.nom }} {{ chauffeur.prenom }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Sélection utilisateur -->
+                        <div class="mb-3" id="utilisateurSelect" style="display:none;">
+                            <label class="form-label"><i class="fas fa-user me-1"></i>Employé <span class="text-danger">*</span></label>
+                            <select class="form-select" name="utilisateur">
+                                <option value="">Sélectionner un employé...</option>
+                                {% for user in utilisateurs %}
+                                <option value="{{ user.pk_utilisateur }}" {% if form_data.utilisateur == user.pk_utilisateur %}selected{% endif %}>
+                                    {{ user.nom_utilisateur|default:user.email }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-calendar me-1"></i>Mois <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="mois" required>
+                                        {% for value, label in mois_choices %}
+                                        <option value="{{ value }}" {% if is_update and salaire.mois == value or not is_update and mois_actuel == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-calendar-alt me-1"></i>Année <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" name="annee" value="{% if is_update %}{{ salaire.annee }}{% else %}{{ annee_actuelle }}{% endif %}" required min="2000" max="2100">
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-money-bill me-1"></i>Salaire de base <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="salaire_base" value="{% if is_update %}{{ salaire.salaire_base }}{% else %}{{ form_data.salaire_base }}{% endif %}" required min="0" step="0.01">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-clock me-1"></i>Heures supplémentaires</label>
+                                    <input type="number" class="form-control" name="heures_supplementaires" value="{% if is_update %}{{ salaire.heures_supplementaires }}{% else %}{{ form_data.heures_supplementaires|default:0 }}{% endif %}" min="0" step="0.5">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-money-bill-wave me-1"></i>Taux heure supp.</label>
+                                    <input type="number" class="form-control" name="taux_heure_supp" value="{% if is_update %}{{ salaire.taux_heure_supp }}{% else %}{{ form_data.taux_heure_supp|default:0 }}{% endif %}" min="0" step="0.01">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-credit-card me-1"></i>Mode de paiement</label>
+                            <select class="form-select" name="mode_paiement">
+                                <option value="">Non spécifié</option>
+                                {% for value, label in mode_paiement_choices %}
+                                <option value="{{ value }}" {% if is_update and salaire.mode_paiement == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-sticky-note me-1"></i>Notes</label>
+                            <textarea class="form-control" name="notes" rows="3">{% if is_update %}{{ salaire.notes }}{% else %}{{ form_data.notes }}{% endif %}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'salaire_list' %}" class="btn btn-secondary"><i class="fas fa-times me-1"></i>Annuler</a>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>{% if is_update %}Enregistrer{% else %}Créer le salaire{% endif %}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2"><strong>Salaire de base:</strong> Montant mensuel fixe</p>
+                    <p class="small mb-2"><strong>Heures supp:</strong> Nombre d'heures supplémentaires</p>
+                    <p class="small mb-2"><strong>Taux heure supp:</strong> Prix d'une heure supplémentaire</p>
+                    <p class="small mb-0"><strong>Note:</strong> Les primes et déductions s'ajoutent après création</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleEmployeSelect() {
+    const type = document.getElementById('typeEmploye').value;
+    document.getElementById('chauffeurSelect').style.display = type === 'chauffeur' ? 'block' : 'none';
+    document.getElementById('utilisateurSelect').style.display = type === 'utilisateur' ? 'block' : 'none';
+}
+// Initialiser l'affichage au chargement
+window.addEventListener('DOMContentLoaded', toggleEmployeSelect);
+</script>
+{% endblock %}

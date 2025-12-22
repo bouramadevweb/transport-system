@@ -1,0 +1,236 @@
+{% extends "admin.html" %}
+
+{% block page_title %}{% if is_update %}Modifier{% else %}Ajouter{% endif %} un Utilisateur | Gestion Transport{% endblock %}
+
+{% block title %}{% if is_update %}Modifier{% else %}Ajouter{% endif %} un Utilisateur{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{% url 'utilisateur_list' %}">Utilisateurs</a></li>
+            <li class="breadcrumb-item active">{% if is_update %}Modifier{% else %}Nouveau{% endif %}</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-{% if is_update %}edit{% else %}user-plus{% endif %} text-primary me-2"></i>
+            {% if is_update %}Modifier l'utilisateur{% else %}Nouvel utilisateur{% endif %}
+        </h2>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Form Card -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Informations de l'utilisateur
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="utilisateurForm">
+                        {% csrf_token %}
+
+                        <!-- Nom d'utilisateur -->
+                        <div class="mb-3">
+                            <label for="nom_utilisateur" class="form-label">
+                                <i class="fas fa-user me-1"></i>Nom d'utilisateur
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="nom_utilisateur"
+                                   name="nom_utilisateur"
+                                   value="{{ form_data.nom_utilisateur|default:'' }}"
+                                   placeholder="Nom complet ou pseudo">
+                            <small class="text-muted">Nom affiché dans l'interface (optionnel)</small>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-1"></i>Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email"
+                                   class="form-control"
+                                   id="email"
+                                   name="email"
+                                   value="{{ form_data.email|default:'' }}"
+                                   required
+                                   placeholder="utilisateur@example.com">
+                            <small class="text-muted">Utilisé pour la connexion</small>
+                        </div>
+
+                        <!-- Mot de passe -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock me-1"></i>Mot de passe {% if not is_update %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            <input type="password"
+                                   class="form-control"
+                                   id="password"
+                                   name="password"
+                                   {% if not is_update %}required{% endif %}
+                                   minlength="8"
+                                   placeholder="{% if is_update %}Laisser vide pour ne pas changer{% else %}Minimum 8 caractères{% endif %}">
+                            <small class="text-muted">
+                                {% if is_update %}
+                                Laisser vide pour conserver le mot de passe actuel
+                                {% else %}
+                                Minimum 8 caractères
+                                {% endif %}
+                            </small>
+                        </div>
+
+                        <!-- Confirmation mot de passe -->
+                        <div class="mb-3">
+                            <label for="password_confirm" class="form-label">
+                                <i class="fas fa-lock me-1"></i>Confirmer le mot de passe {% if not is_update %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            <input type="password"
+                                   class="form-control"
+                                   id="password_confirm"
+                                   name="password_confirm"
+                                   {% if not is_update %}required{% endif %}
+                                   minlength="8"
+                                   placeholder="Répéter le mot de passe">
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Rôle -->
+                        <div class="mb-3">
+                            <label for="role" class="form-label">
+                                <i class="fas fa-shield-alt me-1"></i>Rôle
+                            </label>
+                            <select class="form-select" id="role" name="role">
+                                <option value="NONE" {% if not current_role %}selected{% endif %}>Aucun rôle</option>
+                                {% for role_code, role_data in roles.items %}
+                                <option value="{{ role_code }}" {% if current_role == role_code %}selected{% endif %}>
+                                    {{ role_data.name }} - {{ role_data.description }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Définit les permissions de l'utilisateur</small>
+                        </div>
+
+                        <!-- Statut actif -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="is_active"
+                                       name="is_active"
+                                       {% if form_data.is_active or form_data.is_active == None %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    <i class="fas fa-toggle-on me-1"></i>Utilisateur actif
+                                </label>
+                                <div class="form-text">Décocher pour désactiver le compte sans le supprimer</div>
+                            </div>
+                        </div>
+
+                        <!-- Staff -->
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="is_staff"
+                                       name="is_staff"
+                                       {% if form_data.is_staff %}checked{% endif %}>
+                                <label class="form-check-label" for="is_staff">
+                                    <i class="fas fa-user-shield me-1"></i>Membre du staff
+                                </label>
+                                <div class="form-text">Permet l'accès à l'interface d'administration Django</div>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'utilisateur_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>{% if is_update %}Enregistrer les modifications{% else %}Créer l'utilisateur{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2"><strong>Email:</strong> Identifiant unique pour la connexion</p>
+                    <p class="small mb-2"><strong>Mot de passe:</strong> Minimum 8 caractères</p>
+                    <p class="small mb-2"><strong>Rôle:</strong> Définit les permissions d'accès</p>
+                    <p class="small mb-0"><strong>Actif:</strong> L'utilisateur peut se connecter</p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Rôles disponibles</h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        {% for role_code, role_data in roles.items %}
+                        <div class="mb-2">
+                            <strong>{{ role_data.name }}</strong><br>
+                            <span class="text-muted">{{ role_data.description }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validation du formulaire
+document.getElementById('utilisateurForm').addEventListener('submit', function(e) {
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password_confirm').value;
+    const isUpdate = {{ is_update|lower }};
+
+    // Vérifier si un mot de passe est fourni (obligatoire en création, optionnel en modification)
+    if (!isUpdate && !password) {
+        e.preventDefault();
+        alert('Le mot de passe est obligatoire');
+        return;
+    }
+
+    // Si un mot de passe est fourni, vérifier la confirmation
+    if (password && password !== passwordConfirm) {
+        e.preventDefault();
+        alert('Les mots de passe ne correspondent pas');
+        return;
+    }
+
+    // Vérifier la longueur du mot de passe
+    if (password && password.length < 8) {
+        e.preventDefault();
+        alert('Le mot de passe doit contenir au moins 8 caractères');
+        return;
+    }
+});
+</script>
+{% endblock %}

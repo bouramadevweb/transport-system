@@ -1,0 +1,159 @@
+================================================================================
+                  LISTE DES UTILISATEURS - SYSTÈME DE TRANSPORT
+================================================================================
+
+Date: 22 Décembre 2025
+Total: 6 utilisateurs
+
+================================================================================
+                           INFORMATIONS DE CONNEXION
+================================================================================
+
+URL de connexion: http://localhost:8000/connexion/
+Mot de passe pour tous les comptes de test: Test123!
+
+================================================================================
+                                UTILISATEURS
+================================================================================
+
+1. SUPER ADMIN (compte principal)
+   ----------------------------------
+   Nom:    bcoul2002@yahoo.fr
+   Email:  bcoul2002@yahoo.fr
+   Rôle:   Super Admin
+   Accès:  Complet (toutes les permissions)
+   Note:   Compte existant, mot de passe personnel
+
+
+2. ADMINISTRATEUR
+   ----------------------------------
+   Nom:    Admin Test
+   Email:  admin.test@transport.com
+   Rôle:   Administrateur
+   Accès:  120 permissions - Gestion complète du système
+
+   Peut:
+   - Gérer tous les modules
+   - Créer/modifier/supprimer missions, paiements, conteneurs
+   - Générer et envoyer des factures
+   - Consulter tous les rapports financiers
+   - Gérer les utilisateurs et leurs rôles
+
+
+3. GESTIONNAIRE
+   ----------------------------------
+   Nom:    Manager Test
+   Email:  manager.test@transport.com
+   Rôle:   Gestionnaire
+   Accès:  25 permissions - Gestion opérationnelle
+
+   Peut:
+   - Gérer les missions (créer, modifier, supprimer)
+   - Gérer les conteneurs et contrats
+   - Gérer les chauffeurs, camions et clients
+   - Consulter les paiements (lecture seule)
+
+   Ne peut pas:
+   - Créer ou modifier des paiements
+   - Accéder aux factures
+   - Accéder aux rapports financiers
+   - Gérer les permissions
+
+
+4. COMPTABLE
+   ----------------------------------
+   Nom:    Comptable Test
+   Email:  comptable.test@transport.com
+   Rôle:   Comptable
+   Accès:  15 permissions - Gestion financière
+
+   Peut:
+   - Gérer les paiements (créer, modifier)
+   - Gérer les cautions et frais de trajet
+   - Générer et envoyer des factures
+   - Consulter les rapports financiers
+   - Exporter les données en Excel
+   - Consulter les missions et clients (lecture seule)
+
+   Ne peut pas:
+   - Créer ou modifier des missions
+   - Gérer les affectations
+   - Gérer les permissions
+
+
+5. CHAUFFEUR
+   ----------------------------------
+   Nom:    Forokoro COULIBALY
+   Email:  chauffeur.coulibaly@transport.com
+   Rôle:   Chauffeur
+   Accès:  3 permissions - Consultation limitée
+
+   Peut:
+   - Consulter UNIQUEMENT ses propres missions
+   - Consulter UNIQUEMENT ses propres paiements
+   - Consulter ses affectations
+
+   Ne peut pas:
+   - Voir les missions d'autres chauffeurs
+   - Modifier quoi que ce soit
+   - Accéder aux données financières globales
+   - Accéder aux factures ou rapports
+
+
+6. LECTEUR
+   ----------------------------------
+   Nom:    Lecteur Test
+   Email:  lecteur.test@transport.com
+   Rôle:   Lecteur
+   Accès:  6 permissions - Lecture seule
+
+   Peut:
+   - Consulter toutes les missions
+   - Consulter les chauffeurs et camions
+   - Consulter les clients et conteneurs
+   - Consulter les affectations
+
+   Ne peut pas:
+   - Créer, modifier ou supprimer quoi que ce soit
+   - Accéder aux données financières (paiements, cautions)
+   - Accéder aux factures
+   - Accéder aux rapports financiers
+
+
+================================================================================
+                            ACCÈS RAPIDE PAR FONCTION
+================================================================================
+
+GESTION COMPLÈTE:
+  → bcoul2002@yahoo.fr (Super Admin)
+  → admin.test@transport.com (Administrateur)
+
+GESTION OPÉRATIONNELLE (Missions, Ressources):
+  → manager.test@transport.com (Gestionnaire)
+
+GESTION FINANCIÈRE (Paiements, Factures, Rapports):
+  → comptable.test@transport.com (Comptable)
+
+CONSULTATION PERSONNELLE:
+  → chauffeur.coulibaly@transport.com (Chauffeur)
+
+CONSULTATION GÉNÉRALE (lecture seule):
+  → lecteur.test@transport.com (Lecteur)
+
+
+================================================================================
+                                  RAPPELS
+================================================================================
+
+1. Mot de passe commun pour les comptes de test: Test123!
+2. Le compte bcoul2002@yahoo.fr utilise son mot de passe personnel
+3. URL de connexion: http://localhost:8000/connexion/
+4. Ces comptes de test doivent être supprimés avant la mise en production
+
+
+================================================================================
+Pour plus de détails, consulter:
+- RAPPORT_TEST_PERMISSIONS.md - Tests détaillés des permissions
+- UTILISATEURS_TEST.md - Guide complet des utilisateurs
+- STATUT_FINAL.md - État du système
+================================================================================

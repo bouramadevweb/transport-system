@@ -6,6 +6,8 @@ from . import dashboard_views
 from . import permissions_views
 from . import invoice_views
 from . import reports_views
+from . import user_crud_views
+from . import salary_views
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -158,11 +160,31 @@ urlpatterns = [
     path('audit/<str:pk>/', views.audit_log_detail, name='audit_log_detail'),
 
     # Gestion des permissions et rôles
+    # Permissions
     path('permissions/', permissions_views.permissions_dashboard, name='permissions_dashboard'),
     path('permissions/users/', permissions_views.user_permissions_list, name='user_permissions_list'),
     path('permissions/users/<str:user_id>/assign/', permissions_views.assign_user_role, name='assign_user_role'),
     path('permissions/groups/<int:group_id>/', permissions_views.group_details, name='group_details'),
     path('permissions/my-permissions/', permissions_views.my_permissions, name='my_permissions'),
+
+    # CRUD Utilisateurs
+    path('utilisateurs/', user_crud_views.utilisateur_list, name='utilisateur_list'),
+    path('utilisateurs/create/', user_crud_views.utilisateur_create, name='utilisateur_create'),
+    path('utilisateurs/<str:pk>/update/', user_crud_views.utilisateur_update, name='utilisateur_update'),
+    path('utilisateurs/<str:pk>/delete/', user_crud_views.utilisateur_delete, name='utilisateur_delete'),
+
+    # Gestion des salaires
+    path('salaires/', salary_views.salaire_list, name='salaire_list'),
+    path('salaires/create/', salary_views.salaire_create, name='salaire_create'),
+    path('salaires/<str:pk>/', salary_views.salaire_detail, name='salaire_detail'),
+    path('salaires/<str:pk>/update/', salary_views.salaire_update, name='salaire_update'),
+    path('salaires/<str:pk>/delete/', salary_views.salaire_delete, name='salaire_delete'),
+    path('salaires/<str:pk>/valider/', salary_views.salaire_valider, name='salaire_valider'),
+    path('salaires/<str:pk>/payer/', salary_views.salaire_payer, name='salaire_payer'),
+    path('salaires/<str:salaire_pk>/primes/add/', salary_views.prime_add, name='prime_add'),
+    path('primes/<str:pk>/delete/', salary_views.prime_delete, name='prime_delete'),
+    path('salaires/<str:salaire_pk>/deductions/add/', salary_views.deduction_add, name='deduction_add'),
+    path('deductions/<str:pk>/delete/', salary_views.deduction_delete, name='deduction_delete'),
 
     # Gestion des factures
     path('invoices/', invoice_views.invoices_list, name='invoices_list'),

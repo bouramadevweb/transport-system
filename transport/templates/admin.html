@@ -172,6 +172,9 @@
             <a href="{% url 'frais_list' %}" class="{% if 'frais' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Frais">
               <i class="fas fa-receipt"></i><span>Frais de trajet</span>
             </a>
+            <a href="{% url 'salaire_list' %}" class="{% if 'salaire' in request.resolver_match.url_name or 'prime' in request.resolver_match.url_name or 'deduction' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Salaires">
+              <i class="fas fa-money-bill-wave"></i><span>Gestion des Salaires</span>
+            </a>
           </div>
         </div>
 
@@ -205,6 +208,9 @@
           <div class="section-content">
             <a href="{% url 'permissions_dashboard' %}" class="{% if request.resolver_match.url_name == 'permissions_dashboard' %}active{% endif %}" data-tooltip="Dashboard Permissions">
               <i class="fas fa-tachometer-alt"></i><span>Dashboard Permissions</span>
+            </a>
+            <a href="{% url 'utilisateur_list' %}" class="{% if request.resolver_match.url_name == 'utilisateur_list' or request.resolver_match.url_name == 'utilisateur_create' or request.resolver_match.url_name == 'utilisateur_update' %}active{% endif %}" data-tooltip="Gestion des Utilisateurs">
+              <i class="fas fa-users"></i><span>Gestion des Utilisateurs</span>
             </a>
             <a href="{% url 'user_permissions_list' %}" class="{% if request.resolver_match.url_name == 'user_permissions_list' %}active{% endif %}" data-tooltip="Gestion des Rôles">
               <i class="fas fa-users-cog"></i><span>Gestion des Rôles</span>

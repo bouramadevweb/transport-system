@@ -101,9 +101,15 @@ def assign_user_role(request, user_id):
     current_role = get_user_role(user)
     user.display_name = user.nom_utilisateur or user.email or f"User {user.pk_utilisateur}"
 
+    # Obtenir les infos du rôle actuel
+    role_info = None
+    if current_role and current_role != 'SUPERUSER':
+        role_info = ROLES.get(current_role)
+
     context = {
         'user': user,
         'current_role': current_role,
+        'role_info': role_info,
         'roles': ROLES,
     }
 

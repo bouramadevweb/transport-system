@@ -1,0 +1,358 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Détails Salaire | Gestion Transport{% endblock %}
+
+{% block title %}Détails du Salaire{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{% url 'salaire_list' %}">Salaires</a></li>
+            <li class="breadcrumb-item active">{{ salaire.get_periode }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-money-bill-wave text-primary me-2"></i>
+            Salaire - {{ salaire.get_employe_nom }}
+        </h2>
+        <div class="btn-group">
+            <a href="{% url 'salaire_update' salaire.pk_salaire %}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i>Modifier
+            </a>
+            <a href="{% url 'salaire_delete' salaire.pk_salaire %}" class="btn btn-danger">
+                <i class="fas fa-trash me-1"></i>Supprimer
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <!-- Informations principales -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations générales</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Employé</label>
+                            <p class="mb-0 fw-medium">
+                                {% if salaire.chauffeur %}
+                                <span class="badge bg-secondary me-2">Chauffeur</span>
+                                {% else %}
+                                <span class="badge bg-info me-2">Employé</span>
+                                {% endif %}
+                                {{ salaire.get_employe_nom }}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Période</label>
+                            <p class="mb-0 fw-medium">{{ salaire.get_periode }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Statut</label>
+                            <p class="mb-0">
+                                {% if salaire.statut == 'brouillon' %}
+                                <span class="badge bg-secondary">Brouillon</span>
+                                {% elif salaire.statut == 'valide' %}
+                                <span class="badge bg-warning">Validé</span>
+                                {% else %}
+                                <span class="badge bg-success">Payé</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Mode de paiement</label>
+                            <p class="mb-0">{{ salaire.get_mode_paiement_display|default:"Non spécifié" }}</p>
+                        </div>
+                        {% if salaire.date_paiement %}
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted small">Date de paiement</label>
+                            <p class="mb-0">{{ salaire.date_paiement|date:"d/m/Y" }}</p>
+                        </div>
+                        {% endif %}
+                        {% if salaire.notes %}
+                        <div class="col-12">
+                            <label class="text-muted small">Notes</label>
+                            <p class="mb-0">{{ salaire.notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détails du calcul -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-calculator me-2"></i>Détails du calcul</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr>
+                                <td>Salaire de base</td>
+                                <td class="text-end fw-medium">{{ salaire.salaire_base|floatformat:0 }} FCFA</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    Heures supplémentaires
+                                    <small class="text-muted">({{ salaire.heures_supplementaires }} h × {{ salaire.taux_heure_supp|floatformat:0 }} FCFA)</small>
+                                </td>
+                                <td class="text-end fw-medium">{{ montant_heures_supp|floatformat:0 }} FCFA</td>
+                            </tr>
+                            <tr class="table-light">
+                                <td class="fw-bold">Sous-total</td>
+                                <td class="text-end fw-bold">{{ salaire.salaire_base|add:montant_heures_supp|floatformat:0 }} FCFA</td>
+                            </tr>
+                            <tr class="text-success">
+                                <td><i class="fas fa-plus-circle me-1"></i>Total primes</td>
+                                <td class="text-end fw-medium">+{{ salaire.total_primes|floatformat:0 }} FCFA</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Salaire brut</td>
+                                <td class="text-end fw-bold">{{ salaire_brut|floatformat:0 }} FCFA</td>
+                            </tr>
+                            <tr class="text-danger">
+                                <td><i class="fas fa-minus-circle me-1"></i>Total déductions</td>
+                                <td class="text-end fw-medium">-{{ salaire.total_deductions|floatformat:0 }} FCFA</td>
+                            </tr>
+                            <tr class="table-primary">
+                                <td class="fw-bold fs-5">SALAIRE NET</td>
+                                <td class="text-end fw-bold fs-5">{{ salaire.salaire_net|floatformat:0 }} FCFA</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Primes -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-gift me-2"></i>Primes</h6>
+                    <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#addPrimeModal">
+                        <i class="fas fa-plus me-1"></i>Ajouter
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    {% if salaire.primes.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Montant</th>
+                                    <th class="text-center" style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for prime in salaire.primes.all %}
+                                <tr>
+                                    <td>{{ prime.type_prime }}</td>
+                                    <td>{{ prime.description|default:"-" }}</td>
+                                    <td class="text-end fw-medium">{{ prime.montant|floatformat:0 }} FCFA</td>
+                                    <td class="text-center">
+                                        <a href="{% url 'prime_delete' prime.pk_prime %}" class="btn btn-sm btn-outline-danger"
+                                           onclick="return confirm('Supprimer cette prime ?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        Aucune prime
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Déductions -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-hand-holding-usd me-2"></i>Déductions</h6>
+                    <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#addDeductionModal">
+                        <i class="fas fa-plus me-1"></i>Ajouter
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    {% if salaire.deductions.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Montant</th>
+                                    <th class="text-center" style="width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for deduction in salaire.deductions.all %}
+                                <tr>
+                                    <td>{{ deduction.type_deduction }}</td>
+                                    <td>{{ deduction.description|default:"-" }}</td>
+                                    <td class="text-end fw-medium">{{ deduction.montant|floatformat:0 }} FCFA</td>
+                                    <td class="text-center">
+                                        <a href="{% url 'deduction_delete' deduction.pk_deduction %}" class="btn btn-sm btn-outline-danger"
+                                           onclick="return confirm('Supprimer cette déduction ?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        Aucune déduction
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions et historique -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-tasks me-2"></i>Actions</h6>
+                </div>
+                <div class="card-body">
+                    {% if salaire.statut == 'brouillon' %}
+                    <a href="{% url 'salaire_valider' salaire.pk_salaire %}" class="btn btn-success w-100 mb-2">
+                        <i class="fas fa-check me-1"></i>Valider ce salaire
+                    </a>
+                    {% endif %}
+
+                    {% if salaire.statut == 'valide' %}
+                    <a href="{% url 'salaire_payer' salaire.pk_salaire %}" class="btn btn-primary w-100 mb-2">
+                        <i class="fas fa-money-bill-wave me-1"></i>Marquer comme payé
+                    </a>
+                    {% endif %}
+
+                    {% if salaire.statut == 'paye' %}
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-check-circle me-1"></i>Ce salaire a été payé
+                        {% if salaire.date_paiement %}
+                        <br><small>Le {{ salaire.date_paiement|date:"d/m/Y" }}</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-history me-2"></i>Informations</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="text-muted small">Créé par</label>
+                        <p class="mb-0">{{ salaire.cree_par.nom_utilisateur|default:salaire.cree_par.email }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Date de création</label>
+                        <p class="mb-0">{{ salaire.date_creation|date:"d/m/Y H:i" }}</p>
+                    </div>
+                    <div>
+                        <label class="text-muted small">Dernière modification</label>
+                        <p class="mb-0">{{ salaire.date_modification|date:"d/m/Y H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajouter Prime -->
+<div class="modal fade" id="addPrimeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'prime_add' salaire.pk_salaire %}">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-gift me-2"></i>Ajouter une prime</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Type de prime <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="type_prime" required
+                               placeholder="Ex: Prime de rendement, Prime exceptionnelle...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Montant (FCFA) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="montant" required min="0" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i>Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajouter Déduction -->
+<div class="modal fade" id="addDeductionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'deduction_add' salaire.pk_salaire %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-hand-holding-usd me-2"></i>Ajouter une déduction</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Type de déduction <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="type_deduction" required
+                               placeholder="Ex: Avance, Impôts, Cotisations...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Montant (FCFA) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="montant" required min="0" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-plus me-1"></i>Ajouter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

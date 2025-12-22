@@ -1,0 +1,104 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Supprimer Salaire | Gestion Transport{% endblock %}
+
+{% block title %}Supprimer un Salaire{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{% url 'salaire_list' %}">Salaires</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'salaire_detail' salaire.pk_salaire %}">{{ salaire.get_periode }}</a></li>
+            <li class="breadcrumb-item active">Supprimer</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Confirmation de suppression</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <strong>Attention !</strong> Cette action est irréversible.
+                    </div>
+
+                    <p class="mb-3">Êtes-vous sûr de vouloir supprimer le salaire suivant ?</p>
+
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="text-muted small">Employé</label>
+                                    <p class="mb-2 fw-medium">{{ salaire.get_employe_nom }}</p>
+                                </div>
+                                <div class="col-6">
+                                    <label class="text-muted small">Période</label>
+                                    <p class="mb-2 fw-medium">{{ salaire.get_periode }}</p>
+                                </div>
+                                <div class="col-6">
+                                    <label class="text-muted small">Salaire net</label>
+                                    <p class="mb-2 fw-bold text-primary">{{ salaire.salaire_net|floatformat:0 }} FCFA</p>
+                                </div>
+                                <div class="col-6">
+                                    <label class="text-muted small">Statut</label>
+                                    <p class="mb-2">
+                                        {% if salaire.statut == 'brouillon' %}
+                                        <span class="badge bg-secondary">Brouillon</span>
+                                        {% elif salaire.statut == 'valide' %}
+                                        <span class="badge bg-warning">Validé</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Payé</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {% if salaire.primes.count > 0 %}
+                            <div class="mt-3 pt-3 border-top">
+                                <p class="text-muted small mb-1">
+                                    <i class="fas fa-gift me-1"></i>
+                                    {{ salaire.primes.count }} prime{{ salaire.primes.count|pluralize }} sera supprimée{{ salaire.primes.count|pluralize }}
+                                </p>
+                            </div>
+                            {% endif %}
+
+                            {% if salaire.deductions.count > 0 %}
+                            <div class="mt-2">
+                                <p class="text-muted small mb-1">
+                                    <i class="fas fa-hand-holding-usd me-1"></i>
+                                    {{ salaire.deductions.count }} déduction{{ salaire.deductions.count|pluralize }} sera supprimée{{ salaire.deductions.count|pluralize }}
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if salaire.statut == 'paye' %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Ce salaire a déjà été payé !</strong> Assurez-vous que la suppression est vraiment nécessaire.
+                    </div>
+                    {% endif %}
+
+                    <form method="post" class="mt-4">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'salaire_detail' salaire.pk_salaire %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>Confirmer la suppression
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
