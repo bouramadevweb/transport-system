@@ -1,0 +1,57 @@
+{% if paiements %}
+    {% for paiement in paiements %}
+    <tr>
+        <td>
+            {% if paiement.est_valide %}
+                <span class="badge bg-success">
+                    <i class="fas fa-check-circle me-1"></i>Validé
+                </span>
+            {% else %}
+                <span class="badge bg-warning">
+                    <i class="fas fa-clock me-1"></i>En attente
+                </span>
+            {% endif %}
+        </td>
+        <td>
+            <div>
+                <small class="text-muted d-block">{{ paiement.mission.pk_mission|slice:":20" }}...</small>
+                <strong>{{ paiement.mission.origine }}</strong> → <strong>{{ paiement.mission.destination }}</strong>
+            </div>
+        </td>
+        <td>
+            <span class="text-success fw-bold">{{ paiement.montant_total }}€</span>
+        </td>
+        <td>{{ paiement.commission_transitaire }}€</td>
+        <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+        <td class="text-center">
+            <div class="btn-group" role="group">
+                {% if not paiement.est_valide %}
+                    <button type="button"
+                            class="btn btn-sm btn-primary btn-validate-payment"
+                            data-paiement-id="{{ paiement.pk_paiement }}"
+                            title="Valider le paiement">
+                        <i class="fas fa-check-circle"></i>
+                    </button>
+                {% endif %}
+                <a href="{% url 'update_paiement_mission' paiement.pk_paiement %}"
+                   class="btn btn-sm btn-outline-warning"
+                   title="Modifier">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'delete_paiement_mission' paiement.pk_paiement %}"
+                   class="btn btn-sm btn-outline-danger"
+                   title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+{% else %}
+<tr>
+    <td colspan="6" class="text-center py-4">
+        <i class="fas fa-info-circle me-2 text-muted"></i>
+        <span class="text-muted">Aucun paiement trouvé avec ces critères.</span>
+    </td>
+</tr>
+{% endif %}

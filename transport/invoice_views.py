@@ -224,15 +224,22 @@ def bulk_send_invoices(request):
                     success_count += 1
                 else:
                     error_count += 1
+                    print(f"⚠️ Paiement {paiement_id}: Aucun destinataire trouvé (client ou chauffeur sans email)")
 
             except Exception as e:
                 error_count += 1
+                print(f"❌ Erreur envoi facture {paiement_id}: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 continue
 
         if success_count > 0:
             messages.success(request, f"✅ {success_count} facture(s) envoyée(s) avec succès!")
         if error_count > 0:
-            messages.warning(request, f"⚠️ {error_count} facture(s) n'ont pas pu être envoyées.")
+            messages.warning(request, f"⚠️ {error_count} facture(s) n'ont pas pu être envoyées (vérifiez les emails ou la console pour les détails).")
+
+        if success_count == 0 and error_count == 0:
+            messages.info(request, "ℹ️ Aucune facture n'a été traitée.")
 
         return redirect('invoices_list')
 

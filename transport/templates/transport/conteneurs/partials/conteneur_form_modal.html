@@ -1,0 +1,119 @@
+{% load static %}
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="fas fa-box me-2"></i>
+        {% if mode == 'create' %}
+            Ajouter un conteneur
+        {% else %}
+            Modifier le conteneur
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form method="post" class="ajax-form" id="conteneurForm">
+    {% csrf_token %}
+    <div class="modal-body">
+        <div class="row g-3">
+            <!-- Numéro conteneur -->
+            <div class="col-md-6">
+                <label for="{{ form.numero_conteneur.id_for_label }}" class="form-label">
+                    <i class="fas fa-hashtag me-1"></i>Numéro conteneur
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.numero_conteneur }}
+                {% if form.numero_conteneur.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.numero_conteneur.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Compagnie -->
+            <div class="col-md-6">
+                <label for="{{ form.compagnie.id_for_label }}" class="form-label">
+                    <i class="fas fa-ship me-1"></i>Compagnie
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.compagnie }}
+                {% if form.compagnie.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.compagnie.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Type conteneur -->
+            <div class="col-md-6">
+                <label for="{{ form.type_conteneur.id_for_label }}" class="form-label">
+                    <i class="fas fa-tag me-1"></i>Type de conteneur
+                </label>
+                {{ form.type_conteneur }}
+                {% if form.type_conteneur.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.type_conteneur.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Poids -->
+            <div class="col-md-6">
+                <label for="{{ form.poids.id_for_label }}" class="form-label">
+                    <i class="fas fa-weight me-1"></i>Poids (tonnes)
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.poids }}
+                {% if form.poids.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.poids.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Client -->
+            <div class="col-md-6">
+                <label for="{{ form.client.id_for_label }}" class="form-label">
+                    <i class="fas fa-user me-1"></i>Client
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.client }}
+                {% if form.client.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.client.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Transitaire -->
+            <div class="col-md-6">
+                <label for="{{ form.transitaire.id_for_label }}" class="form-label">
+                    <i class="fas fa-dolly me-1"></i>Transitaire
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.transitaire }}
+                {% if form.transitaire.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.transitaire.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-3">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            {% if mode == 'create' %}Créer{% else %}Modifier{% endif %}
+        </button>
+    </div>
+</form>

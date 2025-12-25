@@ -8,9 +8,9 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0"><i class="fas fa-ship text-primary me-2"></i>{{ title }}</h2>
-        <a href="{% url 'create_compagnie' %}" class="btn btn-primary">
+        <button type="button" class="btn btn-primary btn-create-compagnie">
             <i class="fas fa-plus me-1"></i> Ajouter une compagnie
-        </a>
+        </button>
     </div>
 
     {% if compagnies %}
@@ -24,17 +24,19 @@
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="compagnieTableBody">
                         {% for c in compagnies %}
+                        {% if c.pk_compagnie %}
                         <tr>
                             <td>{{ c.nom }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'update_compagnie' c.pk_compagnie %}"
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-warning btn-edit-compagnie"
+                                            data-compagnie-id="{{ c.pk_compagnie }}"
+                                            title="Modifier">
                                         <i class="fas fa-edit"></i>
-                                    </a>
+                                    </button>
                                     <a href="{% url 'delete_compagnie' c.pk_compagnie %}"
                                        class="btn btn-sm btn-outline-danger"
                                        title="Supprimer">
@@ -43,6 +45,7 @@
                                 </div>
                             </td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -52,8 +55,23 @@
     {% else %}
     <div class="alert alert-info shadow-sm">
         <i class="fas fa-info-circle me-2"></i>
-        Aucune compagnie enregistrée. <a href="{% url 'create_compagnie' %}" class="alert-link">Ajouter la première</a>
+        Aucune compagnie enregistrée. <button type="button" class="btn btn-link alert-link btn-create-compagnie p-0">Ajouter la première</button>
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/crud-modal.js' %}"></script>
+<script>
+// Initialize CRUD modal for compagnies
+new CrudModalManager({
+    entityName: 'compagnie',
+    entityNameDisplay: 'Compagnie',
+    createUrl: '{% url "ajax_compagnie_create" %}',
+    updateUrlPattern: '/compagnies/{id}/ajax/update/',
+    listSelector: '#compagnieTableBody'
+});
+</script>
 {% endblock %}

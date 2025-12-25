@@ -132,9 +132,9 @@
                             <td>{{ p.date|date:"d/m/Y H:i" }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'update_presta_transport' p.pk_presta_transport %}"
+                                    <a href="{% url 'update_contrat' p.contrat_transport.pk_contrat %}"
                                        class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
+                                       title="Modifier le contrat">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <a href="{% url 'delete_presta_transport' p.pk_presta_transport %}"
@@ -168,136 +168,16 @@
         <i class="fas fa-file-invoice"></i>
         <h4>Aucune prestation enregistrée</h4>
         <p>Commencez par ajouter votre première prestation de transport.</p>
-        <a href="{% url 'create_presta_transport' %}" class="btn btn-primary">
+        <a href="{% url 'create_contrat' %}" class="btn btn-primary">
             <i class="fas fa-plus me-2"></i>Ajouter la première prestation
         </a>
     </div>
     {% endif %}
 </div>
+{% endblock %}
 
-<style>
-    /* Empty State */
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .empty-state i {
-        font-size: 4rem;
-        color: #cbd5e1;
-        margin-bottom: 20px;
-    }
-
-    .empty-state h4 {
-        color: #334155;
-        margin-bottom: 10px;
-        font-weight: 600;
-    }
-
-    .empty-state p {
-        color: #64748b;
-        margin-bottom: 25px;
-        font-size: 0.95rem;
-    }
-
-    .sortable {
-        cursor: pointer;
-        user-select: none;
-        position: relative;
-    }
-
-    .sortable:hover {
-        background-color: #e9ecef;
-        transform: translateY(-1px);
-    }
-
-    .sort-icon {
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin-left: 5px;
-        transition: all 0.2s ease;
-    }
-
-    /* Animations des statistiques */
-    .card-body h3 {
-        transition: transform 0.2s ease;
-    }
-
-    /* Animation du tbody */
-    tbody {
-        transition: opacity 0.15s ease;
-    }
-
-    /* Animation des lignes */
-    tbody tr {
-        transition: background-color 0.15s ease;
-    }
-
-    tbody tr:hover {
-        background-color: #f8f9fa !important;
-        transform: scale(1.005);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    /* Amélioration des badges */
-    .badge {
-        transition: transform 0.2s ease;
-    }
-
-    .badge:hover {
-        transform: scale(1.05);
-    }
-
-    /* Animation des boutons */
-    .btn-group .btn {
-        transition: all 0.2s ease;
-    }
-
-    .btn-group .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .table {
-            font-size: 0.85rem;
-        }
-
-        .btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-    }
-
-    @media (max-width: 576px) {
-        h2 {
-            font-size: 1.25rem !important;
-        }
-
-        .card-body h3 {
-            font-size: 1.5rem !important;
-        }
-
-        .fa-2x {
-            font-size: 1.5em !important;
-        }
-
-        .table {
-            font-size: 0.75rem !important;
-        }
-
-        .btn-sm {
-            font-size: 0.7rem !important;
-            padding: 0.25rem 0.4rem !important;
-        }
-    }
-</style>
-
+{% block extra_js %}
+{% load static %}
 <script>
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
@@ -445,4 +325,129 @@ function exportToCSV() {
     link.click();
 }
 </script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #cbd5e1;
+        margin-bottom: 20px;
+    }
+
+    .empty-state h4 {
+        color: #334155;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        color: #64748b;
+        margin-bottom: 25px;
+        font-size: 0.95rem;
+    }
+
+    .sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+    }
+
+    .sortable:hover {
+        background-color: #e9ecef;
+        transform: translateY(-1px);
+    }
+
+    .sort-icon {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-left: 5px;
+        transition: all 0.2s ease;
+    }
+
+    /* Animations des statistiques */
+    .card-body h3 {
+        transition: transform 0.2s ease;
+    }
+
+    /* Animation du tbody */
+    tbody {
+        transition: opacity 0.15s ease;
+    }
+
+    /* Animation des lignes */
+    tbody tr {
+        transition: background-color 0.15s ease;
+    }
+
+    tbody tr:hover {
+        background-color: #f8f9fa !important;
+        transform: scale(1.005);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Amélioration des badges */
+    .badge {
+        transition: transform 0.2s ease;
+    }
+
+    .badge:hover {
+        transform: scale(1.05);
+    }
+
+    /* Animation des boutons */
+    .btn-group .btn {
+        transition: all 0.2s ease;
+    }
+
+    .btn-group .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        h2 {
+            font-size: 1.25rem !important;
+        }
+
+        .card-body h3 {
+            font-size: 1.5rem !important;
+        }
+
+        .fa-2x {
+            font-size: 1.5em !important;
+        }
+
+        .table {
+            font-size: 0.75rem !important;
+        }
+
+        .btn-sm {
+            font-size: 0.7rem !important;
+            padding: 0.25rem 0.4rem !important;
+        }
+    }
+</style>
 {% endblock %}

@@ -8,9 +8,9 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0"><i class="fas fa-building text-primary me-2"></i>{{ title }}</h2>
-        <a href="{% url 'ajouter_entreprise' %}" class="btn btn-primary">
+        <button type="button" class="btn btn-primary btn-create-entreprise">
             <i class="fas fa-plus me-1"></i> Ajouter une entreprise
-        </a>
+        </button>
     </div>
 
     {% if entreprises %}
@@ -38,11 +38,12 @@
                             <td>{{ e.statut }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'modifier_entreprise' e.pk_entreprise %}"
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-warning btn-edit-entreprise"
+                                            data-entreprise-id="{{ e.pk_entreprise }}"
+                                            title="Modifier">
                                         <i class="fas fa-edit"></i>
-                                    </a>
+                                    </button>
                                     <a href="{% url 'supprimer_entreprise' e.pk_entreprise %}"
                                        class="btn btn-sm btn-outline-danger"
                                        title="Supprimer">
@@ -64,4 +65,19 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/crud-modal.js' %}"></script>
+<script>
+// Initialize CRUD modal for entreprises
+new CrudModalManager({
+    entityName: 'entreprise',
+    entityNameDisplay: 'Entreprise',
+    createUrl: '{% url "ajax_entreprise_create" %}',
+    updateUrlPattern: '/entreprises/{id}/ajax/update/',
+    listSelector: 'tbody'
+});
+</script>
 {% endblock %}

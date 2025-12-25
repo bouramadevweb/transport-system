@@ -37,7 +37,14 @@
 {% endblock %}
 
 {% block extra_js %}
+{% load static %}
+<script src="{% static 'js/contrat-form.js' %}"></script>
 <script>
+// Utiliser les fonctions du fichier externe
+document.addEventListener('DOMContentLoaded', function() {
+    initContratFormCalculs();
+});
+
 function calculerDateLimiteRetour() {
     const dateDebutInput = document.getElementById('id_date_debut');
     const dateLimiteRetourInput = document.getElementById('id_date_limite_retour');
@@ -55,15 +62,12 @@ function calculerDateLimiteRetour() {
         const jour = String(dateDebut.getDate()).padStart(2, '0');
         const dateLimiteRetour = `${annee}-${mois}-${jour}`;
 
-        // Mettre à jour le champ date limite retour SEULEMENT si vide
-        // ou si l'utilisateur le souhaite (on suggère la nouvelle date)
-        if (!dateLimiteRetourInput.value) {
-            dateLimiteRetourInput.value = dateLimiteRetour;
-        }
+        // Mettre à jour AUTOMATIQUEMENT le champ date limite retour
+        dateLimiteRetourInput.value = dateLimiteRetour;
 
         // Ajouter une indication visuelle
-        dateLimiteRetourInput.style.backgroundColor = '#fff9e6';
-        dateLimiteRetourInput.title = 'Date suggérée : Date début + 23 jours. Vous pouvez la modifier manuellement.';
+        dateLimiteRetourInput.style.backgroundColor = '#d1ecf1';
+        dateLimiteRetourInput.title = 'Calculé automatiquement : Date début + 23 jours';
     }
 }
 
@@ -223,6 +227,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const camionSelect = document.getElementById('id_camion');
     if (camionSelect && camionSelect.value) {
         chargerChauffeurAffecte();
+    }
+
+    // ✅ Event listener pour calcul automatique de la date limite de retour
+    const dateDebutInput = document.getElementById('id_date_debut');
+    if (dateDebutInput) {
+        dateDebutInput.addEventListener('change', calculerDateLimiteRetour);
+    }
+
+    // Event listeners pour calcul automatique du reliquat
+    const montantTotalInput = document.getElementById('id_montant_total');
+    const avanceTransportInput = document.getElementById('id_avance_transport');
+
+    if (montantTotalInput) {
+        montantTotalInput.addEventListener('input', calculerReliquat);
+    }
+    if (avanceTransportInput) {
+        avanceTransportInput.addEventListener('input', calculerReliquat);
     }
 });
 </script>

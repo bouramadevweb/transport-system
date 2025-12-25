@@ -1,0 +1,82 @@
+<form id="chauffeurForm" method="post">
+    {% csrf_token %}
+
+    <div class="row g-3">
+        <!-- Nom -->
+        <div class="col-md-6">
+            <label for="{{ form.nom.id_for_label }}" class="form-label">
+                <i class="fas fa-user me-1"></i>Nom <span class="text-danger">*</span>
+            </label>
+            {{ form.nom }}
+            {% if form.nom.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.nom.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Prénom -->
+        <div class="col-md-6">
+            <label for="{{ form.prenom.id_for_label }}" class="form-label">
+                <i class="fas fa-user me-1"></i>Prénom <span class="text-danger">*</span>
+            </label>
+            {{ form.prenom }}
+            {% if form.prenom.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.prenom.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Téléphone -->
+        <div class="col-md-6">
+            <label for="{{ form.telephone.id_for_label }}" class="form-label">
+                <i class="fas fa-phone me-1"></i>Téléphone
+            </label>
+            {{ form.telephone }}
+            {% if form.telephone.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.telephone.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Email -->
+        <div class="col-md-6">
+            <label for="{{ form.email.id_for_label }}" class="form-label">
+                <i class="fas fa-envelope me-1"></i>Email
+            </label>
+            {{ form.email }}
+            {% if form.email.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.email.errors }}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Entreprise -->
+        <div class="col-12">
+            <label for="{{ form.entreprise.id_for_label }}" class="form-label">
+                <i class="fas fa-building me-1"></i>Entreprise <span class="text-danger">*</span>
+            </label>
+            {{ form.entreprise }}
+            {% if form.entreprise.errors %}
+                <div class="invalid-feedback d-block">
+                    {{ form.entreprise.errors }}
+                </div>
+            {% endif %}
+            <small class="form-text text-muted">Entreprise à laquelle appartient le chauffeur</small>
+        </div>
+    </div>
+
+    <!-- Boutons -->
+    <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save me-2"></i>
+            {% if mode == 'create' %}Créer le chauffeur{% else %}Enregistrer les modifications{% endif %}
+        </button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Annuler
+        </button>
+    </div>
+</form>

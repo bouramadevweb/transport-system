@@ -1,0 +1,170 @@
+{% load django_bootstrap5 %}
+
+<form id="missionForm" method="post">
+    {% csrf_token %}
+
+    <div class="modal-body">
+        {% if mode == 'update' %}
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Mission:</strong> {{ mission.pk_mission }}
+            </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="row g-3">
+            <!-- Prestation de transport -->
+            <div class="col-12">
+                <label for="{{ form.prestation_transport.id_for_label }}" class="form-label">
+                    <i class="fas fa-file-contract text-primary me-1"></i>
+                    Prestation de transport <span class="text-danger">*</span>
+                </label>
+                {{ form.prestation_transport }}
+                {% if form.prestation_transport.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.prestation_transport.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Contrat -->
+            <div class="col-12">
+                <label for="{{ form.contrat.id_for_label }}" class="form-label">
+                    <i class="fas fa-file-signature text-primary me-1"></i>
+                    Contrat <span class="text-danger">*</span>
+                </label>
+                {{ form.contrat }}
+                {% if form.contrat.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.contrat.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">
+                    Le contrat doit être actif et correspondre à la prestation
+                </small>
+            </div>
+
+            <!-- Origine et Destination -->
+            <div class="col-md-6">
+                <label for="{{ form.origine.id_for_label }}" class="form-label">
+                    <i class="fas fa-map-marker-alt text-success me-1"></i>
+                    Origine <span class="text-danger">*</span>
+                </label>
+                {{ form.origine }}
+                {% if form.origine.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.origine.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label for="{{ form.destination.id_for_label }}" class="form-label">
+                    <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                    Destination <span class="text-danger">*</span>
+                </label>
+                {{ form.destination }}
+                {% if form.destination.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.destination.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Dates -->
+            <div class="col-md-6">
+                <label for="{{ form.date_depart.id_for_label }}" class="form-label">
+                    <i class="fas fa-calendar-alt text-primary me-1"></i>
+                    Date de départ <span class="text-danger">*</span>
+                </label>
+                {{ form.date_depart }}
+                {% if form.date_depart.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.date_depart.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                <label for="{{ form.date_retour.id_for_label }}" class="form-label">
+                    <i class="fas fa-calendar-check text-primary me-1"></i>
+                    Date de retour
+                </label>
+                {{ form.date_retour }}
+                {% if form.date_retour.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.date_retour.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">
+                    Laissez vide si la mission n'est pas encore terminée
+                </small>
+            </div>
+
+            <!-- Itinéraire -->
+            <div class="col-12">
+                <label for="{{ form.itineraire.id_for_label }}" class="form-label">
+                    <i class="fas fa-route text-primary me-1"></i>
+                    Itinéraire <span class="text-danger">*</span>
+                </label>
+                {{ form.itineraire }}
+                {% if form.itineraire.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.itineraire.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Frais de trajet -->
+            <div class="col-12">
+                <label for="{{ form.frais_trajet.id_for_label }}" class="form-label">
+                    <i class="fas fa-money-bill-wave text-success me-1"></i>
+                    Frais de trajet
+                </label>
+                {{ form.frais_trajet }}
+                {% if form.frais_trajet.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.frais_trajet.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">
+                    Optionnel - Sélectionnez les frais prédéfinis pour ce trajet
+                </small>
+            </div>
+
+            <!-- Statut (pour update seulement) -->
+            {% if mode == 'update' %}
+            <div class="col-12">
+                <label for="{{ form.statut.id_for_label }}" class="form-label">
+                    <i class="fas fa-info-circle text-primary me-1"></i>
+                    Statut <span class="text-danger">*</span>
+                </label>
+                {{ form.statut }}
+                {% if form.statut.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.statut.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">
+                    Utilisez le bouton "Terminer" pour terminer proprement une mission avec validation des dates
+                </small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            {% if mode == 'create' %}Créer la mission{% else %}Enregistrer les modifications{% endif %}
+        </button>
+    </div>
+</form>

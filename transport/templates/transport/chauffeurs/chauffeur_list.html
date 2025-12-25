@@ -17,9 +17,9 @@
             </nav>
             <h2 class="mb-0"><i class="fas fa-id-card text-primary me-2"></i>Liste des Chauffeurs</h2>
         </div>
-        <a href="{% url 'chauffeur_create' %}" class="btn btn-primary">
+        <button type="button" class="btn btn-primary btn-create-chauffeur">
             <i class="fas fa-plus me-1"></i> Ajouter un chauffeur
-        </a>
+        </button>
     </div>
 
     {% if chauffeurs %}
@@ -52,9 +52,8 @@
                     <div class="search-box">
                         <i class="fas fa-search"></i>
                         <input type="text"
-                               class="form-control table-search"
+                               class="form-control"
                                id="searchChauffeurs"
-                               data-table="chauffeurTable"
                                placeholder="Rechercher par nom, prénom, email, téléphone...">
                     </div>
                 </div>
@@ -88,32 +87,8 @@
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for chauffeur in chauffeurs %}
-                        <tr>
-                            <td class="fw-medium">{{ chauffeur.nom }}</td>
-                            <td>{{ chauffeur.prenom }}</td>
-                            <td>{{ chauffeur.email|default:"—" }}</td>
-                            <td>{{ chauffeur.telephone|default:"—" }}</td>
-                            <td>
-                                <span class="badge bg-secondary">{{ chauffeur.entreprise.nom }}</span>
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'chauffeur_update' chauffeur.pk_chauffeur %}"
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{% url 'chauffeur_delete' chauffeur.pk_chauffeur %}"
-                                       class="btn btn-sm btn-outline-danger"
-                                       title="Supprimer">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    <tbody id="chauffeurTableBody">
+                        {% include "transport/chauffeurs/partials/chauffeur_rows.html" %}
                     </tbody>
                 </table>
             </div>
@@ -141,4 +116,29 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/ajax-list-search.js' %}"></script>
+<script src="{% static 'js/crud-modal.js' %}"></script>
+<script>
+// Initialize AJAX search for chauffeurs
+new AjaxListSearch({
+    searchInputSelector: '#searchChauffeurs',
+    tableBodySelector: '#chauffeurTableBody',
+    counterSelector: '#rowCount',
+    ajaxUrl: '{% url "ajax_search_chauffeurs" %}',
+    debounceDelay: 300
+});
+
+// Initialize CRUD modal for chauffeurs
+new CrudModalManager({
+    entityName: 'chauffeur',
+    entityNameDisplay: 'Chauffeur',
+    createUrl: '{% url "ajax_chauffeur_create" %}',
+    updateUrlPattern: '/chauffeurs/{id}/ajax/update/',
+    listSelector: '#chauffeurTableBody'
+});
+</script>
 {% endblock %}

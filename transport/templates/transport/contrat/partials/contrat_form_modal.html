@@ -1,0 +1,342 @@
+{% load static %}
+
+<div class="modal-header">
+    <h5 class="modal-title">
+        <i class="fas fa-file-contract me-2"></i>
+        {% if mode == 'create' %}
+            Ajouter un contrat de transport
+        {% else %}
+            Modifier le contrat
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form method="post" class="ajax-form" id="contratForm">
+    {% csrf_token %}
+    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <div class="row g-3">
+            <!-- Section: Informations générales -->
+            <div class="col-12">
+                <h6 class="border-bottom pb-2">
+                    <i class="fas fa-info-circle me-1"></i>Informations générales
+                </h6>
+            </div>
+
+            <!-- Numéro BL -->
+            <div class="col-md-6">
+                <label for="{{ form.numero_bl.id_for_label }}" class="form-label">
+                    <i class="fas fa-hashtag me-1"></i>Numéro BL
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.numero_bl }}
+                {% if form.numero_bl.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.numero_bl.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Lieu de chargement -->
+            <div class="col-md-6">
+                <label for="{{ form.lieu_chargement.id_for_label }}" class="form-label">
+                    <i class="fas fa-map-marker-alt me-1"></i>Lieu de chargement (Origine)
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.lieu_chargement }}
+                {% if form.lieu_chargement.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.lieu_chargement.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Destinataire -->
+            <div class="col-md-12">
+                <label for="{{ form.destinataire.id_for_label }}" class="form-label">
+                    <i class="fas fa-map-pin me-1"></i>Destination
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.destinataire }}
+                {% if form.destinataire.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.destinataire.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Section: Parties prenantes -->
+            <div class="col-12 mt-3">
+                <h6 class="border-bottom pb-2">
+                    <i class="fas fa-users me-1"></i>Parties prenantes
+                </h6>
+            </div>
+
+            <!-- Conteneur -->
+            <div class="col-md-6">
+                <label for="{{ form.conteneur.id_for_label }}" class="form-label">
+                    <i class="fas fa-box me-1"></i>Conteneur
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.conteneur }}
+                {% if form.conteneur.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.conteneur.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Client -->
+            <div class="col-md-6">
+                <label for="{{ form.client.id_for_label }}" class="form-label">
+                    <i class="fas fa-user me-1"></i>Client
+                </label>
+                {{ form.client }}
+                {% if form.client.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.client.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Transitaire -->
+            <div class="col-md-6">
+                <label for="{{ form.transitaire.id_for_label }}" class="form-label">
+                    <i class="fas fa-dolly me-1"></i>Transitaire
+                </label>
+                {{ form.transitaire }}
+                {% if form.transitaire.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.transitaire.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Entreprise -->
+            <div class="col-md-6">
+                <label for="{{ form.entreprise.id_for_label }}" class="form-label">
+                    <i class="fas fa-building me-1"></i>Entreprise
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.entreprise }}
+                {% if form.entreprise.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.entreprise.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Section: Transport -->
+            <div class="col-12 mt-3">
+                <h6 class="border-bottom pb-2">
+                    <i class="fas fa-truck me-1"></i>Transport
+                </h6>
+            </div>
+
+            <!-- Camion -->
+            <div class="col-md-6">
+                <label for="{{ form.camion.id_for_label }}" class="form-label">
+                    <i class="fas fa-truck me-1"></i>Camion
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.camion }}
+                {% if form.camion.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.camion.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Chauffeur -->
+            <div class="col-md-6">
+                <label for="{{ form.chauffeur.id_for_label }}" class="form-label">
+                    <i class="fas fa-id-card me-1"></i>Chauffeur
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.chauffeur }}
+                {% if form.chauffeur.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.chauffeur.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Section: Financier -->
+            <div class="col-12 mt-3">
+                <h6 class="border-bottom pb-2">
+                    <i class="fas fa-money-bill-wave me-1"></i>Financier
+                </h6>
+            </div>
+
+            <!-- Montant total -->
+            <div class="col-md-4">
+                <label for="{{ form.montant_total.id_for_label }}" class="form-label">
+                    <i class="fas fa-calculator me-1"></i>Montant total
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.montant_total }}
+                {% if form.montant_total.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.montant_total.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Avance transport -->
+            <div class="col-md-4">
+                <label for="{{ form.avance_transport.id_for_label }}" class="form-label">
+                    <i class="fas fa-hand-holding-usd me-1"></i>Avance transport
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.avance_transport }}
+                {% if form.avance_transport.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.avance_transport.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Reliquat transport -->
+            <div class="col-md-4">
+                <label for="{{ form.reliquat_transport.id_for_label }}" class="form-label">
+                    <i class="fas fa-receipt me-1"></i>Reliquat transport
+                </label>
+                {{ form.reliquat_transport }}
+                {% if form.reliquat_transport.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.reliquat_transport.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Caution -->
+            <div class="col-md-6">
+                <label for="{{ form.caution.id_for_label }}" class="form-label">
+                    <i class="fas fa-shield-alt me-1"></i>Caution
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.caution }}
+                {% if form.caution.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.caution.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Statut caution -->
+            <div class="col-md-6">
+                <label for="{{ form.statut_caution.id_for_label }}" class="form-label">
+                    <i class="fas fa-info-circle me-1"></i>Statut caution
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.statut_caution }}
+                {% if form.statut_caution.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.statut_caution.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Section: Dates -->
+            <div class="col-12 mt-3">
+                <h6 class="border-bottom pb-2">
+                    <i class="fas fa-calendar me-1"></i>Dates
+                </h6>
+            </div>
+
+            <!-- Date début -->
+            <div class="col-md-6">
+                <label for="{{ form.date_debut.id_for_label }}" class="form-label">
+                    <i class="fas fa-calendar-plus me-1"></i>Date début
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.date_debut }}
+                {% if form.date_debut.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.date_debut.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Date limite retour -->
+            <div class="col-md-6">
+                <label for="{{ form.date_limite_retour.id_for_label }}" class="form-label">
+                    <i class="fas fa-calendar-times me-1"></i>Date limite retour
+                    <span class="text-danger">*</span>
+                </label>
+                {{ form.date_limite_retour }}
+                {% if form.date_limite_retour.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.date_limite_retour.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Section: Signatures -->
+            <div class="col-12 mt-3">
+                <h6 class="border-bottom pb-2">
+                    <i class="fas fa-signature me-1"></i>Signatures
+                </h6>
+            </div>
+
+            <!-- Signature chauffeur -->
+            <div class="col-md-4">
+                <div class="form-check">
+                    {{ form.signature_chauffeur }}
+                    <label class="form-check-label" for="{{ form.signature_chauffeur.id_for_label }}">
+                        <i class="fas fa-id-card me-1"></i>Signature chauffeur
+                    </label>
+                </div>
+            </div>
+
+            <!-- Signature client -->
+            <div class="col-md-4">
+                <div class="form-check">
+                    {{ form.signature_client }}
+                    <label class="form-check-label" for="{{ form.signature_client.id_for_label }}">
+                        <i class="fas fa-user me-1"></i>Signature client
+                    </label>
+                </div>
+            </div>
+
+            <!-- Signature transitaire -->
+            <div class="col-md-4">
+                <div class="form-check">
+                    {{ form.signature_transitaire }}
+                    <label class="form-check-label" for="{{ form.signature_transitaire.id_for_label }}">
+                        <i class="fas fa-dolly me-1"></i>Signature transitaire
+                    </label>
+                </div>
+            </div>
+
+            <!-- Commentaire -->
+            <div class="col-12 mt-3">
+                <label for="{{ form.commentaire.id_for_label }}" class="form-label">
+                    <i class="fas fa-comment me-1"></i>Commentaire
+                </label>
+                {{ form.commentaire }}
+                {% if form.commentaire.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.commentaire.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-3">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            {% if mode == 'create' %}Créer{% else %}Modifier{% endif %}
+        </button>
+    </div>
+</form>

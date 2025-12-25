@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse
-from ..models import (Mission, MissionConteneur, Chauffeur, Client, PaiementMission, Cautions)
+from ..models import (Mission, MissionConteneur, Chauffeur, Client, PaiementMission, Cautions, AuditLog)
 from ..forms import (MissionForm, MissionConteneurForm)
 from ..decorators import (can_delete_data, manager_or_admin_required)
 from ..filters import MissionFilter
@@ -162,6 +162,21 @@ def terminer_mission(request, pk):
 
             result = mission.terminer_mission(date_retour=date_retour, force=force)
 
+            # Enregistrer l'action dans l'historique d'audit
+            AuditLog.log_action(
+                utilisateur=request.user,
+                action='TERMINER_MISSION',
+                model_name='Mission',
+                object_id=mission.pk_mission,
+                object_repr=f"Mission vers {mission.destination}",
+                changes={
+                    'statut': {'old': 'en cours', 'new': 'terminée'},
+                    'date_retour': str(date_retour),
+                    'en_retard': result.get('en_retard', False) if result else False
+                },
+                request=request
+            )
+
             # Afficher le message approprié
             if result and result.get('en_retard'):
                 messages.warning(
@@ -243,6 +258,22 @@ def annuler_mission(request, pk):
 
             # Annuler la mission et les objets liés
             mission.annuler_mission(raison=raison)
+
+            # Enregistrer l'action dans l'historique d'audit
+            AuditLog.log_action(
+                utilisateur=request.user,
+                action='ANNULER_MISSION',
+                model_name='Mission',
+                object_id=mission.pk_mission,
+                object_repr=f"Mission vers {mission.destination}",
+                changes={
+                    'statut': {'old': 'en cours', 'new': 'annulée'},
+                    'raison': raison or 'Non spécifiée',
+                    'nb_cautions_annulees': nb_cautions,
+                    'nb_paiements_annules': nb_paiements
+                },
+                request=request
+            )
 
             # Message détaillé
             details = []

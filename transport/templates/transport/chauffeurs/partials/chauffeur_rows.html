@@ -1,0 +1,35 @@
+{% if chauffeurs %}
+    {% for chauffeur in chauffeurs %}
+    <tr>
+        <td class="fw-medium">{{ chauffeur.nom }}</td>
+        <td>{{ chauffeur.prenom }}</td>
+        <td>{{ chauffeur.email|default:"—" }}</td>
+        <td>{{ chauffeur.telephone|default:"—" }}</td>
+        <td>
+            <span class="badge bg-secondary">{{ chauffeur.entreprise.nom }}</span>
+        </td>
+        <td class="text-center">
+            <div class="btn-group" role="group">
+                <button type="button"
+                        class="btn btn-sm btn-outline-warning btn-edit-chauffeur"
+                        data-chauffeur-id="{{ chauffeur.pk_chauffeur }}"
+                        title="Modifier">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <a href="{% url 'chauffeur_delete' chauffeur.pk_chauffeur %}"
+                   class="btn btn-sm btn-outline-danger"
+                   title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+        </td>
+    </tr>
+    {% endfor %}
+{% else %}
+<tr>
+    <td colspan="6" class="text-center py-4">
+        <i class="fas fa-info-circle me-2 text-muted"></i>
+        <span class="text-muted">Aucun chauffeur trouvé</span>
+    </td>
+</tr>
+{% endif %}

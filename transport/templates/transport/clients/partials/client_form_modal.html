@@ -1,0 +1,130 @@
+{% load django_bootstrap5 %}
+
+<form id="clientForm" method="post">
+    {% csrf_token %}
+
+    <div class="modal-body">
+        {% if mode == 'update' %}
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Client:</strong> {{ client.nom }}
+            </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="row g-3">
+            <!-- Nom -->
+            <div class="col-12">
+                <label for="{{ form.nom.id_for_label }}" class="form-label">
+                    <i class="fas fa-user text-primary me-1"></i>
+                    Nom <span class="text-danger">*</span>
+                </label>
+                {{ form.nom }}
+                {% if form.nom.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.nom.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Type Client -->
+            <div class="col-md-6">
+                <label for="{{ form.type_client.id_for_label }}" class="form-label">
+                    <i class="fas fa-tag text-primary me-1"></i>
+                    Type Client <span class="text-danger">*</span>
+                </label>
+                {{ form.type_client }}
+                {% if form.type_client.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.type_client.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- État Paiement -->
+            <div class="col-md-6">
+                <label for="{{ form.etat_paiement.id_for_label }}" class="form-label">
+                    <i class="fas fa-money-check text-success me-1"></i>
+                    État Paiement <span class="text-danger">*</span>
+                </label>
+                {{ form.etat_paiement }}
+                {% if form.etat_paiement.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.etat_paiement.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Téléphone -->
+            <div class="col-md-6">
+                <label for="{{ form.telephone.id_for_label }}" class="form-label">
+                    <i class="fas fa-phone text-primary me-1"></i>
+                    Téléphone
+                </label>
+                {{ form.telephone }}
+                {% if form.telephone.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.telephone.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Email -->
+            <div class="col-md-6">
+                <label for="{{ form.email.id_for_label }}" class="form-label">
+                    <i class="fas fa-envelope text-primary me-1"></i>
+                    Email
+                </label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.email.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Score Fidélité -->
+            <div class="col-12">
+                <label for="{{ form.score_fidelite.id_for_label }}" class="form-label">
+                    <i class="fas fa-star text-warning me-1"></i>
+                    Score Fidélité
+                </label>
+                {{ form.score_fidelite }}
+                {% if form.score_fidelite.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.score_fidelite.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Commentaire -->
+            <div class="col-12">
+                <label for="{{ form.commentaire.id_for_label }}" class="form-label">
+                    <i class="fas fa-comment text-primary me-1"></i>
+                    Commentaire
+                </label>
+                {{ form.commentaire }}
+                {% if form.commentaire.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.commentaire.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            {% if mode == 'create' %}Créer le client{% else %}Enregistrer{% endif %}
+        </button>
+    </div>
+</form>

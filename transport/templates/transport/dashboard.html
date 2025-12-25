@@ -1,4 +1,5 @@
 {% extends "admin.html" %}
+{% load static %}
 
 {% block page_title %}Tableau de bord | Gestion Transport{% endblock %}
 
@@ -19,7 +20,7 @@
   <!-- Filtres de date -->
   <div class="card shadow-sm border-0 mb-4">
     <div class="card-body">
-      <form method="get" id="dateFilterForm" class="row g-3 align-items-end">
+      <form method="get" id="dashboardFilterForm" class="row g-3 align-items-end">
         <div class="col-12 col-md-4">
           <label for="date_debut" class="form-label small fw-semibold">
             <i class="fas fa-calendar-alt text-primary me-1"></i>Date de début
@@ -473,7 +474,6 @@
   </div>
 
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -500,7 +500,7 @@
       return colorMap[statut] || '#6b7280';
     };
 
-    new Chart(ctxMissions, {
+    window.missionsChartInstance = new Chart(ctxMissions, {
       type: 'doughnut',
       data: {
         labels: missionData.map(item => item.statut),
@@ -569,7 +569,7 @@
     gradient.addColorStop(0.5, 'rgba(37, 99, 235, 0.15)');
     gradient.addColorStop(1, 'rgba(37, 99, 235, 0.05)');
 
-    new Chart(ctxPaiements, {
+    window.paiementsChartInstance = new Chart(ctxPaiements, {
       type: 'line',
       data: {
         labels: {{ paiements_mois_labels|safe }},
@@ -696,7 +696,7 @@
       '#84cc16', '#22c55e', '#10b981', '#14b8a6'
     ];
 
-    new Chart(ctxReparations, {
+    window.reparationsChartInstance = new Chart(ctxReparations, {
       type: 'doughnut',
       data: {
         labels: reparationLabels,
@@ -753,7 +753,7 @@
   {% if entreprises_stats %}
     const ctxEntreprises = document.getElementById('entreprisesChart').getContext('2d');
 
-    new Chart(ctxEntreprises, {
+    window.entreprisesChartInstance = new Chart(ctxEntreprises, {
       type: 'bar',
       data: {
         labels: [
@@ -849,7 +849,7 @@
     gradientTrend.addColorStop(0.5, 'rgba(245, 158, 11, 0.15)');
     gradientTrend.addColorStop(1, 'rgba(245, 158, 11, 0.05)');
 
-    new Chart(ctxMissionsTrend, {
+    window.missionsTrendChartInstance = new Chart(ctxMissionsTrend, {
       type: 'line',
       data: {
         labels: last6Months,
@@ -1074,4 +1074,5 @@
     alert('PDF généré avec succès !');
   };
 </script>
+<script src="{% static 'js/dashboard-ajax.js' %}"></script>
 {% endblock %}

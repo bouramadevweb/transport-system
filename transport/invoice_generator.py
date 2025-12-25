@@ -84,9 +84,9 @@ class InvoiceGenerator:
         date_facture = datetime.now().strftime('%d/%m/%Y')
 
         info_data = [
-            ['<b>Date de facture:</b>', date_facture],
-            ['<b>Date de paiement:</b>', self.paiement.date_paiement.strftime('%d/%m/%Y') if self.paiement.date_paiement else '-'],
-            ['<b>Mode de paiement:</b>', self.paiement.mode_paiement.upper() if self.paiement.mode_paiement else '-'],
+            [Paragraph('<b>Date de facture:</b>', info_style), date_facture],
+            [Paragraph('<b>Date de paiement:</b>', info_style), self.paiement.date_paiement.strftime('%d/%m/%Y') if self.paiement.date_paiement else '-'],
+            [Paragraph('<b>Mode de paiement:</b>', info_style), self.paiement.mode_paiement.upper() if self.paiement.mode_paiement else '-'],
         ]
 
         info_table = Table(info_data, colWidths=[6*cm, 10*cm])
@@ -103,11 +103,12 @@ class InvoiceGenerator:
         if self.contrat and self.contrat.client:
             client = self.contrat.client
             elements.append(Paragraph('<b>CLIENT</b>', styles['Heading2']))
-            client_info = f"""
-            <b>{client.nom}</b><br/>
-            Type: {client.get_type_client_display()}<br/>
-            {f'Téléphone: {client.numero_telephone}' if client.numero_telephone else ''}
-            """
+            client_info = f"<b>{client.nom}</b><br/>"
+            client_info += f"Type: {client.get_type_client_display()}<br/>"
+            if client.telephone:
+                client_info += f"Téléphone: {client.telephone}<br/>"
+            if client.email:
+                client_info += f"Email: {client.email}"
             elements.append(Paragraph(client_info, info_style))
             elements.append(Spacer(1, 0.5*cm))
 
@@ -115,10 +116,9 @@ class InvoiceGenerator:
         if self.contrat and self.contrat.chauffeur:
             chauffeur = self.contrat.chauffeur
             elements.append(Paragraph('<b>CHAUFFEUR</b>', styles['Heading2']))
-            chauffeur_info = f"""
-            <b>{chauffeur.nom} {chauffeur.prenom}</b><br/>
-            {f'Téléphone: {chauffeur.telephone}' if chauffeur.telephone else ''}
-            """
+            chauffeur_info = f"<b>{chauffeur.nom} {chauffeur.prenom}</b><br/>"
+            if chauffeur.telephone:
+                chauffeur_info += f"Téléphone: {chauffeur.telephone}"
             elements.append(Paragraph(chauffeur_info, info_style))
             elements.append(Spacer(1, 0.5*cm))
 
@@ -127,10 +127,22 @@ class InvoiceGenerator:
             elements.append(Paragraph('<b>DÉTAILS DE LA MISSION</b>', styles['Heading2']))
             elements.append(Spacer(1, 0.3*cm))
 
+            # Tronquer l'ID mission pour l'affichage
+            mission_id = str(self.mission.pk_mission)
+            if len(mission_id) > 20:
+                mission_id_display = mission_id[:17] + "..."
+            else:
+                mission_id_display = mission_id
+
             mission_data = [
-                ['<b>ID Mission</b>', '<b>Origine</b>', '<b>Destination</b>', '<b>Date départ</b>'],
                 [
-                    str(self.mission.pk_mission)[:15] + '...' if len(str(self.mission.pk_mission)) > 15 else str(self.mission.pk_mission),
+                    Paragraph('<b>Réf. Mission</b>', styles['Normal']),
+                    Paragraph('<b>Origine</b>', styles['Normal']),
+                    Paragraph('<b>Destination</b>', styles['Normal']),
+                    Paragraph('<b>Date départ</b>', styles['Normal'])
+                ],
+                [
+                    mission_id_display,
                     self.mission.origine,
                     self.mission.destination,
                     self.mission.date_depart.strftime('%d/%m/%Y') if self.mission.date_depart else '-'
@@ -161,10 +173,16 @@ class InvoiceGenerator:
         montant_net = montant_total - commission
 
         financial_data = [
-            ['Description', 'Montant (FCFA)'],
+            [
+                Paragraph('<b>Description</b>', styles['Normal']),
+                Paragraph('<b>Montant (FCFA)</b>', styles['Normal'])
+            ],
             ['Montant Total Transport', f'{montant_total:,.0f}'.replace(',', ' ')],
             ['Commission Transitaire', f'{commission:,.0f}'.replace(',', ' ')],
-            ['<b>MONTANT NET À PAYER</b>', f'<b>{montant_net:,.0f}'.replace(',', ' ') + '</b>'],
+            [
+                Paragraph('<b>MONTANT NET À PAYER</b>', styles['Normal']),
+                Paragraph(f'<b>{montant_net:,.0f}'.replace(',', ' ') + '</b>', styles['Normal'])
+            ],
         ]
 
         financial_table = Table(financial_data, colWidths=[12*cm, 4*cm])
@@ -197,11 +215,16 @@ class InvoiceGenerator:
             alignment=TA_CENTER
         )
 
-        footer_text = f"""
-        <b>TransportPro - Système de Gestion de Transport</b><br/>
-        Facture générée automatiquement le {date_facture}<br/>
-        ID Paiement: {self.paiement.pk_paiement}
-        """
+        # Tronquer l'ID paiement s'il est trop long
+        paiement_id = str(self.paiement.pk_paiement)
+        if len(paiement_id) > 50:
+            paiement_id_display = paiement_id[:47] + "..."
+        else:
+            paiement_id_display = paiement_id
+
+        footer_text = f"<b>TransportPro - Système de Gestion de Transport</b><br/>"
+        footer_text += f"Facture générée automatiquement le {date_facture}<br/>"
+        footer_text += f"Référence: {paiement_id_display}"
         elements.append(Paragraph(footer_text, footer_style))
 
         # === NOTES ===
@@ -213,12 +236,10 @@ class InvoiceGenerator:
             textColor=colors.grey,
             alignment=TA_LEFT
         )
-        note_text = """
-        <b>Notes:</b><br/>
-        - Cette facture est définitive et ne peut être modifiée<br/>
-        - Conserver cette facture comme preuve de paiement<br/>
-        - Pour toute question, contactez le service comptabilité
-        """
+        note_text = "<b>Notes:</b><br/>"
+        note_text += "- Cette facture est définitive et ne peut être modifiée<br/>"
+        note_text += "- Conserver cette facture comme preuve de paiement<br/>"
+        note_text += "- Pour toute question, contactez le service comptabilité"
         elements.append(Paragraph(note_text, note_style))
 
         # Générer le PDF
@@ -226,7 +247,7 @@ class InvoiceGenerator:
 
         # Récupérer le contenu
         self.buffer.seek(0)
-        return ContentFile(self.buffer.read(), name=f'facture_{invoice_number}.pdf')
+        return self.buffer
 
     def get_filename(self):
         """

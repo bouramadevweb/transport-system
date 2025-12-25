@@ -272,11 +272,12 @@
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             {% if not paiement.est_valide %}
-                                                <a href="{% url 'valider_paiement_mission' paiement.pk_paiement %}"
-                                                   class="btn btn-sm btn-primary"
-                                                   title="Valider le paiement">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-primary btn-validate-payment"
+                                                        data-paiement-id="{{ paiement.pk_paiement }}"
+                                                        title="Valider le paiement">
                                                     <i class="fas fa-check-circle"></i>
-                                                </a>
+                                                </button>
                                             {% endif %}
                                             <a href="{% url 'update_paiement_mission' paiement.pk_paiement %}"
                                                class="btn btn-sm btn-outline-warning"
@@ -357,11 +358,12 @@
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             {% if paiement.mission.statut == 'terminée' %}
-                                                <a href="{% url 'valider_paiement_mission' paiement.pk_paiement %}"
-                                                   class="btn btn-sm btn-primary"
-                                                   title="Valider le paiement">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-primary btn-validate-payment"
+                                                        data-paiement-id="{{ paiement.pk_paiement }}"
+                                                        title="Valider le paiement">
                                                     <i class="fas fa-check-circle me-1"></i>Valider
-                                                </a>
+                                                </button>
                                             {% else %}
                                                 <a href="{% url 'terminer_mission' paiement.mission.pk_mission %}"
                                                    class="btn btn-sm btn-success"
@@ -601,4 +603,10 @@
         document.getElementById('dateFilterForm').submit();
     };
 </script>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/paiement-ajax.js' %}"></script>
+<script src="{% static 'js/validation-modal.js' %}"></script>
 {% endblock %}

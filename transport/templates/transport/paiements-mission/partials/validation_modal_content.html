@@ -1,0 +1,130 @@
+<!-- Vérifications préalables -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+        <div class="alert alert-{{ mission_terminee|yesno:'success,danger' }} mb-0">
+            <i class="fas fa-{{ mission_terminee|yesno:'check-circle,times-circle' }} me-2"></i>
+            <strong>Mission:</strong> {{ paiement.mission.statut|title }}
+            {% if not mission_terminee %}
+            <div class="mt-2">
+                <small>La mission doit être terminée avant validation.</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-12 col-md-6">
+        <div class="alert alert-{{ caution_ok|yesno:'success,warning' }} mb-0">
+            <i class="fas fa-{{ caution_ok|yesno:'check-circle,exclamation-triangle' }} me-2"></i>
+            <strong>Caution:</strong>
+            {% if caution %}
+                {{ caution.get_statut_display }}
+                {% if not caution_ok %}
+                <div class="mt-2">
+                    <small>Caution de {{ caution.montant|floatformat:0 }} FCFA doit être remboursée.</small>
+                </div>
+                {% endif %}
+            {% else %}
+                Aucune caution
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Détails du paiement -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Détails du paiement</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12 col-md-6">
+                <p class="mb-2">
+                    <strong><i class="fas fa-route me-2 text-primary"></i>Mission:</strong><br>
+                    <small class="text-muted">{{ paiement.mission.pk_mission|slice:":25" }}...</small><br>
+                    <span class="badge bg-info">{{ paiement.mission.origine }} → {{ paiement.mission.destination }}</span>
+                </p>
+                <p class="mb-2">
+                    <strong><i class="fas fa-user me-2 text-primary"></i>Chauffeur:</strong><br>
+                    {% if paiement.mission.contrat.chauffeur %}
+                        {{ paiement.mission.contrat.chauffeur.nom }} {{ paiement.mission.contrat.chauffeur.prenom }}
+                    {% else %}
+                        <span class="text-muted">Non défini</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-12 col-md-6">
+                <p class="mb-2">
+                    <strong><i class="fas fa-money-bill-wave me-2 text-success"></i>Montant total:</strong><br>
+                    <span class="fs-4 text-success fw-bold">{{ paiement.montant_total|floatformat:0 }} FCFA</span>
+                </p>
+                <p class="mb-2">
+                    <strong><i class="fas fa-percentage me-2 text-primary"></i>Commission:</strong><br>
+                    {{ paiement.commission_transitaire|floatformat:0 }} FCFA
+                </p>
+                <p class="mb-0">
+                    <strong><i class="fas fa-calendar me-2 text-primary"></i>Date paiement:</strong><br>
+                    {{ paiement.date_paiement|date:"d/m/Y" }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulaire de validation ou actions requises -->
+{% if can_validate %}
+    <form id="validationForm" class="validation-form">
+        {% csrf_token %}
+        <input type="hidden" name="paiement_id" value="{{ paiement.pk_paiement }}">
+
+        <div class="alert alert-info">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Toutes les conditions sont remplies.</strong> Vous pouvez valider ce paiement.
+        </div>
+
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-check-circle me-2"></i>Valider le paiement
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-2"></i>Annuler
+            </button>
+        </div>
+    </form>
+{% else %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Actions requises avant validation:</strong>
+    </div>
+
+    <div class="list-group mb-3">
+        {% if not mission_terminee %}
+        <a href="{% url 'terminer_mission' paiement.mission.pk_mission %}" class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">
+                    <i class="fas fa-flag-checkered me-2 text-success"></i>Terminer la mission
+                </h6>
+                <small><i class="fas fa-chevron-right"></i></small>
+            </div>
+            <p class="mb-1 small">La mission est actuellement "{{ paiement.mission.statut }}"</p>
+        </a>
+        {% endif %}
+
+        {% if not caution_ok and caution %}
+        <a href="{% url 'update_caution' caution.pk_caution %}" class="list-group-item list-group-item-action">
+            <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">
+                    <i class="fas fa-money-check-alt me-2 text-warning"></i>Gérer la caution
+                </h6>
+                <small><i class="fas fa-chevron-right"></i></small>
+            </div>
+            <p class="mb-1 small">Caution de {{ caution.montant|floatformat:0 }} FCFA à rembourser</p>
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="d-grid">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Fermer
+        </button>
+    </div>
+{% endif %}

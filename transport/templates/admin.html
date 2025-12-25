@@ -276,7 +276,7 @@
               <div class="notification-list">
                 {% if notifications %}
                   {% for notif in notifications %}
-                  <div class="notification-item {% if not notif.is_read %}unread{% endif %}">
+                  <div class="notification-item {% if not notif.is_read %}unread{% endif %}" data-notification-id="{{ notif.pk_notification }}">
                     <i class="fas fa-{{ notif.icon }} text-{{ notif.color }}"></i>
                     <div class="notification-content">
                       <p><strong>{{ notif.title }}</strong></p>
@@ -1585,7 +1585,11 @@
   </style>
 
   <!-- Custom JavaScript -->
+  <script src="{% static 'js/modern-ux.js' %}"></script>
   <script src="{% static 'js/table-enhancements.js' %}"></script>
+  <script src="{% static 'js/ajax-utils.js' %}"></script>
+  <script src="{% static 'js/notifications-ajax.js' %}"></script>
+  <script src="{% static 'js/test-modals.js' %}"></script>
 
   {% block extra_js %}{% endblock %}
 </body>

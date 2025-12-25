@@ -9,9 +9,9 @@
     <!-- Header -->
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4">
         <h2 class="mb-0"><i class="fas fa-file-contract text-primary me-2"></i>{{ title }}</h2>
-        <a href="{% url 'create_contrat' %}" class="btn btn-primary w-100 w-sm-auto">
+        <button type="button" class="btn btn-primary w-100 w-sm-auto btn-create-contrat">
             <i class="fas fa-plus me-1"></i> Ajouter un contrat
-        </a>
+        </button>
     </div>
 
     <!-- Statistique simple -->
@@ -98,11 +98,12 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group-vertical btn-group-sm" role="group">
-                                    <a href="{% url 'update_contrat' c.pk_contrat %}"
-                                       class="btn btn-outline-warning"
-                                       title="Modifier">
+                                    <button type="button"
+                                            class="btn btn-outline-warning btn-edit-contrat"
+                                            data-contrat-id="{{ c.pk_contrat }}"
+                                            title="Modifier">
                                         <i class="fas fa-edit"></i>
-                                    </a>
+                                    </button>
                                     <a href="{% url 'delete_contrat' c.pk_contrat %}"
                                        class="btn btn-outline-danger"
                                        title="Supprimer">
@@ -126,11 +127,59 @@
     {% else %}
     <div class="alert alert-info shadow-sm">
         <i class="fas fa-info-circle me-2"></i>
-        Aucun contrat enregistré. <a href="{% url 'create_contrat' %}" class="alert-link">Ajouter le premier</a>
+        Aucun contrat enregistré. <button type="button" class="btn btn-link alert-link btn-create-contrat p-0">Ajouter le premier</button>
     </div>
     {% endif %}
 </div>
+{% endblock %}
 
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/crud-modal.js' %}"></script>
+<script src="{% static 'js/contrat-form.js' %}"></script>
+<script>
+// Initialize CRUD modal for contrats
+const contratManager = new CrudModalManager({
+    entityName: 'contrat',
+    entityNameDisplay: 'Contrat',
+    createUrl: '{% url "ajax_contrat_create" %}',
+    updateUrlPattern: '/contrats/{id}/ajax/update/',
+    listSelector: 'tbody',
+    modalSize: 'modal-lg'  // Larger modal for complex form
+});
+
+// Ouvrir automatiquement le modal si des paramètres URL sont présents
+const urlParams = new URLSearchParams(window.location.search);
+const action = urlParams.get('action');
+const contratId = urlParams.get('id');
+
+if (action === 'create') {
+    // Ouvrir le modal de création
+    setTimeout(() => {
+        const createBtn = document.querySelector('.btn-create-contrat');
+        if (createBtn) {
+            createBtn.click();
+            console.log('✅ Modal de création de contrat ouvert automatiquement');
+        }
+        // Nettoyer l'URL pour éviter de rouvrir le modal au rafraîchissement
+        window.history.replaceState({}, '', window.location.pathname);
+    }, 300);
+} else if (action === 'update' && contratId) {
+    // Ouvrir le modal de modification
+    setTimeout(() => {
+        const editBtn = document.querySelector(`.btn-edit-contrat[data-contrat-id="${contratId}"]`);
+        if (editBtn) {
+            editBtn.click();
+            console.log(`✅ Modal de modification du contrat ${contratId} ouvert automatiquement`);
+        }
+        // Nettoyer l'URL pour éviter de rouvrir le modal au rafraîchissement
+        window.history.replaceState({}, '', window.location.pathname);
+    }, 300);
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
 <style>
     /* Amélioration responsive pour la table des contrats */
     .table-responsive {

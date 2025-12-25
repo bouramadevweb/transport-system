@@ -5,14 +5,22 @@ Vues pour vehicle
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required 
 from django.contrib import messages
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse
 from ..models import (Camion, Conteneur, Reparation, ReparationMecanicien, PieceReparee)
-from ..forms import (CamionForm, ConteneurForm, ReparationForm, ReparationMecanicienForm, PieceRepareeForm)
+from ..forms import (CamionForm, ConteneurForm, ReparationForm, ReparationMecanicienForm, PieceRepareeForm, ConnexionForm)
 from ..decorators import (can_delete_data)
-
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import PasswordChangeForm
+from django.db import IntegrityError
+from django.contrib import messages
+from django.db.models import Count, Sum, F
+from django.db.models.functions import TruncMonth, TruncYear
+from django.http import JsonResponse
 
 @login_required
 def camion_list(request):

@@ -121,6 +121,26 @@ class ContratTransportForm(forms.ModelForm):
         # Mettre à jour le queryset du champ camion
         self.fields['camion'].queryset = camions_disponibles
 
+        # Filtrer pour afficher uniquement les chauffeurs disponibles (pas en mission en cours)
+        all_chauffeurs = Chauffeur.objects.all()
+
+        # Récupérer les IDs des chauffeurs en mission (statut='en cours')
+        chauffeurs_en_mission_ids = Mission.objects.filter(
+            statut='en cours'
+        ).values_list('contrat__chauffeur_id', flat=True).distinct()
+
+        # Si on est en mode édition, autoriser le chauffeur actuel même s'il est en mission
+        if self.instance and self.instance.pk and self.instance.chauffeur:
+            chauffeurs_disponibles = all_chauffeurs.exclude(
+                pk_chauffeur__in=chauffeurs_en_mission_ids
+            ) | Chauffeur.objects.filter(pk_chauffeur=self.instance.chauffeur.pk_chauffeur)
+        else:
+            # Mode création : uniquement les chauffeurs libres
+            chauffeurs_disponibles = all_chauffeurs.exclude(pk_chauffeur__in=chauffeurs_en_mission_ids)
+
+        # Mettre à jour le queryset du champ chauffeur
+        self.fields['chauffeur'].queryset = chauffeurs_disponibles
+
         # Ajouter les attributs pour la sélection automatique bidirectionnelle
         self.fields['camion'].widget.attrs.update({
             'id': 'id_camion',

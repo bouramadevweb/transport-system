@@ -8,6 +8,7 @@ from . import invoice_views
 from . import reports_views
 from . import user_crud_views
 from . import salary_views
+from .views import ajax_views
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -21,49 +22,75 @@ urlpatterns = [
     path('entreprises/ajouter/', views.ajouter_entreprise, name='ajouter_entreprise'),
     path('entreprises/modifier/<str:pk>/', views.modifier_entreprise, name='modifier_entreprise'),
     path('entreprises/supprimer/<str:pk>/', views.supprimer_entreprise, name='supprimer_entreprise'),
+    # AJAX URLs for entreprises
+    path('entreprises/ajax/create/', ajax_views.ajax_entreprise_create, name='ajax_entreprise_create'),
+    path('entreprises/<str:pk>/ajax/update/', ajax_views.ajax_entreprise_update, name='ajax_entreprise_update'),
 
 
     path("chauffeurs/", views.chauffeur_list, name="chauffeur_list"),
     path("chauffeurs/create/", views.create_chauffeur, name="chauffeur_create"),
+    path("chauffeurs/ajax/create/", ajax_views.ajax_chauffeur_create, name="ajax_chauffeur_create"),
     path("chauffeurs/<str:pk>/update/", views.update_chauffeur, name="chauffeur_update"),
+    path("chauffeurs/<str:pk>/ajax/update/", ajax_views.ajax_chauffeur_update, name="ajax_chauffeur_update"),
     path("chauffeurs/<str:pk>/delete/", views.chauffeur_delete, name="chauffeur_delete"),
 
     path('camions/', views.camion_list, name='camion_list'),
     path('camions/create/', views.create_camion, name='create_camion'),
     path('camions/<str:pk>/update/', views.update_camion, name='update_camion'),
     path('camions/<str:pk>/delete/', views.delete_camion, name='delete_camion'),
+    path('camions/ajax/create-form/', ajax_views.ajax_camion_create_form, name='ajax_camion_create_form'),
+    path('camions/ajax/create/', ajax_views.ajax_camion_create, name='ajax_camion_create'),
+    path('camions/<str:pk>/ajax/update-form/', ajax_views.ajax_camion_update_form, name='ajax_camion_update_form'),
+    path('camions/<str:pk>/ajax/update/', ajax_views.ajax_camion_update, name='ajax_camion_update'),
 
     path('affectations/', views.affectation_list, name='affectation_list'),
     path('affectations/create/', views.create_affectation, name='create_affectation'),
     path('affectations/<str:pk>/update/', views.update_affectation, name='update_affectation'),
     path('affectations/<str:pk>/delete/', views.delete_affectation, name='delete_affectation'),
     path('affectations/<str:pk>/terminer/', views.terminer_affectation, name='terminer_affectation'),
+    # AJAX URLs for affectations
+    path('affectations/ajax/create/', ajax_views.ajax_affectation_create, name='ajax_affectation_create'),
+    path('affectations/<str:pk>/ajax/update/', ajax_views.ajax_affectation_update, name='ajax_affectation_update'),
 
     path('transitaires/', views.transitaire_list, name='transitaire_list'),
     path('transitaires/create/', views.create_transitaire, name='create_transitaire'),
     path('transitaires/<str:pk>/update/', views.update_transitaire, name='update_transitaire'),
     path('transitaires/<str:pk>/delete/', views.delete_transitaire, name='delete_transitaire'),
+    # AJAX URLs for transitaires
+    path('transitaires/ajax/create/', ajax_views.ajax_transitaire_create, name='ajax_transitaire_create'),
+    path('transitaires/<str:pk>/ajax/update/', ajax_views.ajax_transitaire_update, name='ajax_transitaire_update'),
 
     path('clients/', views.client_list, name='client_list'),
     path('clients/create/', views.create_client, name='create_client'),
+    path('clients/ajax/create/', ajax_views.ajax_client_create, name='ajax_client_create'),
     path('clients/<str:pk>/update/', views.update_client, name='update_client'),
+    path('clients/<str:pk>/ajax/update/', ajax_views.ajax_client_update, name='ajax_client_update'),
     path('clients/<str:pk>/delete/', views.delete_client, name='delete_client'),
 
     path('compagnies/', views.compagnie_list, name='compagnie_list'),
     path('compagnies/create/', views.create_compagnie, name='create_compagnie'),
     path('compagnies/<str:pk>/update/', views.update_compagnie, name='update_compagnie'),
     path('compagnies/<str:pk>/delete/', views.delete_compagnie, name='delete_compagnie'),
+    # AJAX URLs for compagnies
+    path('compagnies/ajax/create/', ajax_views.ajax_compagnie_create, name='ajax_compagnie_create'),
+    path('compagnies/<str:pk>/ajax/update/', ajax_views.ajax_compagnie_update, name='ajax_compagnie_update'),
 
     path('conteneurs/', views.conteneur_list, name='conteneur_list'),
     path('conteneurs/create/', views.create_conteneur, name='create_conteneur'),
     path('conteneurs/<str:pk>/update/', views.update_conteneur, name='update_conteneur'),
     path('conteneurs/<str:pk>/delete/', views.delete_conteneur, name='delete_conteneur'),
+    # AJAX URLs for conteneurs
+    path('conteneurs/ajax/create/', ajax_views.ajax_conteneur_create, name='ajax_conteneur_create'),
+    path('conteneurs/<str:pk>/ajax/update/', ajax_views.ajax_conteneur_update, name='ajax_conteneur_update'),
 
     path('contrats/', views.contrat_list, name='contrat_list'),
     path('contrats/create/', views.create_contrat, name='create_contrat'),
     path('contrats/<str:pk>/update/', views.update_contrat, name='update_contrat'),
     path('contrats/<str:pk>/delete/', views.delete_contrat, name='delete_contrat'),
     path("contrat/pdf/<str:pk>/", views.pdf_contrat, name="pdf_contrat"),
+    # AJAX URLs for contrats
+    path('contrats/ajax/create/', ajax_views.ajax_contrat_create, name='ajax_contrat_create'),
+    path('contrats/<str:pk>/ajax/update/', ajax_views.ajax_contrat_update, name='ajax_contrat_update'),
     # API pour récupérer le chauffeur d'un camion
     path('api/camion/<str:pk_camion>/chauffeur/', views.get_chauffeur_from_camion, name='get_chauffeur_from_camion'),
     # API pour récupérer le camion d'un chauffeur
@@ -73,6 +100,9 @@ urlpatterns = [
     path('prestations/create/', views.create_presta_transport, name='create_presta_transport'),
     path('prestations/<str:pk>/update/', views.update_presta_transport, name='update_presta_transport'),
     path('prestations/<str:pk>/delete/', views.delete_presta_transport, name='delete_presta_transport'),
+    # AJAX URLs for prestations
+    path('prestations/ajax/create/', ajax_views.ajax_prestation_create, name='ajax_prestation_create'),
+    path('prestations/<str:pk>/ajax/update/', ajax_views.ajax_prestation_update, name='ajax_prestation_update'),
 
     path('cautions/', views.cautions_list, name='cautions_list'),
     path('cautions/create/', views.create_caution, name='create_caution'),
@@ -89,7 +119,13 @@ urlpatterns = [
     path('missions/<str:pk>/update/', views.update_mission, name='update_mission'),
     path('missions/<str:pk>/delete/', views.delete_mission, name='delete_mission'),
     path('missions/<str:pk>/terminer/', views.terminer_mission, name='terminer_mission'),
+    path('missions/<str:pk>/ajax/terminer/', ajax_views.ajax_terminer_mission_modal_content, name='ajax_terminer_mission_modal'),
+    path('missions/<str:pk>/ajax/terminer-execute/', ajax_views.ajax_terminer_mission, name='ajax_terminer_mission'),
     path('missions/<str:pk>/annuler/', views.annuler_mission, name='annuler_mission'),
+    path('missions/ajax/create-form/', ajax_views.ajax_mission_create_form, name='ajax_mission_create_form'),
+    path('missions/ajax/create/', ajax_views.ajax_mission_create, name='ajax_mission_create'),
+    path('missions/<str:pk>/ajax/update-form/', ajax_views.ajax_mission_update_form, name='ajax_mission_update_form'),
+    path('missions/<str:pk>/ajax/update/', ajax_views.ajax_mission_update, name='ajax_mission_update'),
 
     path('mission-conteneurs/', views.mission_conteneur_list, name='mission_conteneur_list'),
     path('mission-conteneurs/create/', views.create_mission_conteneur, name='create_mission_conteneur'),
@@ -97,6 +133,11 @@ urlpatterns = [
     path('mission-conteneurs/<str:pk>/delete/', views.delete_mission_conteneur, name='delete_mission_conteneur'),
 
     path('paiement-missions/', views.paiement_mission_list, name='paiement_mission_list'),
+    path('paiement-missions/ajax/filter/', ajax_views.ajax_filter_paiements, name='ajax_filter_paiements'),
+    path('paiement-missions/<str:pk>/ajax/validation/', ajax_views.ajax_validation_modal_content, name='ajax_validation_modal'),
+    path('paiement-missions/<str:pk>/ajax/validate/', ajax_views.ajax_validate_paiement, name='ajax_validate_paiement'),
+    path('clients/ajax/search/', ajax_views.ajax_search_clients, name='ajax_search_clients'),
+    path('chauffeurs/ajax/search/', ajax_views.ajax_search_chauffeurs, name='ajax_search_chauffeurs'),
     path('paiement-missions/create/', views.create_paiement_mission, name='create_paiement_mission'),
     path('paiement-missions/<str:pk>/update/', views.update_paiement_mission, name='update_paiement_mission'),
     path('paiement-missions/<str:pk>/delete/', views.delete_paiement_mission, name='delete_paiement_mission'),
@@ -121,6 +162,9 @@ urlpatterns = [
     path('fournisseurs/create/', views.create_fournisseur, name='create_fournisseur'),
     path('fournisseurs/<str:pk>/update/', views.update_fournisseur, name='update_fournisseur'),
     path('fournisseurs/<str:pk>/delete/', views.delete_fournisseur, name='delete_fournisseur'),
+    # AJAX URLs for fournisseurs
+    path('fournisseurs/ajax/create/', ajax_views.ajax_fournisseur_create, name='ajax_fournisseur_create'),
+    path('fournisseurs/<str:pk>/ajax/update/', ajax_views.ajax_fournisseur_update, name='ajax_fournisseur_update'),
 
     path('reparations/', views.reparation_list, name='reparation_list'),
     path('reparations/create/', views.create_reparation, name='create_reparation'),
@@ -140,6 +184,7 @@ urlpatterns = [
 
     path("", views.dashboard, name="dashboard"),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('dashboard/ajax/filter/', ajax_views.ajax_dashboard_filter, name='ajax_dashboard_filter'),
 
     # Nouveaux dashboards avancés avec KPIs
     path('dashboard/home/', dashboard_views.dashboard_home, name='dashboard_home'),
@@ -154,6 +199,9 @@ urlpatterns = [
     path('aide/', views.help_page, name='help_page'),
     path('notifications/', views.notifications_list, name='notifications_list'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    path('notifications/<str:pk>/ajax/mark-read/', ajax_views.ajax_mark_notification_read, name='ajax_mark_notification_read'),
+    path('notifications/ajax/mark-all-read/', ajax_views.ajax_mark_all_notifications_read, name='ajax_mark_all_notifications_read'),
+    path('notifications/ajax/get/', ajax_views.ajax_get_notifications, name='ajax_get_notifications'),
 
     # Historique d'audit
     path('audit/', views.audit_log_list, name='audit_log_list'),

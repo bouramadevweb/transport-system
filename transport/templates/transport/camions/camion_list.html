@@ -27,9 +27,9 @@
                 <i class="fas fa-file-csv me-1"></i> CSV
             </button>
             <!-- Bouton Nouveau -->
-            <a href="{% url 'create_camion' %}" class="btn btn-primary">
+            <button type="button" class="btn btn-primary" data-action="create-camion">
                 <i class="fas fa-plus me-1"></i> Nouveau camion
-            </a>
+            </button>
         </div>
     </div>
 
@@ -81,11 +81,13 @@
                             <td>{{ camion.capacite_tonnes }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'update_camion' camion.pk_camion %}"
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-warning"
+                                            data-action="edit-camion"
+                                            data-camion-id="{{ camion.pk_camion }}"
+                                            title="Modifier">
                                         <i class="fas fa-edit"></i>
-                                    </a>
+                                    </button>
                                     <a href="{% url 'delete_camion' camion.pk_camion %}"
                                        class="btn btn-sm btn-outline-danger"
                                        title="Supprimer">
@@ -122,4 +124,83 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/camions-crud.js' %}"></script>
+<script>
+// Fonction de recherche locale dans le tableau
+const searchInput = document.getElementById('searchInput');
+const tableBody = document.querySelector('#camionTable tbody');
+const rowCounter = document.getElementById('rowCount');
+
+if (searchInput && tableBody) {
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        const rows = tableBody.querySelectorAll('tr');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const shouldShow = text.includes(searchTerm);
+            row.style.display = shouldShow ? '' : 'none';
+            if (shouldShow) visibleCount++;
+        });
+
+        if (rowCounter) {
+            rowCounter.textContent = visibleCount;
+        }
+    });
+
+    // Raccourci clavier Ctrl+K pour focus sur recherche
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'k') {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
+}
+
+// Fonction d'export CSV
+function exportToCSV(filename) {
+    const table = document.getElementById('camionTable');
+    let csv = [];
+
+    // Headers
+    const headers = [];
+    table.querySelectorAll('thead th').forEach(th => {
+        const text = th.textContent.trim().replace(/\s+/g, ' ');
+        if (!text.includes('Actions')) {
+            headers.push(text);
+        }
+    });
+    csv.push(headers.join(','));
+
+    // Rows
+    table.querySelectorAll('tbody tr').forEach(tr => {
+        if (tr.style.display !== 'none') {
+            const row = [];
+            tr.querySelectorAll('td').forEach((td, index) => {
+                if (index < headers.length) {
+                    row.push('"' + td.textContent.trim().replace(/"/g, '""') + '"');
+                }
+            });
+            csv.push(row.join(','));
+        }
+    });
+
+    // Download
+    const csvContent = csv.join('\n');
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename + '_' + new Date().toISOString().split('T')[0] + '.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
 {% endblock %}

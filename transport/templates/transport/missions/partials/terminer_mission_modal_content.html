@@ -1,0 +1,181 @@
+<!-- Détails de la mission -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Détails de la mission</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <p class="mb-2"><strong><i class="fas fa-map-marker-alt me-2 text-primary"></i>Destination:</strong></p>
+                <p class="ms-4">{{ mission.origine }} → {{ mission.destination }}</p>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-2"><strong><i class="fas fa-calendar-alt me-2 text-primary"></i>Date de départ:</strong></p>
+                <p class="ms-4">{{ mission.date_depart|date:"d/m/Y" }}</p>
+            </div>
+            {% if mission.contrat %}
+            <div class="col-md-6">
+                <p class="mb-2"><strong><i class="fas fa-clock me-2 text-primary"></i>Date limite:</strong></p>
+                <p class="ms-4">{{ mission.contrat.date_limite_retour|date:"d/m/Y" }}</p>
+            </div>
+            {% endif %}
+            <div class="col-md-6">
+                <p class="mb-2"><strong><i class="fas fa-user me-2 text-primary"></i>Chauffeur:</strong></p>
+                <p class="ms-4">{{ mission.contrat.chauffeur.nom }} {{ mission.contrat.chauffeur.prenom }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerte de statut retard (dynamique) -->
+<div id="penaliteAlert" class="alert alert-{{ en_retard|yesno:'danger,success' }} mb-4" role="alert">
+    <div class="d-flex align-items-start">
+        <i class="fas fa-{{ en_retard|yesno:'exclamation-triangle,check-circle' }} fa-2x me-3"></i>
+        <div class="flex-grow-1">
+            <h6 class="alert-heading mb-2" id="penaliteTitle">
+                {% if en_retard %}
+                    Attention: Retard détecté!
+                {% else %}
+                    Mission dans les délais
+                {% endif %}
+            </h6>
+            <div id="penaliteContent">
+                {% if en_retard %}
+                    <p class="mb-2">La mission accuse un retard de <strong id="joursRetard">{{ info_penalite.jours_retard }}</strong> jour(s).</p>
+                    <p class="mb-0">
+                        Pénalité: <strong id="montantPenalite">{{ info_penalite.penalite|floatformat:0 }} FCFA</strong>
+                        <small class="text-muted">(25 000 FCFA/jour)</small>
+                    </p>
+                {% else %}
+                    <p class="mb-0">La mission sera terminée dans les délais prévus.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Paiement associé -->
+{% if paiement %}
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Paiement associé</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-2"><strong>Montant total:</strong></p>
+                <p class="ms-3 text-success fw-bold">{{ paiement.montant_total|floatformat:0 }} FCFA</p>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-2"><strong>Statut:</strong></p>
+                <p class="ms-3">
+                    {% if paiement.est_valide %}
+                        <span class="badge bg-success">Validé</span>
+                    {% else %}
+                        <span class="badge bg-warning">En attente</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% if not paiement.est_valide %}
+        <div class="alert alert-info mb-0 mt-3">
+            <i class="fas fa-info-circle me-2"></i>
+            Après avoir terminé cette mission, vous pourrez valider le paiement.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Formulaire -->
+<form id="terminerMissionForm">
+    {% csrf_token %}
+    <input type="hidden" name="mission_id" value="{{ mission.pk_mission }}">
+    <input type="hidden" id="forceInput" name="force" value="0">
+
+    <div class="mb-4">
+        <label for="dateRetour" class="form-label">
+            <i class="fas fa-calendar-check me-2"></i>Date de retour <span class="text-danger">*</span>
+        </label>
+        <input type="date"
+               class="form-control form-control-lg"
+               id="dateRetour"
+               name="date_retour"
+               value="{{ date_retour }}"
+               {% if date_limite %}max="{{ date_limite }}"{% endif %}
+               required>
+        <small class="form-text text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Sélectionnez la date effective de retour de la mission
+        </small>
+    </div>
+
+    <!-- Boutons de confirmation -->
+    <div class="d-grid gap-2" id="normalSubmit">
+        <button type="submit" class="btn btn-success btn-lg">
+            <i class="fas fa-flag-checkered me-2"></i>Terminer la mission
+        </button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Annuler
+        </button>
+    </div>
+
+    <!-- Boutons de confirmation pour retard (cachés par défaut) -->
+    <div class="d-none" id="retardSubmit">
+        <div class="alert alert-warning mb-3">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Confirmation requise:</strong> Cette mission est en retard. Voulez-vous quand même la terminer ?
+        </div>
+        <div class="d-grid gap-2">
+            <button type="button" class="btn btn-warning btn-lg" id="confirmRetardBtn">
+                <i class="fas fa-check-circle me-2"></i>Confirmer malgré le retard
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-2"></i>Annuler
+            </button>
+        </div>
+    </div>
+</form>
+
+<script>
+// Calcul en temps réel des pénalités quand la date change
+(function() {
+    const dateInput = document.getElementById('dateRetour');
+    const dateLimite = {% if date_limite %}'{{ date_limite }}'{% else %}null{% endif %};
+    const penaliteAlert = document.getElementById('penaliteAlert');
+    const penaliteTitle = document.getElementById('penaliteTitle');
+    const penaliteContent = document.getElementById('penaliteContent');
+
+    if (dateInput && dateLimite) {
+        dateInput.addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const limitDate = new Date(dateLimite);
+
+            if (selectedDate > limitDate) {
+                // Calculer le retard
+                const diffTime = Math.abs(selectedDate - limitDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const penalite = diffDays * 25000;
+
+                // Afficher l'alerte de retard
+                penaliteAlert.className = 'alert alert-danger mb-4';
+                penaliteTitle.innerHTML = 'Attention: Retard détecté!';
+                penaliteContent.innerHTML = `
+                    <p class="mb-2">La mission accuse un retard de <strong id="joursRetard">${diffDays}</strong> jour(s).</p>
+                    <p class="mb-0">
+                        Pénalité: <strong id="montantPenalite">${penalite.toLocaleString('fr-FR')} FCFA</strong>
+                        <small class="text-muted">(25 000 FCFA/jour)</small>
+                    </p>
+                `;
+                penaliteAlert.querySelector('i').className = 'fas fa-exclamation-triangle fa-2x me-3';
+            } else {
+                // Pas de retard
+                penaliteAlert.className = 'alert alert-success mb-4';
+                penaliteTitle.innerHTML = 'Mission dans les délais';
+                penaliteContent.innerHTML = '<p class="mb-0">La mission sera terminée dans les délais prévus.</p>';
+                penaliteAlert.querySelector('i').className = 'fas fa-check-circle fa-2x me-3';
+            }
+        });
+    }
+})();
+</script>

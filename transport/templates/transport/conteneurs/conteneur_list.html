@@ -8,9 +8,9 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0"><i class="fas fa-box text-primary me-2"></i>{{ title }}</h2>
-        <a href="{% url 'create_conteneur' %}" class="btn btn-primary">
+        <button type="button" class="btn btn-primary btn-create-conteneur">
             <i class="fas fa-plus me-1"></i> Ajouter un conteneur
-        </a>
+        </button>
     </div>
 
     {% if conteneurs %}
@@ -58,11 +58,12 @@
                             <td>{{ c.transitaire.nom }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{% url 'update_conteneur' c.pk_conteneur %}"
-                                       class="btn btn-sm btn-outline-warning"
-                                       title="Modifier">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-warning btn-edit-conteneur"
+                                            data-conteneur-id="{{ c.pk_conteneur }}"
+                                            title="Modifier">
                                         <i class="fas fa-edit"></i>
-                                    </a>
+                                    </button>
                                     <a href="{% url 'delete_conteneur' c.pk_conteneur %}"
                                        class="btn btn-sm btn-outline-danger"
                                        title="Supprimer">
@@ -80,8 +81,23 @@
     {% else %}
     <div class="alert alert-info shadow-sm">
         <i class="fas fa-info-circle me-2"></i>
-        Aucun conteneur enregistré. <a href="{% url 'create_conteneur' %}" class="alert-link">Ajouter le premier</a>
+        Aucun conteneur enregistré. <button type="button" class="btn btn-link alert-link btn-create-conteneur p-0">Ajouter le premier</button>
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/crud-modal.js' %}"></script>
+<script>
+// Initialize CRUD modal for conteneurs
+new CrudModalManager({
+    entityName: 'conteneur',
+    entityNameDisplay: 'Conteneur',
+    createUrl: '{% url "ajax_conteneur_create" %}',
+    updateUrlPattern: '/conteneurs/{id}/ajax/update/',
+    listSelector: 'tbody'
+});
+</script>
 {% endblock %}
