@@ -1,0 +1,396 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Bloquer pour stationnement | Gestion Transport{% endblock %}
+
+{% block title %}Bloquer mission pour stationnement{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{% url 'mission_list' %}">Missions</a></li>
+            <li class="breadcrumb-item active">Bloquer pour stationnement</li>
+        </ol>
+    </nav>
+
+    <!-- En-tête avec statut -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="fw-semibold text-warning mb-2">
+                <i class="fas fa-parking me-2"></i>Bloquer mission pour stationnement
+            </h2>
+            <p class="text-muted mb-0">Le camion est arrivé et attend le déchargement</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="card border-warning">
+                <div class="card-body py-2">
+                    <small class="text-muted d-block">Statut actuel</small>
+                    <span class="badge bg-primary fs-6">{{ mission.get_statut_display }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informations de la mission - Enrichies -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h5 class="mb-0 text-white">
+                <i class="fas fa-info-circle me-2"></i>Détails de la mission
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <!-- Colonne 1: Itinéraire -->
+                <div class="col-md-4">
+                    <div class="border-start border-primary border-4 ps-3">
+                        <h6 class="text-primary mb-3"><i class="fas fa-route me-2"></i>Itinéraire</h6>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Origine</small>
+                            <strong class="text-success"><i class="fas fa-map-marker-alt me-1"></i>{{ mission.origine }}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Destination</small>
+                            <strong class="text-danger"><i class="fas fa-flag-checkered me-1"></i>{{ mission.destination }}</strong>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block">Date départ</small>
+                            <strong><i class="far fa-calendar me-1"></i>{{ mission.date_depart|date:"d/m/Y" }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne 2: Personnel & Véhicule -->
+                <div class="col-md-4">
+                    <div class="border-start border-success border-4 ps-3">
+                        <h6 class="text-success mb-3"><i class="fas fa-truck me-2"></i>Transport</h6>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Chauffeur</small>
+                            <strong>
+                                <i class="fas fa-user me-1"></i>
+                                {{ mission.contrat.chauffeur.nom|default:"N/A" }}
+                                {% if mission.contrat.chauffeur.prenom %}
+                                    {{ mission.contrat.chauffeur.prenom }}
+                                {% endif %}
+                                {% if mission.contrat.chauffeur.telephone %}
+                                    <br><small class="text-muted"><i class="fas fa-phone me-1"></i>{{ mission.contrat.chauffeur.telephone }}</small>
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block">Camion affecté</small>
+                            {% with camion=mission.contrat.chauffeur.get_camion_actuel %}
+                                {% if camion %}
+                                    <strong class="text-success">
+                                        <i class="fas fa-truck-moving me-1"></i>
+                                        {{ camion.immatriculation }}
+                                    </strong>
+                                    {% if camion.modele %}
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>{{ camion.modele }}
+                                        </small>
+                                    {% endif %}
+                                    {% if camion.capacite_tonnes %}
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="fas fa-weight-hanging me-1"></i>{{ camion.capacite_tonnes }} tonnes
+                                        </small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Aucun camion affecté
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">Le chauffeur doit être affecté à un camion</small>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne 3: Client & Conteneur -->
+                <div class="col-md-4">
+                    <div class="border-start border-info border-4 ps-3">
+                        <h6 class="text-info mb-3"><i class="fas fa-building me-2"></i>Client</h6>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Nom du client</small>
+                            <strong><i class="fas fa-handshake me-1"></i>{{ mission.contrat.client.nom|default:"N/A" }}</strong>
+                        </div>
+                        {% if mission.contrat.conteneur %}
+                        <div>
+                            <small class="text-muted d-block">Conteneur</small>
+                            <strong>
+                                <i class="fas fa-box me-1"></i>
+                                {{ mission.contrat.conteneur.numero_conteneur }}
+                                <span class="badge bg-secondary">{{ mission.contrat.conteneur.type_conteneur }}</span>
+                            </strong>
+                        </div>
+                        {% endif %}
+                        <div class="mt-2">
+                            <small class="text-muted d-block">Mission ID</small>
+                            <code class="small">{{ mission.pk_mission }}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Règles de stationnement - Améliorées -->
+    <div class="card border-warning shadow-sm mb-4">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Règles de stationnement (Demurrage)
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-success"><i class="fas fa-gift me-2"></i>Période gratuite</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>3 premiers jours ouvrables gratuits</strong> (lundi au vendredi)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle text-info me-2"></i>
+                            Si arrivée le weekend, les 3 jours gratuits commencent le lundi suivant
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-danger"><i class="fas fa-money-bill-wave me-2"></i>Période facturable</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-calendar-day text-danger me-2"></i>
+                            À partir du <strong>4ème jour ouvrable</strong>: <span class="badge bg-danger">25 000 CFA/jour</span>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                            <strong>Important:</strong> Après le 4ème jour, TOUS les jours comptent (samedi & dimanche inclus)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-calendar-times text-muted me-2"></i>
+                            Aucun jour férié n'est exclu du calcul
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire avec calculateur en temps réel -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-calendar-plus me-2"></i>Enregistrer l'arrivée du camion</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" id="bloquerForm">
+                {% csrf_token %}
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="date_arrivee" class="form-label fw-bold">
+                                <i class="fas fa-calendar-alt me-1"></i>Date d'arrivée du camion <span class="text-danger">*</span>
+                            </label>
+                            <input type="date"
+                                   name="date_arrivee"
+                                   id="date_arrivee"
+                                   class="form-control form-control-lg"
+                                   value="{{ today|date:'Y-m-d' }}"
+                                   max="{{ today|date:'Y-m-d' }}"
+                                   required>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                La date d'arrivée marque le début de la période de stationnement
+                            </small>
+                        </div>
+
+                        <!-- Alerte weekend dynamique -->
+                        <div id="weekendAlert" class="alert alert-warning d-none" role="alert">
+                            <i class="fas fa-calendar-times me-2"></i>
+                            <strong>Arrivée le weekend détectée!</strong>
+                            <p class="mb-0 small">
+                                La période gratuite de 3 jours commencera le lundi suivant.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Calculateur en temps réel -->
+                    <div class="col-md-6">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white py-2">
+                                <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Aperçu de la période gratuite</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="calculatorPreview">
+                                    <div class="mb-2">
+                                        <small class="text-muted">Début période gratuite</small>
+                                        <div id="dateDebutGratuit" class="fw-bold text-success">
+                                            <i class="fas fa-calendar-check me-1"></i>
+                                            Sélectionnez une date
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <small class="text-muted">Fin période gratuite (3ème jour ouvrable)</small>
+                                        <div id="dateFinGratuit" class="fw-bold text-success">
+                                            <i class="fas fa-calendar-check me-1"></i>
+                                            -
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div>
+                                        <small class="text-muted">Facturation commence à partir de</small>
+                                        <div id="dateDebutFacturation" class="fw-bold text-danger">
+                                            <i class="fas fa-money-bill-wave me-1"></i>
+                                            -
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info border-0 mt-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-lightbulb fa-2x text-info me-3"></i>
+                        <div>
+                            <strong>À noter:</strong> Après validation, le système calculera automatiquement
+                            les frais de stationnement en fonction du nombre de jours écoulés. Vous pourrez
+                            marquer le déchargement une fois que le camion sera déchargé.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'mission_list' %}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-arrow-left me-1"></i>Annuler
+                    </a>
+                    <button type="submit" class="btn btn-warning btn-lg px-5">
+                        <i class="fas fa-parking me-1"></i>Bloquer pour stationnement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('date_arrivee');
+    const weekendAlert = document.getElementById('weekendAlert');
+    const dateDebutGratuit = document.getElementById('dateDebutGratuit');
+    const dateFinGratuit = document.getElementById('dateFinGratuit');
+    const dateDebutFacturation = document.getElementById('dateDebutFacturation');
+
+    // Noms des jours en français
+    const joursNoms = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const moisNoms = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+                      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+    function formatDate(date) {
+        const jour = joursNoms[date.getDay()];
+        const numero = date.getDate();
+        const mois = moisNoms[date.getMonth()];
+        const annee = date.getFullYear();
+        return `${jour} ${numero} ${mois} ${annee}`;
+    }
+
+    function addDays(date, days) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    function isWeekend(date) {
+        const day = date.getDay();
+        return day === 0 || day === 6; // 0 = Dimanche, 6 = Samedi
+    }
+
+    function calculateFreePeriod(arrivalDate) {
+        // Étape 1: Trouver le début de la période gratuite
+        let debutGratuit = new Date(arrivalDate);
+        while (isWeekend(debutGratuit)) {
+            debutGratuit = addDays(debutGratuit, 1);
+        }
+
+        // Étape 2: Compter 3 jours ouvrables
+        let joursOuvrablesComptes = 0;
+        let currentDate = new Date(debutGratuit);
+        let finGratuit = null;
+
+        while (joursOuvrablesComptes < 3) {
+            if (!isWeekend(currentDate)) {
+                joursOuvrablesComptes++;
+                if (joursOuvrablesComptes === 3) {
+                    finGratuit = new Date(currentDate);
+                    break;
+                }
+            }
+            currentDate = addDays(currentDate, 1);
+        }
+
+        // Étape 3: Date de début de facturation (jour suivant la fin de période gratuite)
+        const debutFacturation = addDays(finGratuit, 1);
+
+        return {
+            debutGratuit: debutGratuit,
+            finGratuit: finGratuit,
+            debutFacturation: debutFacturation
+        };
+    }
+
+    function updateCalculator() {
+        const selectedDate = new Date(dateInput.value);
+
+        if (!dateInput.value) {
+            dateDebutGratuit.innerHTML = '<i class="fas fa-calendar-check me-1"></i>Sélectionnez une date';
+            dateFinGratuit.textContent = '-';
+            dateDebutFacturation.textContent = '-';
+            weekendAlert.classList.add('d-none');
+            return;
+        }
+
+        // Vérifier si c'est un weekend
+        if (isWeekend(selectedDate)) {
+            weekendAlert.classList.remove('d-none');
+        } else {
+            weekendAlert.classList.add('d-none');
+        }
+
+        // Calculer les périodes
+        const periods = calculateFreePeriod(selectedDate);
+
+        // Afficher les résultats
+        dateDebutGratuit.innerHTML = `
+            <i class="fas fa-calendar-check me-1"></i>
+            ${formatDate(periods.debutGratuit)}
+            ${isWeekend(selectedDate) ? '<span class="badge bg-warning ms-2">Décalé au lundi</span>' : ''}
+        `;
+
+        dateFinGratuit.innerHTML = `
+            <i class="fas fa-calendar-check me-1"></i>
+            ${formatDate(periods.finGratuit)}
+        `;
+
+        dateDebutFacturation.innerHTML = `
+            <i class="fas fa-money-bill-wave me-1"></i>
+            ${formatDate(periods.debutFacturation)}
+            <span class="badge bg-danger ms-2">25 000 CFA/jour</span>
+        `;
+    }
+
+    // Écouter les changements de date
+    dateInput.addEventListener('change', updateCalculator);
+
+    // Calculer au chargement si une date est déjà sélectionnée
+    updateCalculator();
+});
+</script>
+{% endblock %}

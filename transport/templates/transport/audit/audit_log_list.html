@@ -11,10 +11,109 @@
         <h2 class="fw-semibold mb-0 text-primary">
             <i class="fas fa-history me-2"></i>Historique d'audit
         </h2>
-        <div>
-            <span class="badge bg-info">{{ logs|length }} enregistrement(s)</span>
+        <div class="d-flex gap-2">
+            <a href="{% url 'export_audit_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success">
+                <i class="fas fa-file-excel me-1"></i>Exporter Excel
+            </a>
+            <a href="{% url 'audit_cleanup' %}" class="btn btn-outline-danger">
+                <i class="fas fa-broom me-1"></i>Nettoyer
+            </a>
+            <span class="badge bg-info align-self-center">{{ logs|length }} enregistrement(s)</span>
         </div>
     </div>
+
+    <!-- Statistiques -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-clipboard-list fa-2x text-primary"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Total Actions</p>
+                            <h3 class="mb-0 fw-bold">{{ stats.total }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-plus-circle fa-2x text-success"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Créations</p>
+                            <h3 class="mb-0 fw-bold">{{ stats.creates }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-edit fa-2x text-warning"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Modifications</p>
+                            <h3 class="mb-0 fw-bold">{{ stats.updates }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-danger bg-opacity-10 rounded-3 p-3">
+                                <i class="fas fa-trash fa-2x text-danger"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <p class="text-muted mb-1 small">Suppressions</p>
+                            <h3 class="mb-0 fw-bold">{{ stats.deletes }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top utilisateurs -->
+    {% if top_users %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-trophy me-2 text-warning"></i>Top 5 utilisateurs les plus actifs</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for user in top_users %}
+                <div class="col-md-2">
+                    <div class="text-center">
+                        <div class="badge bg-primary mb-2" style="font-size: 1.2rem;">{{ user.count }}</div>
+                        <p class="small text-muted mb-0">{{ user.utilisateur__email|truncatechars:20 }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Filtres -->
     <div class="card shadow-sm border-0 mb-4">
@@ -143,6 +242,14 @@
                                     <span class="badge bg-primary"><i class="fas fa-flag-checkered me-1"></i>{{ log.get_action_display }}</span>
                                 {% elif log.action == 'ANNULER_MISSION' %}
                                     <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'LOGIN' %}
+                                    <span class="badge bg-success"><i class="fas fa-sign-in-alt me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'LOGOUT' %}
+                                    <span class="badge bg-secondary"><i class="fas fa-sign-out-alt me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'FAILED_LOGIN' %}
+                                    <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>{{ log.get_action_display }}</span>
+                                {% elif log.action == 'CHANGE_PASSWORD' %}
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-key me-1"></i>{{ log.get_action_display }}</span>
                                 {% else %}
                                     <span class="badge bg-secondary">{{ log.get_action_display }}</span>
                                 {% endif %}
@@ -213,18 +320,26 @@
                 L'historique d'audit enregistre toutes les actions importantes effectuées dans le système :
             </p>
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <ul class="small text-muted mb-0">
                         <li><span class="badge bg-success">Création</span> - Nouveaux objets créés</li>
                         <li><span class="badge bg-warning">Modification</span> - Objets modifiés</li>
                         <li><span class="badge bg-danger">Suppression</span> - Objets supprimés</li>
                     </ul>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <ul class="small text-muted mb-0">
                         <li><span class="badge bg-info">Validation paiement</span> - Paiements validés</li>
                         <li><span class="badge bg-primary">Terminer mission</span> - Missions terminées</li>
                         <li><span class="badge bg-danger">Annuler mission</span> - Missions annulées</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <ul class="small text-muted mb-0">
+                        <li><span class="badge bg-success"><i class="fas fa-sign-in-alt me-1"></i>Connexion</span> - Connexions réussies</li>
+                        <li><span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>Connexion échouée</span> - Tentatives échouées</li>
+                        <li><span class="badge bg-secondary"><i class="fas fa-sign-out-alt me-1"></i>Déconnexion</span> - Déconnexions utilisateurs</li>
+                        <li><span class="badge bg-warning text-dark"><i class="fas fa-key me-1"></i>Changement de mot de passe</span> - Modifications de mot de passe</li>
                     </ul>
                 </div>
             </div>

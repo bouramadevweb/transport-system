@@ -20,20 +20,71 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th><i class="fas fa-route me-2"></i>Type</th>
+                            <th><i class="fas fa-calendar me-2"></i>Date</th>
+                            <th><i class="fas fa-truck me-2"></i>Camion</th>
+                            <th><i class="fas fa-user me-2"></i>Chauffeur</th>
+                            <th><i class="fas fa-tasks me-2"></i>Mission</th>
                             <th><i class="fas fa-map-marker me-2"></i>Origine</th>
                             <th><i class="fas fa-map-marker-alt me-2"></i>Destination</th>
-                            <th><i class="fas fa-road me-2"></i>Frais Route</th>
-                            <th><i class="fas fa-gas-pump me-2"></i>Frais Carburant</th>
+                            <th><i class="fas fa-dollar-sign me-2"></i>Total</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {%for f in frais %}
                         <tr>
+                            <td>
+                                {% if f.type_trajet == 'aller' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-arrow-right me-1"></i>ALLER
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-arrow-left me-1"></i>RETOUR
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if f.date_trajet %}
+                                    <small>{{ f.date_trajet|date:"d/m/Y" }}</small>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if f.contrat and f.contrat.camion %}
+                                    <strong>{{ f.contrat.camion.immatriculation }}</strong>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if f.contrat and f.contrat.chauffeur %}
+                                    {{ f.contrat.chauffeur.nom }} {{ f.contrat.chauffeur.prenom }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if f.mission %}
+                                    <small class="text-muted" title="{{ f.mission.pk_mission }}">
+                                        {{ f.mission.pk_mission|slice:":20" }}...
+                                    </small>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td>{{ f.origine }}</td>
                             <td>{{ f.destination }}</td>
-                            <td>{{ f.frais_route }}</td>
-                            <td>{{ f.frais_carburant }}</td>
+                            <td>
+                                <strong class="text-success">{{ f.frais_route|add:f.frais_carburant|floatformat:0 }} FCFA</strong>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-road"></i> {{ f.frais_route|floatformat:0 }} +
+                                    <i class="fas fa-gas-pump"></i> {{ f.frais_carburant|floatformat:0 }}
+                                </small>
+                            </td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <a href="{%url 'update_frais' f.pk_frais %}"
@@ -62,4 +113,38 @@
     </div>
     {%endif %}
 </div>
+
+<style>
+    /* Responsive optimizations */
+    @media (max-width: 576px) {
+        h2 { font-size: 1.25rem !important; }
+        h3 { font-size: 1.5rem !important; }
+        h4 { font-size: 1.1rem !important; }
+        .btn { font-size: 0.9rem; padding: 0.4rem 0.6rem; }
+        .btn-sm { font-size: 0.85rem; padding: 0.35rem 0.5rem; }
+        .table { font-size: 0.75rem; }
+        .table th, .table td { padding: 0.4rem 0.3rem; }
+        .table th i { display: none; }
+        .badge { font-size: 0.7rem; padding: 0.25em 0.5em; }
+        .card-body { padding: 0.75rem !important; }
+        .fa-2x { font-size: 1.5rem !important; }
+        .form-control { font-size: 0.9rem; padding: 0.4rem 0.6rem; }
+        small { font-size: 0.75rem !important; }
+        .container-fluid { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        .empty-state { padding: 2rem 1rem !important; }
+        .empty-state i { font-size: 2rem !important; }
+        .empty-state p { font-size: 0.9rem; }
+    }
+    @media (min-width: 577px) and (max-width: 768px) {
+        h2 { font-size: 1.5rem !important; }
+        .table { font-size: 0.85rem; }
+        .btn { font-size: 0.95rem; }
+    }
+    @media (min-width: 992px) {
+        .btn { transition: all 0.2s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .card { transition: transform 0.2s; }
+        .table tbody tr { transition: background-color 0.2s; }
+    }
+</style>
 {%endblock %}

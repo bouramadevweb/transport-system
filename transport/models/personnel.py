@@ -31,6 +31,20 @@ class Chauffeur(models.Model):
             self.pk_chauffeur = slugify(base)[:250]
         super().save(*args, **kwargs)
 
+    def get_camion_actuel(self):
+        """
+        Retourne le camion actuellement affecté à ce chauffeur
+
+        Returns:
+            Camion ou None: Le camion actuel si une affectation active existe, None sinon
+        """
+        affectation_active = Affectation.objects.filter(
+            chauffeur=self,
+            date_fin_affectation__isnull=True
+        ).first()
+
+        return affectation_active.camion if affectation_active else None
+
     class Meta:
         constraints = [
             models.UniqueConstraint(

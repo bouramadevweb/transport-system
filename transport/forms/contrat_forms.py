@@ -152,6 +152,21 @@ class ContratTransportForm(forms.ModelForm):
             'onchange': 'chargerCamionAffecte()'
         })
 
+        # L'ID du conteneur est défini pour l'event listener JavaScript
+        # (l'event listener est configuré dans contrat-form.js)
+        self.fields['conteneur'].widget.attrs.update({
+            'id': 'id_conteneur'
+        })
+
+        # Ajouter les IDs explicites pour les champs client et transitaire
+        self.fields['client'].widget.attrs.update({
+            'id': 'id_client'
+        })
+
+        self.fields['transitaire'].widget.attrs.update({
+            'id': 'id_transitaire'
+        })
+
     def clean_numero_bl(self):
         """Valide l'unicité du numéro BL"""
         numero_bl = self.cleaned_data.get('numero_bl')

@@ -5,41 +5,43 @@
 {% block title %}Liste des Camions{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid px-2 px-md-3">
     <!-- Header avec recherche et export -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-        <h2 class="mb-0">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 mb-md-4 gap-3">
+        <h2 class="mb-0 fs-4 fs-md-3">
             <i class="fas fa-truck text-primary me-2"></i>
             {{ title }}
         </h2>
-        <div class="d-flex gap-2 align-items-center flex-wrap">
+        <div class="d-flex flex-column flex-sm-row gap-2 align-items-stretch align-items-sm-center w-100 w-sm-auto">
             <!-- Barre de recherche -->
-            <div class="input-group" style="max-width: 300px;">
+            <div class="input-group" style="max-width: 100%;">
                 <span class="input-group-text bg-white border-end-0">
                     <i class="fas fa-search text-muted"></i>
                 </span>
                 <input type="text" id="searchInput" class="form-control border-start-0"
                        placeholder="Rechercher...">
             </div>
-            <!-- Export CSV -->
-            <button class="btn btn-outline-success btn-sm" onclick="exportToCSV('camions')"
-                    title="Exporter en CSV">
-                <i class="fas fa-file-csv me-1"></i> CSV
-            </button>
-            <!-- Bouton Nouveau -->
-            <button type="button" class="btn btn-primary" data-action="create-camion">
-                <i class="fas fa-plus me-1"></i> Nouveau camion
-            </button>
+            <div class="d-flex gap-2">
+                <!-- Export CSV -->
+                <button class="btn btn-outline-success btn-sm flex-grow-1" onclick="exportToCSV('camions')"
+                        title="Exporter en CSV">
+                    <i class="fas fa-file-csv me-1"></i> CSV
+                </button>
+                <!-- Bouton Nouveau -->
+                <button type="button" class="btn btn-primary btn-sm flex-grow-1" data-action="create-camion">
+                    <i class="fas fa-plus me-1"></i> <span class="d-none d-sm-inline">Nouveau </span>camion
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Statistiques -->
-    <div class="row g-3 mb-4">
+    <div class="row g-2 g-md-3 mb-3 mb-md-4">
         <div class="col-12 col-sm-6 col-md-4">
             <div class="card border-primary shadow-sm h-100">
-                <div class="card-body text-center py-3">
-                    <i class="fas fa-truck fa-2x text-primary mb-2"></i>
-                    <h3 class="text-primary mb-2" id="totalCamions">{{ camions|length }}</h3>
+                <div class="card-body text-center p-3 py-md-3">
+                    <i class="fas fa-truck fa-lg fa-md-2x text-primary mb-2"></i>
+                    <h3 class="text-primary mb-2 fs-4 fs-md-3" id="totalCamions">{{ camions|length }}</h3>
                     <p class="text-muted mb-0 small">Total Camions</p>
                 </div>
             </div>
@@ -101,12 +103,12 @@
                 </table>
             </div>
         </div>
-        <div class="card-footer bg-white border-top-0">
-            <div class="d-flex justify-content-between align-items-center">
+        <div class="card-footer bg-white border-top-0 p-2 p-md-3">
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
                 <small class="text-muted">
                     <span id="rowCount">{{ camions|length }}</span> camion(s) affiché(s)
                 </small>
-                <small class="text-muted">
+                <small class="text-muted d-none d-lg-block">
                     <i class="fas fa-keyboard me-1"></i>Astuce: Appuyez sur <kbd>Ctrl</kbd> + <kbd>K</kbd> pour rechercher
                 </small>
             </div>
@@ -114,16 +116,144 @@
     </div>
     {% else %}
     <!-- Empty State -->
-    <div class="empty-state">
-        <i class="fas fa-truck-monster"></i>
-        <h4>Aucun camion enregistré</h4>
-        <p>Commencez par ajouter votre premier camion pour gérer votre flotte de véhicules.</p>
+    <div class="empty-state text-center p-4 p-md-5">
+        <i class="fas fa-truck-monster fa-3x mb-3 text-muted"></i>
+        <h4 class="fs-5 fs-md-4">Aucun camion enregistré</h4>
+        <p class="text-muted">Commencez par ajouter votre premier camion pour gérer votre flotte de véhicules.</p>
         <a href="{% url 'create_camion' %}" class="btn btn-primary">
             <i class="fas fa-plus me-2"></i>Ajouter le premier camion
         </a>
     </div>
     {% endif %}
 </div>
+
+<style>
+    /* Responsive optimizations for camion_list */
+    @media (max-width: 576px) {
+        h2 {
+            font-size: 1.25rem !important;
+        }
+
+        h3 {
+            font-size: 1.5rem !important;
+        }
+
+        h4 {
+            font-size: 1.1rem !important;
+        }
+
+        .btn {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.6rem;
+        }
+
+        .btn-sm {
+            font-size: 0.85rem;
+            padding: 0.35rem 0.5rem;
+        }
+
+        .table {
+            font-size: 0.75rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.4rem 0.3rem;
+        }
+
+        .table th i {
+            display: none;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.25em 0.5em;
+        }
+
+        .card-body {
+            padding: 0.75rem !important;
+        }
+
+        .fa-2x {
+            font-size: 1.5rem !important;
+        }
+
+        .input-group {
+            max-width: 100% !important;
+        }
+
+        .input-group-text {
+            padding: 0.4rem 0.6rem;
+        }
+
+        .form-control {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.6rem;
+        }
+
+        .card-footer {
+            font-size: 0.8rem;
+        }
+
+        small {
+            font-size: 0.75rem !important;
+        }
+
+        kbd {
+            font-size: 0.7rem;
+        }
+
+        .container-fluid {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+
+        .empty-state {
+            padding: 2rem 1rem !important;
+        }
+
+        .empty-state i {
+            font-size: 2rem !important;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+        }
+    }
+
+    @media (min-width: 577px) and (max-width: 768px) {
+        h2 {
+            font-size: 1.5rem !important;
+        }
+
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .btn {
+            font-size: 0.95rem;
+        }
+    }
+
+    @media (min-width: 992px) {
+        .btn {
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .card {
+            transition: transform 0.2s;
+        }
+
+        .table tbody tr {
+            transition: background-color 0.2s;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}

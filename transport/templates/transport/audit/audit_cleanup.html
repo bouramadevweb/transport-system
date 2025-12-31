@@ -1,0 +1,195 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Nettoyage de l'audit | Gestion Transport{% endblock %}
+
+{% block title %}Nettoyage de l'audit{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{% url 'audit_log_list' %}">Historique d'audit</a></li>
+            <li class="breadcrumb-item active">Nettoyage</li>
+        </ol>
+    </nav>
+
+    <!-- En-tête -->
+    <div class="mb-4">
+        <h2 class="fw-semibold text-danger">
+            <i class="fas fa-broom me-2"></i>Nettoyage de l'historique d'audit
+        </h2>
+        <p class="text-muted">Supprimez les anciens enregistrements d'audit pour libérer de l'espace en base de données.</p>
+    </div>
+
+    <!-- Avertissement -->
+    <div class="alert alert-warning border-0 shadow-sm mb-4">
+        <div class="d-flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+            </div>
+            <div class="flex-grow-1 ms-3">
+                <h5 class="alert-heading">⚠️ Attention : Action irréversible</h5>
+                <p class="mb-2">
+                    La suppression des logs d'audit est <strong>définitive et irréversible</strong>.
+                    Les enregistrements supprimés ne pourront pas être récupérés.
+                </p>
+                <p class="mb-0">
+                    <strong>Recommandation :</strong> Exportez d'abord les logs en Excel avant de les supprimer.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques actuelles -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistiques actuelles</h5>
+        </div>
+        <div class="card-body">
+            <div class="text-center mb-3">
+                <h2 class="text-primary mb-0">{{ total_logs }}</h2>
+                <p class="text-muted">Enregistrements d'audit au total</p>
+            </div>
+
+            <div class="row g-3">
+                {% for stat in stats_by_period %}
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <h4 class="text-danger mb-2">{{ stat.count }}</h4>
+                            <p class="small text-muted mb-1">Logs de plus de</p>
+                            <p class="fw-bold mb-0">{{ stat.months }} mois</p>
+                            <small class="text-muted">Avant le {{ stat.date_limite|date:"d/m/Y" }}</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire de nettoyage -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-trash me-2"></i>Supprimer les anciens logs</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="cleanupForm">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <label for="months" class="form-label fw-bold">
+                                Supprimer les logs de plus de :
+                            </label>
+                            <select name="months" id="months" class="form-select form-select-lg" required>
+                                <option value="">-- Choisir une période --</option>
+                                <option value="3">3 mois ({{ stats_by_period.0.count }} logs)</option>
+                                <option value="6">6 mois ({{ stats_by_period.1.count }} logs)</option>
+                                <option value="12">12 mois / 1 an ({{ stats_by_period.2.count }} logs)</option>
+                                <option value="24">24 mois / 2 ans ({{ stats_by_period.3.count }} logs)</option>
+                            </select>
+                            <small class="text-muted">
+                                Les logs plus récents seront conservés
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmExport" required>
+                                <label class="form-check-label" for="confirmExport">
+                                    J'ai exporté les logs en Excel (ou je ne souhaite pas les conserver)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                                <label class="form-check-label" for="confirmDelete">
+                                    Je comprends que cette action est irréversible
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Astuce :</strong> Allez d'abord sur la
+                            <a href="{% url 'audit_log_list' %}" class="alert-link">page d'historique d'audit</a>,
+                            filtrez la période à supprimer, puis exportez en Excel avant de revenir ici.
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'audit_log_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger" id="submitBtn" disabled>
+                                <i class="fas fa-trash me-1"></i>Supprimer les logs
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommandations -->
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-success text-white">
+            <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recommandations</h6>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li class="mb-2">
+                    <strong>Conservation :</strong> Il est recommandé de conserver au moins 12 mois d'historique pour les audits comptables
+                </li>
+                <li class="mb-2">
+                    <strong>Exportation :</strong> Exportez toujours les logs avant suppression pour archivage externe
+                </li>
+                <li class="mb-2">
+                    <strong>Fréquence :</strong> Effectuez ce nettoyage 1 à 2 fois par an maximum
+                </li>
+                <li class="mb-0">
+                    <strong>Conformité :</strong> Vérifiez vos obligations légales avant de supprimer des données d'audit
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+// Activer le bouton de suppression seulement si les deux cases sont cochées
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmExport = document.getElementById('confirmExport');
+    const confirmDelete = document.getElementById('confirmDelete');
+    const submitBtn = document.getElementById('submitBtn');
+    const monthsSelect = document.getElementById('months');
+
+    function updateSubmitButton() {
+        const canSubmit = confirmExport.checked && confirmDelete.checked && monthsSelect.value;
+        submitBtn.disabled = !canSubmit;
+    }
+
+    confirmExport.addEventListener('change', updateSubmitButton);
+    confirmDelete.addEventListener('change', updateSubmitButton);
+    monthsSelect.addEventListener('change', updateSubmitButton);
+
+    // Confirmation finale avant soumission
+    document.getElementById('cleanupForm').addEventListener('submit', function(e) {
+        const months = monthsSelect.value;
+        const count = monthsSelect.options[monthsSelect.selectedIndex].text.match(/\d+/g)[1];
+
+        const confirmFinal = confirm(
+            `⚠️ CONFIRMATION FINALE\n\n` +
+            `Vous allez SUPPRIMER ${count} enregistrement(s) d'audit de plus de ${months} mois.\n\n` +
+            `Cette action est IRRÉVERSIBLE.\n\n` +
+            `Êtes-vous absolument sûr ?`
+        );
+
+        if (!confirmFinal) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

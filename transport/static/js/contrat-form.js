@@ -14,13 +14,11 @@ function calculerDateLimiteRetour() {
     const dateLimiteField = document.getElementById('id_date_limite_retour');
 
     if (!dateDebutField || !dateLimiteField) {
-        console.warn('Champs date non trouvés');
         return;
     }
 
     const dateDebut = dateDebutField.value;
     if (!dateDebut) {
-        console.log('Pas de date début saisie');
         return;
     }
 
@@ -40,8 +38,6 @@ function calculerDateLimiteRetour() {
     // Indication visuelle
     dateLimiteField.style.backgroundColor = '#d1ecf1';
     dateLimiteField.title = 'Calculé automatiquement : Date début + 23 jours';
-
-    console.log(`✅ Date limite calculée: ${dateDebut} + 23 jours = ${dateLimite}`);
 }
 
 /**
@@ -53,7 +49,6 @@ function calculerReliquat() {
     const reliquatField = document.getElementById('id_reliquat_transport');
 
     if (!montantTotalField || !avanceField || !reliquatField) {
-        console.warn('Champs financiers non trouvés');
         return;
     }
 
@@ -81,14 +76,76 @@ function calculerReliquat() {
         reliquatField.style.color = '#0c5460';
         reliquatField.title = `Reliquat à payer: ${reliquat.toFixed(2)} FCFA`;
     }
-
-    console.log(`✅ Reliquat calculé: ${montantTotal} - ${avance} = ${reliquat.toFixed(2)}`);
 }
 
 /**
  * Variable pour éviter les boucles infinies lors de la sélection bidirectionnelle
  */
 let isUpdatingVehicleDriver = false;
+
+/**
+ * Charger automatiquement le client et le transitaire du conteneur sélectionné
+ */
+function chargerClientTransitaire() {
+    const conteneurSelect = document.getElementById('id_conteneur');
+    const clientSelect = document.getElementById('id_client');
+    const transitaireSelect = document.getElementById('id_transitaire');
+
+    if (!conteneurSelect || !clientSelect || !transitaireSelect) {
+        return;
+    }
+
+    const conteneurId = conteneurSelect.value;
+
+    if (!conteneurId) {
+        return;
+    }
+
+    // Appel AJAX pour récupérer le client et le transitaire du conteneur
+    fetch(`/api/conteneur/${conteneurId}/info/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Sélectionner automatiquement le client si disponible
+                if (data.client_id) {
+                    clientSelect.value = data.client_id;
+                    clientSelect.style.backgroundColor = '#d1ecf1';
+                    clientSelect.style.border = '2px solid #0c5460';
+                    clientSelect.title = `Client du conteneur : ${data.client_nom}`;
+                } else {
+                    clientSelect.value = '';
+                    clientSelect.style.backgroundColor = '#fff3cd';
+                    clientSelect.style.border = '1px solid #ffc107';
+                    clientSelect.title = '⚠️ Aucun client associé à ce conteneur';
+                }
+
+                // Sélectionner automatiquement le transitaire si disponible
+                if (data.transitaire_id) {
+                    transitaireSelect.value = data.transitaire_id;
+                    transitaireSelect.style.backgroundColor = '#d1ecf1';
+                    transitaireSelect.style.border = '2px solid #0c5460';
+                    transitaireSelect.title = `Transitaire du conteneur : ${data.transitaire_nom}`;
+                } else {
+                    transitaireSelect.value = '';
+                    transitaireSelect.style.backgroundColor = '#fff3cd';
+                    transitaireSelect.style.border = '1px solid #ffc107';
+                    transitaireSelect.title = '⚠️ Aucun transitaire associé à ce conteneur';
+                }
+            } else {
+                clientSelect.style.backgroundColor = '#f8d7da';
+                clientSelect.style.border = '1px solid #dc3545';
+                transitaireSelect.style.backgroundColor = '#f8d7da';
+                transitaireSelect.style.border = '1px solid #dc3545';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur chargement conteneur:', error);
+            clientSelect.style.backgroundColor = '#f8d7da';
+            clientSelect.style.border = '1px solid #dc3545';
+            transitaireSelect.style.backgroundColor = '#f8d7da';
+            transitaireSelect.style.border = '1px solid #dc3545';
+        });
+}
 
 /**
  * Charger automatiquement le chauffeur affecté au camion sélectionné
@@ -109,7 +166,6 @@ function chargerChauffeurAffecte() {
     }
 
     isUpdatingVehicleDriver = true;
-    console.log('🚛 Chargement du chauffeur pour camion:', camionId);
 
     // Appel AJAX pour récupérer le chauffeur affecté au camion
     fetch(`/api/camion/${camionId}/chauffeur/`)
@@ -123,20 +179,16 @@ function chargerChauffeurAffecte() {
                 chauffeurSelect.style.backgroundColor = '#d1ecf1';
                 chauffeurSelect.style.border = '2px solid #0c5460';
                 chauffeurSelect.title = `Chauffeur affecté : ${data.chauffeur_nom}`;
-
-                console.log(`✅ Chauffeur affecté automatiquement : ${data.chauffeur_nom}`);
             } else {
                 // Aucun chauffeur affecté
                 chauffeurSelect.value = '';
                 chauffeurSelect.style.backgroundColor = '#fff3cd';
                 chauffeurSelect.style.border = '1px solid #ffc107';
                 chauffeurSelect.title = '⚠️ Aucun chauffeur affecté à ce camion';
-
-                console.warn('⚠️ Aucun chauffeur affecté à ce camion');
             }
         })
         .catch(error => {
-            console.error('❌ Erreur lors de la récupération du chauffeur:', error);
+            console.error('Erreur chargement chauffeur:', error);
             chauffeurSelect.style.backgroundColor = '#f8d7da';
             chauffeurSelect.style.border = '1px solid #dc3545';
             chauffeurSelect.title = '❌ Erreur lors de la récupération du chauffeur';
@@ -165,7 +217,6 @@ function chargerCamionAffecte() {
     }
 
     isUpdatingVehicleDriver = true;
-    console.log('👨‍✈️ Chargement du camion pour chauffeur:', chauffeurId);
 
     // Appel AJAX pour récupérer le camion affecté au chauffeur
     fetch(`/api/chauffeur/${chauffeurId}/camion/`)
@@ -179,20 +230,16 @@ function chargerCamionAffecte() {
                 camionSelect.style.backgroundColor = '#d1ecf1';
                 camionSelect.style.border = '2px solid #0c5460';
                 camionSelect.title = `Camion affecté : ${data.camion_immatriculation}`;
-
-                console.log(`✅ Camion affecté automatiquement : ${data.camion_immatriculation}`);
             } else {
                 // Aucun camion affecté
                 camionSelect.value = '';
                 camionSelect.style.backgroundColor = '#fff3cd';
                 camionSelect.style.border = '1px solid #ffc107';
                 camionSelect.title = '⚠️ Aucun camion affecté à ce chauffeur';
-
-                console.warn('⚠️ Aucun camion affecté à ce chauffeur');
             }
         })
         .catch(error => {
-            console.error('❌ Erreur lors de la récupération du camion:', error);
+            console.error('Erreur chargement camion:', error);
             camionSelect.style.backgroundColor = '#f8d7da';
             camionSelect.style.border = '1px solid #dc3545';
             camionSelect.title = '❌ Erreur lors de la récupération du camion';
@@ -206,8 +253,6 @@ function chargerCamionAffecte() {
  * Initialiser les calculs automatiques pour le formulaire de contrat
  */
 function initContratFormCalculs() {
-    console.log('🔧 Initialisation des calculs automatiques contrat...');
-
     // Calculer au chargement si des valeurs existent
     calculerDateLimiteRetour();
     calculerReliquat();
@@ -215,59 +260,29 @@ function initContratFormCalculs() {
     // Event listener pour la date de début
     const dateDebutField = document.getElementById('id_date_debut');
     if (dateDebutField) {
-        dateDebutField.addEventListener('change', function() {
-            console.log('📅 Date début changée:', this.value);
-            calculerDateLimiteRetour();
-        });
-        console.log('✅ Event listener ajouté sur date_debut');
-    } else {
-        console.warn('❌ Champ date_debut non trouvé');
+        dateDebutField.addEventListener('change', calculerDateLimiteRetour);
     }
 
     // Event listeners pour les champs financiers
     const montantTotalField = document.getElementById('id_montant_total');
     if (montantTotalField) {
-        montantTotalField.addEventListener('input', function() {
-            console.log('💰 Montant total changé:', this.value);
-            calculerReliquat();
-        });
-        console.log('✅ Event listener ajouté sur montant_total');
-    } else {
-        console.warn('❌ Champ montant_total non trouvé');
+        montantTotalField.addEventListener('input', calculerReliquat);
     }
 
     const avanceField = document.getElementById('id_avance_transport');
     if (avanceField) {
-        avanceField.addEventListener('input', function() {
-            console.log('💵 Avance changée:', this.value);
-            calculerReliquat();
-        });
-        console.log('✅ Event listener ajouté sur avance_transport');
-    } else {
-        console.warn('❌ Champ avance_transport non trouvé');
+        avanceField.addEventListener('input', calculerReliquat);
     }
 
-    // ✅ Event listeners pour camion/chauffeur
+    // Event listeners pour camion/chauffeur
     const camionSelect = document.getElementById('id_camion');
     if (camionSelect) {
-        camionSelect.addEventListener('change', function() {
-            console.log('🚛 Camion changé:', this.value);
-            chargerChauffeurAffecte();
-        });
-        console.log('✅ Event listener ajouté sur camion');
-    } else {
-        console.warn('❌ Champ camion non trouvé');
+        camionSelect.addEventListener('change', chargerChauffeurAffecte);
     }
 
     const chauffeurSelect = document.getElementById('id_chauffeur');
     if (chauffeurSelect) {
-        chauffeurSelect.addEventListener('change', function() {
-            console.log('👨‍✈️ Chauffeur changé:', this.value);
-            chargerCamionAffecte();
-        });
-        console.log('✅ Event listener ajouté sur chauffeur');
-    } else {
-        console.warn('❌ Champ chauffeur non trouvé');
+        chauffeurSelect.addEventListener('change', chargerCamionAffecte);
     }
 
     // Charger le chauffeur si un camion est déjà sélectionné (mode édition)
@@ -275,12 +290,22 @@ function initContratFormCalculs() {
         chargerChauffeurAffecte();
     }
 
-    console.log('✅ Calculs automatiques initialisés');
+    // Event listener pour conteneur
+    const conteneurSelect = document.getElementById('id_conteneur');
+    if (conteneurSelect) {
+        conteneurSelect.addEventListener('change', chargerClientTransitaire);
+
+        // Charger le client et le transitaire si un conteneur est déjà sélectionné (mode édition)
+        if (conteneurSelect.value) {
+            chargerClientTransitaire();
+        }
+    }
 }
 
 // Export pour utilisation globale
 window.calculerDateLimiteRetour = calculerDateLimiteRetour;
 window.calculerReliquat = calculerReliquat;
+window.chargerClientTransitaire = chargerClientTransitaire;
 window.chargerChauffeurAffecte = chargerChauffeurAffecte;
 window.chargerCamionAffecte = chargerCamionAffecte;
 window.initContratFormCalculs = initContratFormCalculs;

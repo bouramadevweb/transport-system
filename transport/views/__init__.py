@@ -96,6 +96,11 @@ from .mission_views import (
     create_mission_conteneur,
     update_mission_conteneur,
     delete_mission_conteneur,
+    # Gestion du stationnement
+    bloquer_stationnement,
+    marquer_dechargement,
+    calculer_stationnement,
+    preview_frais_stationnement,
 )
 
 # Import des vues contrats
@@ -108,6 +113,7 @@ from .contrat_views import (
     create_presta_transport,
     update_presta_transport,
     delete_presta_transport,
+    get_conteneur_info,
 )
 
 # Import des vues finances
@@ -129,6 +135,7 @@ from .frais_views import (
     create_frais,
     update_frais,
     delete_frais,
+    missions_data_api,
 )
 
 # Import des vues dashboard
@@ -140,6 +147,7 @@ from .dashboard_views import (
     tableau_bord_statistiques,
     audit_log_list,
     audit_log_detail,
+    audit_cleanup,
 )
 
 # Import des vues AJAX
@@ -183,10 +191,13 @@ __all__ = [
     'mission_list', 'create_mission', 'update_mission', 'delete_mission',
     'terminer_mission', 'annuler_mission',
     'mission_conteneur_list', 'create_mission_conteneur', 'update_mission_conteneur', 'delete_mission_conteneur',
+    # Stationnement
+    'bloquer_stationnement', 'marquer_dechargement', 'calculer_stationnement', 'preview_frais_stationnement',
 
     # Contrats
     'contrat_list', 'create_contrat', 'update_contrat', 'delete_contrat',
     'presta_transport_list', 'create_presta_transport', 'update_presta_transport', 'delete_presta_transport',
+    'get_conteneur_info',
 
     # Finances
     'cautions_list', 'create_caution', 'update_caution', 'delete_caution',
@@ -194,11 +205,11 @@ __all__ = [
     'delete_paiement_mission', 'valider_paiement_mission',
 
     # Frais
-    'frais_list', 'create_frais', 'update_frais', 'delete_frais',
+    'frais_list', 'create_frais', 'update_frais', 'delete_frais', 'missions_data_api',
 
     # Dashboard
     'dashboard', 'help_page', 'notifications_list', 'mark_all_notifications_read',
-    'tableau_bord_statistiques', 'audit_log_list', 'audit_log_detail',
+    'tableau_bord_statistiques', 'audit_log_list', 'audit_log_detail', 'audit_cleanup',
 
     # AJAX
     'get_chauffeur_from_camion', 'get_camion_from_chauffeur',

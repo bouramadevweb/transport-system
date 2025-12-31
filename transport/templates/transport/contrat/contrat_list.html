@@ -104,6 +104,17 @@
                                             title="Modifier">
                                         <i class="fas fa-edit"></i>
                                     </button>
+                                    {% if c.statut == 'actif' %}
+                                    <a href="{% url 'annuler_contrat' c.pk_contrat %}"
+                                       class="btn btn-outline-danger"
+                                       title="Annuler ce contrat">
+                                        <i class="fas fa-ban"></i>
+                                    </a>
+                                    {% else %}
+                                    <span class="badge bg-secondary" title="Contrat {{ c.statut }}">
+                                        <i class="fas fa-ban"></i> {{ c.get_statut_display }}
+                                    </span>
+                                    {% endif %}
                                     <a href="{% url 'delete_contrat' c.pk_contrat %}"
                                        class="btn btn-outline-danger"
                                        title="Supprimer">

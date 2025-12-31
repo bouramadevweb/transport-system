@@ -9,6 +9,12 @@ from . import reports_views
 from . import user_crud_views
 from . import salary_views
 from .views import ajax_views
+from .views.annulation_views import (
+    annuler_contrat_view,
+    annuler_mission_view,
+    contrats_annules_list,
+    missions_annulees_list,
+)
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -87,6 +93,8 @@ urlpatterns = [
     path('contrats/create/', views.create_contrat, name='create_contrat'),
     path('contrats/<str:pk>/update/', views.update_contrat, name='update_contrat'),
     path('contrats/<str:pk>/delete/', views.delete_contrat, name='delete_contrat'),
+    path('contrats/<str:pk>/annuler/', annuler_contrat_view, name='annuler_contrat'),
+    path('contrats/annules/', contrats_annules_list, name='contrats_annules_list'),
     path("contrat/pdf/<str:pk>/", views.pdf_contrat, name="pdf_contrat"),
     # AJAX URLs for contrats
     path('contrats/ajax/create/', ajax_views.ajax_contrat_create, name='ajax_contrat_create'),
@@ -95,6 +103,8 @@ urlpatterns = [
     path('api/camion/<str:pk_camion>/chauffeur/', views.get_chauffeur_from_camion, name='get_chauffeur_from_camion'),
     # API pour récupérer le camion d'un chauffeur
     path('api/chauffeur/<str:pk_chauffeur>/camion/', views.get_camion_from_chauffeur, name='get_camion_from_chauffeur'),
+    # API pour récupérer le client et le transitaire d'un conteneur
+    path('api/conteneur/<str:conteneur_id>/info/', views.get_conteneur_info, name='get_conteneur_info'),
 
     path('prestations/', views.presta_transport_list, name='presta_transport_list'),
     path('prestations/create/', views.create_presta_transport, name='create_presta_transport'),
@@ -113,6 +123,8 @@ urlpatterns = [
     path('frais/create/', views.create_frais, name='create_frais'),
     path('frais/<str:pk>/update/', views.update_frais, name='update_frais'),
     path('frais/<str:pk>/delete/', views.delete_frais, name='delete_frais'),
+    # API pour auto-complétion
+    path('api/missions-data/', views.missions_data_api, name='missions_data_api'),
 
     path('missions/', views.mission_list, name='mission_list'),
     path('missions/create/', views.create_mission, name='create_mission'),
@@ -122,6 +134,12 @@ urlpatterns = [
     path('missions/<str:pk>/ajax/terminer/', ajax_views.ajax_terminer_mission_modal_content, name='ajax_terminer_mission_modal'),
     path('missions/<str:pk>/ajax/terminer-execute/', ajax_views.ajax_terminer_mission, name='ajax_terminer_mission'),
     path('missions/<str:pk>/annuler/', views.annuler_mission, name='annuler_mission'),
+    path('missions/annulees/', missions_annulees_list, name='missions_annulees_list'),
+    # Gestion du stationnement (demurrage)
+    path('missions/<str:pk>/bloquer-stationnement/', views.bloquer_stationnement, name='bloquer_stationnement'),
+    path('missions/<str:pk>/marquer-dechargement/', views.marquer_dechargement, name='marquer_dechargement'),
+    path('missions/<str:pk>/calculer-stationnement/', views.calculer_stationnement, name='calculer_stationnement'),
+    path('missions/<str:pk>/preview-frais-stationnement/', views.preview_frais_stationnement, name='preview_frais_stationnement'),
     path('missions/ajax/create-form/', ajax_views.ajax_mission_create_form, name='ajax_mission_create_form'),
     path('missions/ajax/create/', ajax_views.ajax_mission_create, name='ajax_mission_create'),
     path('missions/<str:pk>/ajax/update-form/', ajax_views.ajax_mission_update_form, name='ajax_mission_update_form'),
@@ -148,6 +166,8 @@ urlpatterns = [
     path('missions/export/csv/', export_views.export_missions_csv, name='export_missions_csv'),
     path('paiements/export/excel/', export_views.export_paiements_excel, name='export_paiements_excel'),
     path('paiements/export/csv/', export_views.export_paiements_csv, name='export_paiements_csv'),
+    path('utilisateurs/export/excel/', export_views.export_utilisateurs_excel, name='export_utilisateurs_excel'),
+    path('audit/export/excel/', export_views.export_audit_excel, name='export_audit_excel'),
 
     # Rapports PDF avancés
     path('missions/rapport/pdf/', pdf_reports.generate_missions_report_pdf, name='rapport_missions_pdf'),
@@ -205,6 +225,7 @@ urlpatterns = [
 
     # Historique d'audit
     path('audit/', views.audit_log_list, name='audit_log_list'),
+    path('audit/cleanup/', views.audit_cleanup, name='audit_cleanup'),
     path('audit/<str:pk>/', views.audit_log_detail, name='audit_log_detail'),
 
     # Gestion des permissions et rôles
@@ -254,6 +275,13 @@ urlpatterns = [
 
 handler404 = 'transport.views.rediriger_vers_connexion'
 handler500 = 'transport.views.rediriger_erreur_serveur'
+
+
+
+
+
+
+
 
 # urlpatterns = [
 #     path('inscription_utilisateur/', views.inscription_utilisateur, name='inscription_utilisateur'),

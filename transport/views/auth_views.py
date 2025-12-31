@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse
-from ..models import (Utilisateur)
+from ..models import (Utilisateur, AuditLog)
 from ..forms import (InscriptionUtilisateurForm, ConnexionForm)
 
 
@@ -29,7 +29,7 @@ def inscription_utilisateur(request):
 
 def connexion_utilisateur(request):
     form = ConnexionForm(request.POST or None)
-    
+
     if request.method == 'POST':
         if form.is_valid():
             email = form.cleaned_data['email']
@@ -38,8 +38,43 @@ def connexion_utilisateur(request):
 
             if user is not None:
                 login(request, user)
+
+                # Enregistrer la connexion dans l'audit log
+                AuditLog.log_action(
+                    utilisateur=user,
+                    action='LOGIN',
+                    model_name='Utilisateur',
+                    object_id=user.pk_utilisateur,
+                    object_repr=f"{user.email}",
+                    request=request
+                )
+
                 return redirect('dashboard')  # Redirige vers une page après connexion
             else:
+                # Tentative de connexion échouée
+                # Vérifier si l'email existe pour identifier les attaques ciblées
+                try:
+                    target_user = Utilisateur.objects.get(email=email)
+                    # L'email existe - quelqu'un essaie d'accéder à ce compte
+                    AuditLog.log_action(
+                        utilisateur=target_user,
+                        action='FAILED_LOGIN',
+                        model_name='Utilisateur',
+                        object_id=target_user.pk_utilisateur,
+                        object_repr=f"Tentative échouée: {email}",
+                        request=request
+                    )
+                except Utilisateur.DoesNotExist:
+                    # L'email n'existe pas - tentative avec un compte inexistant
+                    AuditLog.log_action(
+                        utilisateur=None,
+                        action='FAILED_LOGIN',
+                        model_name='Utilisateur',
+                        object_id='unknown',
+                        object_repr=f"Tentative échouée: {email}",
+                        request=request
+                    )
+
                 form.add_error(None, "Email ou mot de passe invalide.")
 
     return render(request, 'transport/connexion.html', {'form': form})
@@ -48,6 +83,16 @@ def connexion_utilisateur(request):
 
 @login_required
 def logout_utilisateur(request):
+    # Enregistrer la déconnexion dans l'audit log avant de déconnecter
+    AuditLog.log_action(
+        utilisateur=request.user,
+        action='LOGOUT',
+        model_name='Utilisateur',
+        object_id=request.user.pk_utilisateur,
+        object_repr=f"{request.user.email}",
+        request=request
+    )
+
     logout(request)
     return redirect('connexion')
 
@@ -75,6 +120,17 @@ def user_settings(request):
             if password_form.is_valid():
                 user = password_form.save()
                 update_session_auth_hash(request, user)  # Important pour ne pas déconnecter l'utilisateur
+
+                # Enregistrer le changement de mot de passe dans l'audit log
+                AuditLog.log_action(
+                    utilisateur=user,
+                    action='CHANGE_PASSWORD',
+                    model_name='Utilisateur',
+                    object_id=user.pk_utilisateur,
+                    object_repr=f"{user.email}",
+                    request=request
+                )
+
                 messages.success(request, '✅ Votre mot de passe a été changé avec succès!')
                 return redirect('user_settings')
             else:

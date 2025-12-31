@@ -110,6 +110,7 @@ class AuditLog(models.Model):
         ('DEBLOQUER_CAUTION', 'Débloquer caution'),
         ('LOGIN', 'Connexion'),
         ('LOGOUT', 'Déconnexion'),
+        ('FAILED_LOGIN', 'Tentative de connexion échouée'),
         ('CHANGE_PASSWORD', 'Changement de mot de passe'),
     ]
 

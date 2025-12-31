@@ -107,7 +107,8 @@ def utilisateur_create(request):
             if role and role in ROLES:
                 assign_role_to_user(user, role)
 
-            messages.success(request, f"✅ Utilisateur '{user.display_name or email}' créé avec succès!")
+            display_name = user.nom_utilisateur or email or f"User {user.pk_utilisateur}"
+            messages.success(request, f"✅ Utilisateur '{display_name}' créé avec succès!")
             return redirect('utilisateur_list')
 
         except Exception as e:
@@ -187,7 +188,8 @@ def utilisateur_update(request, pk):
             elif role in ROLES:
                 assign_role_to_user(utilisateur, role)
 
-            messages.success(request, f"✅ Utilisateur '{utilisateur.display_name or email}' modifié avec succès!")
+            display_name = utilisateur.nom_utilisateur or email or f"User {utilisateur.pk_utilisateur}"
+            messages.success(request, f"✅ Utilisateur '{display_name}' modifié avec succès!")
             return redirect('utilisateur_list')
 
         except Exception as e:

@@ -16,9 +16,19 @@
                     </h5>
                 </div>
                 <div class="card-body p-4">
-                    <form method="post" class="needs-validation" novalidate>
+                    <form method="post" class="needs-validation" novalidate id="fraisForm">
                         {%csrf_token %}
                         {%bootstrap_form form %}
+
+                        <div class="alert alert-info mt-3" id="infoMessage">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Astuce:</strong> Sélectionnez une mission pour pré-remplir automatiquement le contrat associé.
+                            Seules les missions <strong>sans frais du type sélectionné</strong> sont affichées pour éviter les doublons.
+                        </div>
+                        <div class="alert alert-success mt-2" id="filterInfo" style="display:none;">
+                            <i class="fas fa-filter me-2"></i>
+                            <span id="filterInfoText"></span>
+                        </div>
 
                         <div class="d-flex gap-2 justify-content-end mt-4">
                             <a href="{%url 'frais_list' %}" class="btn btn-secondary">
@@ -34,4 +44,324 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const missionSelect = document.getElementById('id_mission');
+    const contratSelect = document.getElementById('id_contrat');
+    const typeTrajetsSelect = document.getElementById('id_type_trajet');
+    const dateTrajetInput = document.getElementById('id_date_trajet');
+    const origineInput = document.getElementById('id_origine');
+    const destinationInput = document.getElementById('id_destination');
+
+    // Stocker la correspondance mission -> contrat
+    const missionContratMap = {};
+    const missionDataMap = {};
+
+    // Stocker les missions déjà utilisées
+    let missionsAvecAller = [];
+    let missionsAvecRetour = [];
+
+    // 🆕 Stocker les contrats déjà utilisés
+    let contratsAvecAller = [];
+    let contratsAvecRetour = [];
+
+    // Stocker toutes les options de mission (backup)
+    let toutesLesOptions = [];
+
+    // 🆕 Stocker toutes les options de contrat (backup)
+    let toutesLesOptionsContrat = [];
+
+    // Récupérer les missions déjà utilisées depuis les attributs data
+    if (missionSelect) {
+        const missionsAllerData = missionSelect.dataset.missionsAvecAller;
+        const missionsRetourData = missionSelect.dataset.missionsAvecRetour;
+
+        if (missionsAllerData) {
+            missionsAvecAller = missionsAllerData.split(',').filter(m => m !== '');
+        }
+        if (missionsRetourData) {
+            missionsAvecRetour = missionsRetourData.split(',').filter(m => m !== '');
+        }
+
+        // Sauvegarder toutes les options au chargement
+        toutesLesOptions = Array.from(missionSelect.options).map(opt => ({
+            value: opt.value,
+            text: opt.text,
+            element: opt.cloneNode(true)
+        }));
+    }
+
+    // 🆕 Récupérer les contrats déjà utilisés depuis les attributs data
+    if (contratSelect) {
+        const contratsAllerData = contratSelect.dataset.contratsAvecAller;
+        const contratsRetourData = contratSelect.dataset.contratsAvecRetour;
+
+        if (contratsAllerData) {
+            contratsAvecAller = contratsAllerData.split(',').filter(c => c !== '');
+        }
+        if (contratsRetourData) {
+            contratsAvecRetour = contratsRetourData.split(',').filter(c => c !== '');
+        }
+
+        // Sauvegarder toutes les options de contrat au chargement
+        toutesLesOptionsContrat = Array.from(contratSelect.options).map(opt => ({
+            value: opt.value,
+            text: opt.text,
+            element: opt.cloneNode(true)
+        }));
+    }
+
+    // Fonction pour filtrer les missions selon le type de trajet
+    function filtrerMissionsSelonType(typeTrajet) {
+        if (!missionSelect) return;
+
+        // Sauvegarder la sélection actuelle
+        const selectionActuelle = missionSelect.value;
+
+        // Vider le select (sauf l'option vide)
+        while (missionSelect.options.length > 1) {
+            missionSelect.remove(1);
+        }
+
+        // Réajouter les options filtrées
+        toutesLesOptions.forEach(opt => {
+            if (!opt.value) return; // Ignorer l'option vide
+
+            const missionPk = opt.value;
+            let dejaUtilisee = false;
+
+            if (typeTrajet === 'aller') {
+                dejaUtilisee = missionsAvecAller.includes(missionPk);
+            } else if (typeTrajet === 'retour') {
+                dejaUtilisee = missionsAvecRetour.includes(missionPk);
+            }
+
+            // N'ajouter que si pas déjà utilisée pour ce type
+            if (!dejaUtilisee) {
+                missionSelect.appendChild(opt.element.cloneNode(true));
+            }
+        });
+
+        // Restaurer la sélection si toujours disponible
+        if (selectionActuelle) {
+            const optionExists = Array.from(missionSelect.options).some(opt => opt.value === selectionActuelle);
+            if (optionExists) {
+                missionSelect.value = selectionActuelle;
+            } else {
+                missionSelect.value = '';
+                // Réinitialiser le contrat si la mission n'est plus disponible
+                if (contratSelect) {
+                    contratSelect.value = '';
+                    contratSelect.disabled = false;
+                    contratSelect.style.backgroundColor = '';
+                }
+            }
+        }
+
+        // Mettre à jour le compteur et afficher l'info
+        const nbMissionsDisponibles = missionSelect.options.length - 1; // -1 pour l'option vide
+        const nbTotalMissions = toutesLesOptions.length - 1; // -1 pour l'option vide
+        const nbMissionsFiltered = nbTotalMissions - nbMissionsDisponibles;
+
+        console.log(`${nbMissionsDisponibles} mission(s) disponible(s) pour le type "${typeTrajet}"`);
+
+        // Afficher un message d'info sur le filtrage
+        const filterInfoDiv = document.getElementById('filterInfo');
+        const filterInfoText = document.getElementById('filterInfoText');
+
+        if (filterInfoDiv && filterInfoText) {
+            if (nbMissionsFiltered > 0) {
+                filterInfoText.innerHTML = `
+                    <strong>${nbMissionsDisponibles}</strong> mission(s) disponible(s) pour le type <strong>"${typeTrajet}"</strong>.
+                    ${nbMissionsFiltered} mission(s) masquée(s) car elle(s) ont déjà un frais de ce type.
+                `;
+                filterInfoDiv.style.display = 'block';
+            } else {
+                filterInfoDiv.style.display = 'none';
+            }
+        }
+    }
+
+    // 🆕 Fonction pour filtrer les contrats selon le type de trajet
+    function filtrerContratsSelonType(typeTrajet) {
+        if (!contratSelect) return;
+
+        // Sauvegarder la sélection actuelle
+        const selectionActuelle = contratSelect.value;
+
+        // Vider le select (sauf l'option vide)
+        while (contratSelect.options.length > 1) {
+            contratSelect.remove(1);
+        }
+
+        // Réajouter les options filtrées
+        toutesLesOptionsContrat.forEach(opt => {
+            if (!opt.value) return; // Ignorer l'option vide
+
+            const contratPk = opt.value;
+            let dejaUtilise = false;
+
+            if (typeTrajet === 'aller') {
+                dejaUtilise = contratsAvecAller.includes(contratPk);
+            } else if (typeTrajet === 'retour') {
+                dejaUtilise = contratsAvecRetour.includes(contratPk);
+            }
+
+            // N'ajouter que si pas déjà utilisé pour ce type
+            if (!dejaUtilise) {
+                contratSelect.appendChild(opt.element.cloneNode(true));
+            }
+        });
+
+        // Restaurer la sélection si toujours disponible
+        if (selectionActuelle) {
+            const optionExists = Array.from(contratSelect.options).some(opt => opt.value === selectionActuelle);
+            if (optionExists) {
+                contratSelect.value = selectionActuelle;
+            } else {
+                contratSelect.value = '';
+            }
+        }
+
+        const nbContratsDisponibles = contratSelect.options.length - 1;
+        console.log(`${nbContratsDisponibles} contrat(s) disponible(s) pour le type "${typeTrajet}"`);
+    }
+
+    // Construire la map depuis les options de mission
+    if (missionSelect) {
+        // Récupérer les données via AJAX
+        fetch('/api/missions-data/')
+            .then(response => response.json())
+            .then(data => {
+                data.missions.forEach(mission => {
+                    missionContratMap[mission.pk] = mission.contrat_pk;
+                    missionDataMap[mission.pk] = mission;
+                });
+
+                // Filtrer les missions ET contrats selon le type de trajet sélectionné
+                if (typeTrajetsSelect) {
+                    filtrerMissionsSelonType(typeTrajetsSelect.value);
+                    filtrerContratsSelonType(typeTrajetsSelect.value);
+                }
+            })
+            .catch(error => {
+                console.log('Erreur lors du chargement des données missions:', error);
+                // Fallback: construire la map depuis le DOM
+                buildMapFromDOM();
+
+                // Filtrer quand même
+                if (typeTrajetsSelect) {
+                    filtrerMissionsSelonType(typeTrajetsSelect.value);
+                    filtrerContratsSelonType(typeTrajetsSelect.value);
+                }
+            });
+    }
+
+    // Fallback: construire la map depuis les attributs data si l'API n'est pas disponible
+    function buildMapFromDOM() {
+        if (missionSelect && missionSelect.options) {
+            Array.from(missionSelect.options).forEach(option => {
+                if (option.value && option.dataset.contrat) {
+                    missionContratMap[option.value] = option.dataset.contrat;
+                }
+            });
+        }
+    }
+
+    // Quand une mission est sélectionnée
+    if (missionSelect) {
+        missionSelect.addEventListener('change', function() {
+            const selectedMissionPk = this.value;
+
+            if (selectedMissionPk && missionContratMap[selectedMissionPk]) {
+                // Sélectionner automatiquement le contrat
+                const contratPk = missionContratMap[selectedMissionPk];
+                if (contratSelect) {
+                    contratSelect.value = contratPk;
+                    contratSelect.disabled = true;
+                    contratSelect.style.backgroundColor = '#e9ecef';
+                }
+
+                // Pré-remplir les autres champs si disponible
+                const missionData = missionDataMap[selectedMissionPk];
+                if (missionData) {
+                    // Pré-remplir la date selon le type de trajet
+                    if (dateTrajetInput && typeTrajetsSelect) {
+                        if (typeTrajetsSelect.value === 'aller' && missionData.date_depart) {
+                            dateTrajetInput.value = missionData.date_depart;
+                        } else if (typeTrajetsSelect.value === 'retour' && missionData.date_retour) {
+                            dateTrajetInput.value = missionData.date_retour;
+                        }
+                    }
+
+                    // Pré-remplir origine/destination si non readonly
+                    if (origineInput && !origineInput.readOnly && missionData.origine) {
+                        origineInput.value = missionData.origine;
+                    }
+                    if (destinationInput && !destinationInput.readOnly) {
+                        if (typeTrajetsSelect && typeTrajetsSelect.value === 'retour' && missionData.origine) {
+                            destinationInput.value = missionData.origine;
+                        } else if (missionData.destination) {
+                            destinationInput.value = missionData.destination;
+                        }
+                    }
+                }
+            } else {
+                // Réactiver le champ contrat si aucune mission n'est sélectionnée
+                if (contratSelect) {
+                    contratSelect.disabled = false;
+                    contratSelect.style.backgroundColor = '';
+                }
+            }
+        });
+    }
+
+    // Quand le type de trajet change, ajuster origine/destination ET filtrer les missions/contrats
+    if (typeTrajetsSelect) {
+        typeTrajetsSelect.addEventListener('change', function() {
+            const typeTrajet = this.value;
+
+            // D'abord, filtrer les missions ET contrats disponibles
+            filtrerMissionsSelonType(typeTrajet);
+            filtrerContratsSelonType(typeTrajet);
+
+            // Ensuite, ajuster origine/destination si une mission est sélectionnée
+            const selectedMissionPk = missionSelect ? missionSelect.value : null;
+            const missionData = missionDataMap[selectedMissionPk];
+
+            if (missionData && typeTrajet === 'retour') {
+                // Pour un retour: inverser origine et destination
+                if (origineInput && !origineInput.readOnly) {
+                    origineInput.value = missionData.destination;
+                }
+                if (destinationInput && !destinationInput.readOnly) {
+                    destinationInput.value = missionData.origine;
+                }
+                if (dateTrajetInput && missionData.date_retour) {
+                    dateTrajetInput.value = missionData.date_retour;
+                }
+            } else if (missionData && typeTrajet === 'aller') {
+                // Pour un aller: utiliser l'ordre normal
+                if (origineInput && !origineInput.readOnly) {
+                    origineInput.value = missionData.origine;
+                }
+                if (destinationInput && !destinationInput.readOnly) {
+                    destinationInput.value = missionData.destination;
+                }
+                if (dateTrajetInput && missionData.date_depart) {
+                    dateTrajetInput.value = missionData.date_depart;
+                }
+            }
+        });
+    }
+
+    // Déclencher l'événement change au chargement si une mission est déjà sélectionnée
+    if (missionSelect && missionSelect.value) {
+        setTimeout(() => {
+            missionSelect.dispatchEvent(new Event('change'));
+        }, 500); // Attendre que la map soit construite
+    }
+});
+</script>
 {%endblock %}

@@ -307,7 +307,6 @@ def creer_workflow_complet_contrat(sender, instance, created, **kwargs):  # noqa
                     origine=origine,
                     destination=destination,
                     itineraire=itineraire,
-                    frais_trajet=None,
                     statut='en cours'
                 )
                 logger.info(f"✅ Mission créée: {mission.pk_mission}")

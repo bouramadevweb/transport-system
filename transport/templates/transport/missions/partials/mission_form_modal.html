@@ -120,21 +120,12 @@
                 {% endif %}
             </div>
 
-            <!-- Frais de trajet -->
+            <!-- Note sur les frais de trajet -->
             <div class="col-12">
-                <label for="{{ form.frais_trajet.id_for_label }}" class="form-label">
-                    <i class="fas fa-money-bill-wave text-success me-1"></i>
-                    Frais de trajet
-                </label>
-                {{ form.frais_trajet }}
-                {% if form.frais_trajet.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.frais_trajet.errors }}
-                    </div>
-                {% endif %}
-                <small class="form-text text-muted">
-                    Optionnel - Sélectionnez les frais prédéfinis pour ce trajet
-                </small>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> Les frais de trajet (aller et retour) doivent être créés séparément après la création de la mission dans la section "Frais de trajet".
+                </div>
             </div>
 
             <!-- Statut (pour update seulement) -->

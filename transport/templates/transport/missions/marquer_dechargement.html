@@ -1,0 +1,608 @@
+{% extends "admin.html" %}
+
+{% block page_title %}Marquer le déchargement | Gestion Transport{% endblock %}
+
+{% block title %}Marquer le déchargement{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{% url 'mission_list' %}">Missions</a></li>
+            <li class="breadcrumb-item active">Marquer le déchargement</li>
+        </ol>
+    </nav>
+
+    <!-- En-tête -->
+    <div class="mb-4">
+        <h2 class="fw-semibold text-success">
+            <i class="fas fa-check-circle me-2"></i>Marquer le déchargement
+        </h2>
+        <p class="text-muted">Enregistrer la date de déchargement et calculer les frais finaux</p>
+    </div>
+
+    <!-- Informations de la mission - Enrichies -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h5 class="mb-0 text-white">
+                <i class="fas fa-info-circle me-2"></i>Détails de la mission
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <!-- Colonne 1: Itinéraire & Dates -->
+                <div class="col-md-4">
+                    <div class="border-start border-primary border-4 ps-3">
+                        <h6 class="text-primary mb-3"><i class="fas fa-route me-2"></i>Itinéraire</h6>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Origine</small>
+                            <strong class="text-success"><i class="fas fa-map-marker-alt me-1"></i>{{ mission.origine }}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Destination</small>
+                            <strong class="text-danger"><i class="fas fa-flag-checkered me-1"></i>{{ mission.destination }}</strong>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Date départ</small>
+                            <strong><i class="far fa-calendar me-1"></i>{{ mission.date_depart|date:"d/m/Y" }}</strong>
+                        </div>
+                        {% if mission.date_arrivee %}
+                        <div>
+                            <small class="text-muted d-block">Date arrivée</small>
+                            <strong class="text-warning"><i class="fas fa-calendar-check me-1"></i>{{ mission.date_arrivee|date:"d/m/Y" }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Colonne 2: Personnel & Véhicule -->
+                <div class="col-md-4">
+                    <div class="border-start border-success border-4 ps-3">
+                        <h6 class="text-success mb-3"><i class="fas fa-truck me-2"></i>Transport</h6>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Chauffeur</small>
+                            <strong>
+                                <i class="fas fa-user me-1"></i>
+                                {{ mission.contrat.chauffeur.nom|default:"N/A" }}
+                                {% if mission.contrat.chauffeur.prenom %}
+                                    {{ mission.contrat.chauffeur.prenom }}
+                                {% endif %}
+                                {% if mission.contrat.chauffeur.telephone %}
+                                    <br><small class="text-muted"><i class="fas fa-phone me-1"></i>{{ mission.contrat.chauffeur.telephone }}</small>
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div>
+                            <small class="text-muted d-block">Camion affecté</small>
+                            {% with camion=mission.contrat.chauffeur.get_camion_actuel %}
+                                {% if camion %}
+                                    <strong class="text-success">
+                                        <i class="fas fa-truck-moving me-1"></i>
+                                        {{ camion.immatriculation }}
+                                    </strong>
+                                    {% if camion.modele %}
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>{{ camion.modele }}
+                                        </small>
+                                    {% endif %}
+                                    {% if camion.capacite_tonnes %}
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="fas fa-weight-hanging me-1"></i>{{ camion.capacite_tonnes }} tonnes
+                                        </small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Aucun camion affecté
+                                    </span>
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Colonne 3: Client & Stationnement -->
+                <div class="col-md-4">
+                    <div class="border-start border-info border-4 ps-3">
+                        <h6 class="text-info mb-3"><i class="fas fa-building me-2"></i>Client</h6>
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Nom du client</small>
+                            <strong><i class="fas fa-handshake me-1"></i>{{ mission.contrat.client.nom|default:"N/A" }}</strong>
+                        </div>
+                        {% if mission.contrat.conteneur %}
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Conteneur</small>
+                            <strong>
+                                <i class="fas fa-box me-1"></i>
+                                {{ mission.contrat.conteneur.numero_conteneur }}
+                                <span class="badge bg-secondary">{{ mission.contrat.conteneur.type_conteneur }}</span>
+                            </strong>
+                        </div>
+                        {% endif %}
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Statut stationnement</small>
+                            {% if mission.statut_stationnement == 'en_stationnement' %}
+                                <span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>En stationnement</span>
+                            {% elif mission.statut_stationnement == 'decharge' %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Déchargé</span>
+                            {% else %}
+                                <span class="badge bg-warning"><i class="fas fa-clock me-1"></i>En attente</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <small class="text-muted d-block">Mission ID</small>
+                            <code class="small">{{ mission.pk_mission }}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if mission.date_arrivee %}
+            <hr>
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-calculator me-2"></i>
+                <strong>Calcul automatique des frais:</strong> Le système calculera les frais de stationnement
+                du <strong>{{ mission.date_arrivee|date:"d/m/Y" }}</strong> jusqu'à la date de déchargement ci-dessous.
+            </div>
+            {% else %}
+            <hr>
+            <div class="alert alert-danger mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Attention:</strong> La date d'arrivée n'a pas été renseignée. Vous devez d'abord
+                <a href="{% url 'bloquer_stationnement' mission.pk_mission %}" class="alert-link">bloquer la mission pour stationnement</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if mission.date_arrivee %}
+    <!-- Aperçu en temps réel -->
+    <div class="card shadow-sm border-0 mb-4" id="cardApercu" style="display: none;">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h5 class="mb-0 text-white">
+                <i class="fas fa-eye me-2"></i>Aperçu en temps réel
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <small class="text-muted d-block">Jours total</small>
+                        <h4 class="mb-0" id="liveJoursTotal">—</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <small class="text-muted d-block">Jours gratuits</small>
+                        <h4 class="mb-0 text-success" id="liveJoursGratuits">—</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <small class="text-muted d-block">Jours facturables</small>
+                        <h4 class="mb-0 text-danger" id="liveJoursFacturables">—</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-warning bg-opacity-25 rounded">
+                        <small class="text-muted d-block">Montant total</small>
+                        <h4 class="mb-0 text-danger" id="liveMontantTotal">—</h4>
+                    </div>
+                </div>
+            </div>
+            <hr>
+            <div id="liveMessage" class="text-center">
+                <i class="fas fa-spinner fa-spin me-2"></i>Calcul en cours...
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Enregistrer le déchargement</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="date_dechargement" class="form-label fw-bold">
+                        Date de déchargement <span class="text-danger">*</span>
+                    </label>
+                    <input type="date"
+                           name="date_dechargement"
+                           id="date_dechargement"
+                           class="form-control"
+                           value="{{ today|date:'Y-m-d' }}"
+                           min="{{ mission.date_arrivee|date:'Y-m-d' }}"
+                           max="{{ today|date:'Y-m-d' }}"
+                           required>
+                    <small class="text-muted">
+                        La date doit être >= {{ mission.date_arrivee|date:"d/m/Y" }} (date d'arrivée)
+                    </small>
+                </div>
+
+                <div class="alert alert-warning border-0">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-info-circle fa-2x text-warning"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="alert-heading">Rappel des règles de facturation</h6>
+                            <ul class="mb-0">
+                                <li><strong>3 premiers jours ouvrables:</strong> Gratuits (lundi au vendredi)</li>
+                                <li>Si arrivée le weekend, les 3 jours gratuits commencent le lundi suivant</li>
+                                <li><strong>À partir du 4ème jour ouvrable:</strong> 25 000 CFA/jour</li>
+                                <li><strong>Important:</strong> Après le 4ème jour, TOUS les jours comptent (y compris samedi & dimanche)</li>
+                                <li>Aucun jour férié n'est exclu</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'mission_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Annuler
+                    </a>
+                    <button type="button" class="btn btn-success" id="btnPreviewDechargement">
+                        <i class="fas fa-eye me-1"></i>Aperçu et Confirmation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center mt-4">
+        <a href="{% url 'bloquer_stationnement' mission.pk_mission %}" class="btn btn-warning btn-lg">
+            <i class="fas fa-parking me-2"></i>Bloquer d'abord pour stationnement
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Modal de confirmation avec aperçu des frais -->
+    <div class="modal fade" id="modalConfirmationDechargement" tabindex="-1" aria-labelledby="modalConfirmationLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="modalConfirmationLabel">
+                        <i class="fas fa-calculator me-2"></i>Aperçu des frais de stationnement
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Vérifiez les frais calculés avant de confirmer le déchargement</strong>
+                    </div>
+
+                    <!-- Résumé des dates -->
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <i class="fas fa-calendar-alt me-2"></i>Période de stationnement
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Date d'arrivée</small>
+                                    <strong class="text-success" id="previewDateArrivee">{{ mission.date_arrivee|date:"d/m/Y" }}</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Date de déchargement</small>
+                                    <strong class="text-danger" id="previewDateDechargement">—</strong>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Jours total</small>
+                                    <strong id="previewJoursTotal">0</strong> jour(s)
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Jours gratuits utilisés</small>
+                                    <strong class="text-success" id="previewJoursGratuits">0</strong> jour(s)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calcul des frais -->
+                    <div class="card mb-3 border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <i class="fas fa-money-bill-wave me-2"></i>Frais de stationnement
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Jours facturables</small>
+                                    <strong class="text-danger fs-4" id="previewJoursFacturables">0</strong> jour(s)
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">Tarif journalier</small>
+                                    <strong>25 000 CFA</strong>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="text-center">
+                                <small class="text-muted d-block">Montant total à facturer</small>
+                                <h2 class="text-danger mb-0" id="previewMontantTotal">0 CFA</h2>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Détail du calcul -->
+                    <div class="card border-secondary">
+                        <div class="card-header bg-secondary text-white">
+                            <i class="fas fa-list-ul me-2"></i>Détail du calcul
+                        </div>
+                        <div class="card-body">
+                            <div id="previewDetailsCalcul" class="small">
+                                <!-- Rempli dynamiquement par JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnConfirmerDechargement">
+                        <i class="fas fa-check-circle me-1"></i>Confirmer le déchargement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const dateInput = document.getElementById('date_dechargement');
+    const btnPreview = document.getElementById('btnPreviewDechargement');
+    const btnConfirm = document.getElementById('btnConfirmerDechargement');
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmationDechargement'));
+
+    // Date d'arrivée depuis le backend (en format YYYY-MM-DD)
+    const dateArrivee = new Date('{{ mission.date_arrivee|date:"Y-m-d" }}');
+
+    // Éléments pour l'aperçu en temps réel
+    const cardApercu = document.getElementById('cardApercu');
+    const liveJoursTotal = document.getElementById('liveJoursTotal');
+    const liveJoursGratuits = document.getElementById('liveJoursGratuits');
+    const liveJoursFacturables = document.getElementById('liveJoursFacturables');
+    const liveMontantTotal = document.getElementById('liveMontantTotal');
+    const liveMessage = document.getElementById('liveMessage');
+
+    // Fonction pour vérifier si un jour est un weekend
+    function isWeekend(date) {
+        const day = date.getDay();
+        return day === 0 || day === 6; // 0 = Dimanche, 6 = Samedi
+    }
+
+    // Fonction pour ajouter des jours à une date
+    function addDays(date, days) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    // Fonction pour calculer le nombre de jours ouvrables entre deux dates
+    function countBusinessDays(startDate, endDate) {
+        let count = 0;
+        let currentDate = new Date(startDate);
+
+        while (currentDate <= endDate) {
+            if (!isWeekend(currentDate)) {
+                count++;
+            }
+            currentDate = addDays(currentDate, 1);
+        }
+
+        return count;
+    }
+
+    // Fonction pour calculer le nombre total de jours (calendrier)
+    function countTotalDays(startDate, endDate) {
+        const diffTime = Math.abs(endDate - startDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays + 1; // +1 pour inclure le jour de départ
+    }
+
+    // Fonction principale de calcul des frais
+    function calculateFees(dateArrivee, dateDechargement) {
+        // Étape 1: Trouver le début de la période gratuite
+        let debutGratuit = new Date(dateArrivee);
+        while (isWeekend(debutGratuit)) {
+            debutGratuit = addDays(debutGratuit, 1);
+        }
+
+        // Étape 2: Calculer la fin de la période gratuite (3 jours ouvrables)
+        let joursGratuitsComptes = 0;
+        let currentDate = new Date(debutGratuit);
+        let finGratuit = null;
+
+        while (joursGratuitsComptes < 3) {
+            if (!isWeekend(currentDate)) {
+                joursGratuitsComptes++;
+                if (joursGratuitsComptes === 3) {
+                    finGratuit = new Date(currentDate);
+                    break;
+                }
+            }
+            currentDate = addDays(currentDate, 1);
+        }
+
+        // Étape 3: Date de début de facturation (jour après la fin de la période gratuite)
+        const debutFacturation = addDays(finGratuit, 1);
+
+        // Étape 4: Calculer les jours facturables
+        let joursFacturables = 0;
+        if (dateDechargement >= debutFacturation) {
+            // TOUS les jours comptent après la période gratuite (y compris weekends)
+            const diffTime = Math.abs(dateDechargement - debutFacturation);
+            joursFacturables = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        // Calculer le montant
+        const tarifJournalier = 25000;
+        const montantTotal = joursFacturables * tarifJournalier;
+
+        // Calculs supplémentaires pour l'affichage
+        const joursTotal = countTotalDays(dateArrivee, dateDechargement);
+        const joursOuvrablesTotal = countBusinessDays(dateArrivee, dateDechargement);
+        const joursGratuitsUtilises = Math.min(3, joursOuvrablesTotal);
+
+        return {
+            debutGratuit: debutGratuit,
+            finGratuit: finGratuit,
+            debutFacturation: debutFacturation,
+            joursTotal: joursTotal,
+            joursGratuitsUtilises: joursGratuitsUtilises,
+            joursFacturables: joursFacturables,
+            montantTotal: montantTotal,
+            tarifJournalier: tarifJournalier
+        };
+    }
+
+    // Fonction pour formater une date en français
+    function formatDate(date) {
+        const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+        return date.toLocaleDateString('fr-FR', options);
+    }
+
+    // Fonction pour formater un montant en CFA
+    function formatCFA(montant) {
+        return montant.toLocaleString('fr-FR') + ' CFA';
+    }
+
+    // Fonction pour appeler l'endpoint AJAX et mettre à jour l'aperçu en temps réel
+    function updateLivePreview(dateDechargement) {
+        if (!dateDechargement) {
+            cardApercu.style.display = 'none';
+            return;
+        }
+
+        // Afficher la carte avec un indicateur de chargement
+        cardApercu.style.display = 'block';
+        liveMessage.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Calcul en cours...';
+
+        // Appeler l'endpoint AJAX
+        const url = '{% url "preview_frais_stationnement" mission.pk_mission %}?date_dechargement=' + dateDechargement;
+
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur lors du calcul');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Mettre à jour les valeurs
+                    liveJoursTotal.textContent = data.jours_total;
+                    liveJoursGratuits.textContent = data.jours_gratuits;
+                    liveJoursFacturables.textContent = data.jours_facturables;
+                    liveMontantTotal.textContent = data.montant_formatted + ' CFA';
+
+                    // Mettre à jour le message
+                    if (data.statut === 'gratuit') {
+                        liveMessage.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i><strong class="text-success">' + data.message + '</strong>';
+                    } else {
+                        liveMessage.innerHTML = '<i class="fas fa-money-bill-wave text-danger me-2"></i><strong class="text-danger">' + data.message + '</strong>';
+                    }
+                } else {
+                    liveMessage.innerHTML = '<i class="fas fa-exclamation-triangle text-warning me-2"></i>' + data.message;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                liveMessage.innerHTML = '<i class="fas fa-times-circle text-danger me-2"></i>Erreur lors du calcul des frais';
+            });
+    }
+
+    // Fonction pour mettre à jour l'aperçu dans le modal
+    function updatePreview() {
+        const dateDechargement = new Date(dateInput.value);
+
+        if (!dateInput.value) {
+            return;
+        }
+
+        const calcul = calculateFees(dateArrivee, dateDechargement);
+
+        // Mettre à jour les dates
+        document.getElementById('previewDateDechargement').textContent = formatDate(dateDechargement);
+
+        // Mettre à jour les jours
+        document.getElementById('previewJoursTotal').textContent = calcul.joursTotal;
+        document.getElementById('previewJoursGratuits').textContent = calcul.joursGratuitsUtilises;
+        document.getElementById('previewJoursFacturables').textContent = calcul.joursFacturables;
+
+        // Mettre à jour le montant
+        document.getElementById('previewMontantTotal').textContent = formatCFA(calcul.montantTotal);
+
+        // Mettre à jour le détail du calcul
+        let detailHTML = '<ul class="mb-0">';
+        detailHTML += `<li>✅ Arrivée du camion: <strong>${formatDate(dateArrivee)}</strong></li>`;
+
+        if (isWeekend(dateArrivee)) {
+            detailHTML += `<li>ℹ️ Arrivée le weekend → Période gratuite commence le <strong>${formatDate(calcul.debutGratuit)}</strong></li>`;
+        } else {
+            detailHTML += `<li>ℹ️ Période gratuite commence: <strong>${formatDate(calcul.debutGratuit)}</strong></li>`;
+        }
+
+        detailHTML += `<li>✅ 3 jours gratuits jusqu'au: <strong>${formatDate(calcul.finGratuit)}</strong></li>`;
+
+        if (calcul.joursFacturables > 0) {
+            detailHTML += `<li>💰 Facturation commence le: <strong>${formatDate(calcul.debutFacturation)}</strong></li>`;
+            detailHTML += `<li>📅 Déchargement: <strong>${formatDate(dateDechargement)}</strong></li>`;
+            detailHTML += `<li>🔢 Calcul: ${calcul.joursFacturables} jour(s) × ${formatCFA(calcul.tarifJournalier)} = <strong class="text-danger">${formatCFA(calcul.montantTotal)}</strong></li>`;
+        } else {
+            detailHTML += `<li>✅ Déchargement dans la période gratuite</li>`;
+            detailHTML += `<li>🎉 <strong class="text-success">Aucun frais à facturer!</strong></li>`;
+        }
+
+        detailHTML += '</ul>';
+
+        document.getElementById('previewDetailsCalcul').innerHTML = detailHTML;
+    }
+
+    // Ouvrir le modal avec aperçu
+    btnPreview.addEventListener('click', function() {
+        if (!dateInput.value) {
+            alert('Veuillez sélectionner une date de déchargement');
+            dateInput.focus();
+            return;
+        }
+
+        updatePreview();
+        modal.show();
+    });
+
+    // Confirmer et soumettre le formulaire
+    btnConfirm.addEventListener('click', function() {
+        modal.hide();
+        form.submit();
+    });
+
+    // Mettre à jour l'aperçu quand la date change (pour le modal si déjà ouvert)
+    dateInput.addEventListener('change', function() {
+        if (document.getElementById('modalConfirmationDechargement').classList.contains('show')) {
+            updatePreview();
+        }
+        // Mettre à jour l'aperçu en temps réel via AJAX
+        updateLivePreview(dateInput.value);
+    });
+
+    // Mettre à jour l'aperçu lors du chargement initial si une date est déjà sélectionnée
+    if (dateInput.value) {
+        updateLivePreview(dateInput.value);
+    }
+});
+</script>
+{% endblock %}

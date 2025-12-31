@@ -1,4 +1,5 @@
 {% extends "admin.html" %}
+{% load static %}
 
 {% block page_title %}Liste des Missions | Gestion Transport{% endblock %}
 
@@ -11,29 +12,15 @@
         <h2 class="mb-0"><i class="fas fa-route text-primary me-2"></i>{{ title }}</h2>
         <div class="d-flex gap-2">
             <!-- Export buttons -->
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-download me-1"></i>Exporter
-                </button>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a class="dropdown-item" href="{% url 'export_missions_excel' %}?{{ request.GET.urlencode }}">
-                            <i class="fas fa-file-excel text-success me-2"></i>Excel (.xlsx)
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="{% url 'export_missions_csv' %}?{{ request.GET.urlencode }}">
-                            <i class="fas fa-file-csv text-info me-2"></i>CSV (.csv)
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <a class="dropdown-item" href="{% url 'rapport_missions_pdf' %}?{{ request.GET.urlencode }}">
-                            <i class="fas fa-file-pdf text-danger me-2"></i>Rapport PDF
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            <a href="{% url 'export_missions_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success" title="Exporter en Excel">
+                <i class="fas fa-file-excel me-1"></i>Excel
+            </a>
+            <a href="{% url 'export_missions_csv' %}?{{ request.GET.urlencode }}" class="btn btn-outline-info" title="Exporter en CSV">
+                <i class="fas fa-file-csv me-1"></i>CSV
+            </a>
+            <a href="{% url 'rapport_missions_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-outline-danger" title="Rapport PDF">
+                <i class="fas fa-file-pdf me-1"></i>PDF
+            </a>
             <a href="{% url 'create_contrat' %}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i> Nouvelle mission
             </a>
@@ -211,6 +198,45 @@
         </div>
     </div>
 
+    <!-- 🆕 Statistiques par type de transport -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <h6 class="text-muted mb-2">
+                <i class="fas fa-route me-2"></i>Types de transport
+            </h6>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4">
+            <div class="card border-success shadow-sm h-100">
+                <div class="card-body text-center py-3">
+                    <h4 class="text-success mb-2">{{ missions_aller_retour }}</h4>
+                    <p class="text-muted mb-0 small">
+                        <i class="fas fa-exchange-alt me-1"></i>Aller-Retour
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4">
+            <div class="card border-info shadow-sm h-100">
+                <div class="card-body text-center py-3">
+                    <h4 class="text-info mb-2">{{ missions_aller_simple }}</h4>
+                    <p class="text-muted mb-0 small">
+                        <i class="fas fa-arrow-right me-1"></i>Aller simple
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4">
+            <div class="card border-warning shadow-sm h-100">
+                <div class="card-body text-center py-3">
+                    <h4 class="text-warning mb-2">{{ missions_sans_trajet }}</h4>
+                    <p class="text-muted mb-0 small">
+                        <i class="fas fa-exclamation-circle me-1"></i>Sans trajet
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tabs pour filtrer -->
     <ul class="nav nav-tabs mb-3" id="missionTabs" role="tablist">
         <li class="nav-item" role="presentation">
@@ -249,6 +275,8 @@
                                     <th><i class="fas fa-map-marker-alt me-2"></i>Itinéraire</th>
                                     <th><i class="fas fa-calendar me-2"></i>Date départ</th>
                                     <th><i class="fas fa-calendar-check me-2"></i>Date retour</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Frais trajet</th>
+                                    <th><i class="fas fa-parking me-2"></i>Stationnement</th>
                                     <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
@@ -257,21 +285,30 @@
                                 {% for mission in missions %}
                                 <tr>
                                     <td>
-                                        {% if mission.statut == 'en cours' %}
-                                            <span class="badge bg-warning">
-                                                <i class="fas fa-spinner me-1"></i>En cours
-                                            </span>
-                                        {% elif mission.statut == 'terminée' %}
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-check-circle me-1"></i>Terminée
-                                            </span>
-                                        {% elif mission.statut == 'annulée' %}
-                                            <span class="badge bg-danger">
-                                                <i class="fas fa-times-circle me-1"></i>Annulée
-                                            </span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ mission.statut }}</span>
-                                        {% endif %}
+                                        <div class="d-flex flex-column gap-1">
+                                            {% if mission.statut == 'en cours' %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-spinner me-1"></i>En cours
+                                                </span>
+                                            {% elif mission.statut == 'terminée' %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check-circle me-1"></i>Terminée
+                                                </span>
+                                            {% elif mission.statut == 'annulée' %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times-circle me-1"></i>Annulée
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ mission.statut }}</span>
+                                            {% endif %}
+
+                                            {# Badge type de transport #}
+                                            {% with badge=mission.get_type_transport_badge %}
+                                                <span class="badge bg-{{ badge.color }}" title="{{ badge.title }}">
+                                                    <i class="fas {{ badge.icon }} me-1"></i>{{ badge.label }}
+                                                </span>
+                                            {% endwith %}
+                                        </div>
                                     </td>
                                     <td>
                                         <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
@@ -284,10 +321,74 @@
                                             <span class="text-muted">—</span>
                                         {% endif %}
                                     </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            {% if mission.frais_trajet_aller %}
+                                                <small class="text-success">
+                                                    <i class="fas fa-arrow-right me-1"></i>
+                                                    {{ mission.frais_trajet_aller.frais_route|add:mission.frais_trajet_aller.frais_carburant|floatformat:0 }} FCFA
+                                                </small>
+                                            {% endif %}
+                                            {% if mission.frais_trajet_retour %}
+                                                <small class="text-primary">
+                                                    <i class="fas fa-arrow-left me-1"></i>
+                                                    {{ mission.frais_trajet_retour.frais_route|add:mission.frais_trajet_retour.frais_carburant|floatformat:0 }} FCFA
+                                                </small>
+                                            {% endif %}
+                                            {% if not mission.frais_trajet_aller and not mission.frais_trajet_retour %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if mission.date_arrivee %}
+                                            <div class="d-flex flex-column">
+                                                {% if mission.statut_stationnement == 'en_stationnement' %}
+                                                    <span class="badge bg-danger mb-1">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>En stationnement
+                                                    </span>
+                                                {% elif mission.statut_stationnement == 'decharge' %}
+                                                    <span class="badge bg-success mb-1">
+                                                        <i class="fas fa-check-circle me-1"></i>Déchargé
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-warning mb-1">
+                                                        <i class="fas fa-clock me-1"></i>En attente
+                                                    </span>
+                                                {% endif %}
+                                                {% if mission.jours_stationnement_facturables > 0 %}
+                                                    <small class="text-danger fw-bold">
+                                                        💰 {{ mission.montant_stationnement|floatformat:0 }} CFA
+                                                    </small>
+                                                    <small class="text-muted">
+                                                        ({{ mission.jours_stationnement_facturables }} jour{% if mission.jours_stationnement_facturables > 1 %}s{% endif %})
+                                                    </small>
+                                                {% else %}
+                                                    <small class="text-success">Aucun frais</small>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
                                     <td><small class="text-muted">{{ mission.contrat.numero_bl }}</small></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
                                             {% if mission.statut == 'en cours' %}
+                                                <!-- Gestion du stationnement -->
+                                                {% if not mission.date_arrivee %}
+                                                    <a href="{% url 'bloquer_stationnement' mission.pk_mission %}"
+                                                       class="btn btn-sm btn-warning"
+                                                       title="Bloquer pour stationnement">
+                                                        <i class="fas fa-parking"></i>
+                                                    </a>
+                                                {% elif not mission.date_dechargement %}
+                                                    <a href="{% url 'marquer_dechargement' mission.pk_mission %}"
+                                                       class="btn btn-sm btn-success"
+                                                       title="Marquer le déchargement">
+                                                        <i class="fas fa-truck-loading"></i>
+                                                    </a>
+                                                {% endif %}
                                                 <a href="{% url 'terminer_mission' mission.pk_mission %}"
                                                    class="btn btn-sm btn-success"
                                                    title="Terminer la mission">
@@ -343,6 +444,7 @@
                                     <th><i class="fas fa-map-marker-alt me-2"></i>Itinéraire</th>
                                     <th><i class="fas fa-calendar me-2"></i>Date départ</th>
                                     <th><i class="fas fa-clock me-2"></i>Durée</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Frais trajet</th>
                                     <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
@@ -357,6 +459,25 @@
                                     <td>
                                         {% load humanize %}
                                         {{ mission.date_depart|timesince }}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            {% if mission.frais_trajet_aller %}
+                                                <small class="text-success">
+                                                    <i class="fas fa-arrow-right me-1"></i>
+                                                    {{ mission.frais_trajet_aller.frais_route|add:mission.frais_trajet_aller.frais_carburant|floatformat:0 }} FCFA
+                                                </small>
+                                            {% endif %}
+                                            {% if mission.frais_trajet_retour %}
+                                                <small class="text-primary">
+                                                    <i class="fas fa-arrow-left me-1"></i>
+                                                    {{ mission.frais_trajet_retour.frais_route|add:mission.frais_trajet_retour.frais_carburant|floatformat:0 }} FCFA
+                                                </small>
+                                            {% endif %}
+                                            {% if not mission.frais_trajet_aller and not mission.frais_trajet_retour %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                     <td><small class="text-muted">{{ mission.contrat.numero_bl }}</small></td>
                                     <td class="text-center">
@@ -407,6 +528,7 @@
                                     <th><i class="fas fa-map-marker-alt me-2"></i>Itinéraire</th>
                                     <th><i class="fas fa-calendar me-2"></i>Date départ</th>
                                     <th><i class="fas fa-calendar-check me-2"></i>Date retour</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Frais trajet</th>
                                     <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
@@ -415,10 +537,41 @@
                                 {% for mission in missions_terminees %}
                                 <tr>
                                     <td>
-                                        <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
+                                        <div class="d-flex flex-column gap-1">
+                                            <div>
+                                                <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
+                                            </div>
+                                            {# Badge type de transport #}
+                                            {% with badge=mission.get_type_transport_badge %}
+                                                <small>
+                                                    <span class="badge bg-{{ badge.color }}" title="{{ badge.title }}">
+                                                        <i class="fas {{ badge.icon }} me-1"></i>{{ badge.label }}
+                                                    </span>
+                                                </small>
+                                            {% endwith %}
+                                        </div>
                                     </td>
                                     <td>{{ mission.date_depart|date:"d/m/Y" }}</td>
                                     <td>{{ mission.date_retour|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            {% if mission.frais_trajet_aller %}
+                                                <small class="text-success">
+                                                    <i class="fas fa-arrow-right me-1"></i>
+                                                    {{ mission.frais_trajet_aller.frais_route|add:mission.frais_trajet_aller.frais_carburant|floatformat:0 }} FCFA
+                                                </small>
+                                            {% endif %}
+                                            {% if mission.frais_trajet_retour %}
+                                                <small class="text-primary">
+                                                    <i class="fas fa-arrow-left me-1"></i>
+                                                    {{ mission.frais_trajet_retour.frais_route|add:mission.frais_trajet_retour.frais_carburant|floatformat:0 }} FCFA
+                                                </small>
+                                            {% endif %}
+                                            {% if not mission.frais_trajet_aller and not mission.frais_trajet_retour %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
                                     <td><small class="text-muted">{{ mission.contrat.numero_bl }}</small></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
@@ -460,6 +613,7 @@
                                 <tr>
                                     <th><i class="fas fa-map-marker-alt me-2"></i>Itinéraire</th>
                                     <th><i class="fas fa-calendar me-2"></i>Date départ</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Frais trajet</th>
                                     <th><i class="fas fa-file-contract me-2"></i>Contrat</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
@@ -468,9 +622,40 @@
                                 {% for mission in missions_annulees %}
                                 <tr class="table-danger table-danger-subtle">
                                     <td>
-                                        <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
+                                        <div class="d-flex flex-column gap-1">
+                                            <div>
+                                                <strong>{{ mission.origine }}</strong> <i class="fas fa-arrow-right text-muted mx-1"></i> <strong>{{ mission.destination }}</strong>
+                                            </div>
+                                            {# Badge type de transport #}
+                                            {% with badge=mission.get_type_transport_badge %}
+                                                <small>
+                                                    <span class="badge bg-{{ badge.color }}" title="{{ badge.title }}">
+                                                        <i class="fas {{ badge.icon }} me-1"></i>{{ badge.label }}
+                                                    </span>
+                                                </small>
+                                            {% endwith %}
+                                        </div>
                                     </td>
                                     <td>{{ mission.date_depart|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            {% if mission.frais_trajet_aller %}
+                                                <small class="text-success">
+                                                    <i class="fas fa-arrow-right me-1"></i>
+                                                    {{ mission.frais_trajet_aller.frais_route|add:mission.frais_trajet_aller.frais_carburant|floatformat:0 }} FCFA
+                                                </small>
+                                            {% endif %}
+                                            {% if mission.frais_trajet_retour %}
+                                                <small class="text-primary">
+                                                    <i class="fas fa-arrow-left me-1"></i>
+                                                    {{ mission.frais_trajet_retour.frais_route|add:mission.frais_trajet_retour.frais_carburant|floatformat:0 }} FCFA
+                                                </small>
+                                            {% endif %}
+                                            {% if not mission.frais_trajet_aller and not mission.frais_trajet_retour %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
                                     <td><small class="text-muted">{{ mission.contrat.numero_bl }}</small></td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">

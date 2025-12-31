@@ -64,6 +64,18 @@ class ContratTransport(models.Model):
     signature_transitaire = models.BooleanField(default=False)
     pdf_file = models.FileField(upload_to='contrats/', null=True, blank=True)
 
+    # Statut du contrat (pour gestion annulation)
+    statut = models.CharField(
+        max_length=10,
+        choices=[
+            ('actif', 'Actif'),
+            ('termine', 'Terminé'),
+            ('annule', 'Annulé'),
+        ],
+        default='actif',
+        help_text="Statut du contrat"
+    )
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -176,6 +188,98 @@ class ContratTransport(models.Model):
         # Calcul automatique du reliquat
         self.reliquat_transport = Decimal(self.montant_total) - Decimal(self.avance_transport)
         super().save(*args, **kwargs)
+
+    def annuler_contrat(self, raison=''):
+        """Annule le contrat et tous les objets liés en cascade
+
+        Args:
+            raison: Raison de l'annulation
+
+        Cette méthode annule automatiquement:
+        - Le contrat lui-même
+        - Toutes les missions associées
+        - Toutes les cautions associées
+        - Tous les paiements associés (via annulation missions)
+
+        IMPORTANT: Les objets sont ANNULÉS (statut changé),
+        pas SUPPRIMÉS - pour garder la traçabilité.
+
+        Returns:
+            dict: Nombre d'objets annulés par type
+        """
+        from django.utils import timezone
+        from django.core.exceptions import ValidationError
+
+        if self.statut == 'annule':
+            raise ValidationError('⚠️ Ce contrat est déjà annulé.')
+
+        date_annulation = timezone.now()
+
+        # 1. Annuler le contrat
+        self.statut = 'annule'
+
+        # Ajouter la raison dans le commentaire
+        if raison:
+            if not self.commentaire:
+                self.commentaire = ''
+            self.commentaire += (
+                f'\n\n🚫 CONTRAT ANNULÉ\n'
+                f'Date: {date_annulation.strftime("%d/%m/%Y %H:%M")}\n'
+                f'Raison: {raison}'
+            )
+        else:
+            if not self.commentaire:
+                self.commentaire = ''
+            self.commentaire += (
+                f'\n\n🚫 CONTRAT ANNULÉ\n'
+                f'Date: {date_annulation.strftime("%d/%m/%Y %H:%M")}'
+            )
+
+        self.save()
+
+        # 2. Annuler toutes les missions associées
+        from .mission import Mission
+        missions = Mission.objects.filter(contrat=self)
+        nb_missions = 0
+
+        for mission in missions:
+            if mission.statut != 'annulée':
+                # Utiliser la méthode annuler_mission existante
+                mission.annuler_mission(
+                    raison=f"Contrat {self.numero_bl} annulé: {raison if raison else 'Non spécifiée'}"
+                )
+                nb_missions += 1
+
+        # 3. Annuler toutes les cautions (déjà fait par annuler_mission,
+        # mais on le refait pour être sûr)
+        from .finance import Cautions
+        cautions = Cautions.objects.filter(contrat=self)
+        nb_cautions = 0
+
+        for caution in cautions:
+            if caution.statut != 'annulee':
+                caution.statut = 'annulee'
+                caution.save()
+                nb_cautions += 1
+
+        # 4. Compter les prestations (pas de statut, juste pour info)
+        prestations = PrestationDeTransports.objects.filter(contrat_transport=self)
+        nb_prestations = prestations.count()
+
+        # Log pour traçabilité
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Contrat {self.numero_bl} annulé: "
+            f"{nb_missions} missions, {nb_cautions} cautions, "
+            f"{nb_prestations} prestations affectées"
+        )
+
+        return {
+            'missions_annulees': nb_missions,
+            'cautions_annulees': nb_cautions,
+            'prestations': nb_prestations,
+        }
 
     def __str__(self):
         return f"Contrat {self.pk_contrat} | BL: {self.numero_bl}"

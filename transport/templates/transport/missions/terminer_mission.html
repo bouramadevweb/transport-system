@@ -61,10 +61,23 @@
                                 </div>
                             </div>
 
-                            {% if mission.frais_trajet %}
+                            {% if mission.frais_trajet_aller or mission.frais_trajet_retour %}
                             <div class="alert alert-secondary mb-0">
                                 <strong><i class="fas fa-dollar-sign me-2"></i>Frais de trajet :</strong>
-                                Route: {{ mission.frais_trajet.frais_route }}€ | Carburant: {{ mission.frais_trajet.frais_carburant }}€
+                                <div class="row mt-2">
+                                    {% if mission.frais_trajet_aller %}
+                                    <div class="col-md-6">
+                                        <strong><i class="fas fa-arrow-right text-success me-1"></i>Aller :</strong>
+                                        Route: {{ mission.frais_trajet_aller.frais_route }} FCFA | Carburant: {{ mission.frais_trajet_aller.frais_carburant }} FCFA
+                                    </div>
+                                    {% endif %}
+                                    {% if mission.frais_trajet_retour %}
+                                    <div class="col-md-6">
+                                        <strong><i class="fas fa-arrow-left text-primary me-1"></i>Retour :</strong>
+                                        Route: {{ mission.frais_trajet_retour.frais_route }} FCFA | Carburant: {{ mission.frais_trajet_retour.frais_carburant }} FCFA
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </div>
                             {% endif %}
                         </div>

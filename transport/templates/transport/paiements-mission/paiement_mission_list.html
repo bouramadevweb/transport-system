@@ -11,29 +11,15 @@
         <h2 class="mb-0"><i class="fas fa-credit-card text-primary me-2"></i>{{ title }}</h2>
         <div class="d-flex gap-2 w-100 w-sm-auto">
             <!-- Export buttons -->
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-download me-1"></i>Exporter
-                </button>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a class="dropdown-item" href="{% url 'export_paiements_excel' %}?{{ request.GET.urlencode }}">
-                            <i class="fas fa-file-excel text-success me-2"></i>Excel (.xlsx)
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item" href="{% url 'export_paiements_csv' %}?{{ request.GET.urlencode }}">
-                            <i class="fas fa-file-csv text-info me-2"></i>CSV (.csv)
-                        </a>
-                    </li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <a class="dropdown-item" href="{% url 'rapport_paiements_pdf' %}?{{ request.GET.urlencode }}">
-                            <i class="fas fa-file-pdf text-danger me-2"></i>Rapport PDF
-                        </a>
-                    </li>
-                </ul>
-            </div>
+            <a href="{% url 'export_paiements_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success" title="Exporter en Excel">
+                <i class="fas fa-file-excel me-1"></i>Excel
+            </a>
+            <a href="{% url 'export_paiements_csv' %}?{{ request.GET.urlencode }}" class="btn btn-outline-info" title="Exporter en CSV">
+                <i class="fas fa-file-csv me-1"></i>CSV
+            </a>
+            <a href="{% url 'rapport_paiements_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-outline-danger" title="Rapport PDF">
+                <i class="fas fa-file-pdf me-1"></i>PDF
+            </a>
             <a href="{% url 'create_paiement_mission' %}" class="btn btn-primary flex-grow-1 flex-sm-grow-0">
                 <i class="fas fa-plus me-1"></i> Nouveau paiement
             </a>
@@ -238,7 +224,8 @@
                                 <tr>
                                     <th><i class="fas fa-info-circle me-2"></i>Statut</th>
                                     <th><i class="fas fa-route me-2"></i>Mission</th>
-                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant Total</th>
+                                    <th><i class="fas fa-parking me-2"></i>Frais Stationnement</th>
                                     <th><i class="fas fa-percentage me-2"></i>Commission</th>
                                     <th><i class="fas fa-calendar me-2"></i>Date</th>
                                     <th class="text-center">Actions</th>
@@ -265,9 +252,19 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="text-success fw-bold">{{ paiement.montant_total }}€</span>
+                                        <span class="text-success fw-bold">{{ paiement.montant_total|floatformat:0 }} CFA</span>
                                     </td>
-                                    <td>{{ paiement.commission_transitaire }}€</td>
+                                    <td>
+                                        {% if paiement.frais_stationnement > 0 %}
+                                            <span class="text-danger fw-bold">{{ paiement.frais_stationnement|floatformat:0 }} CFA</span>
+                                            {% if paiement.mission.jours_stationnement_facturables %}
+                                                <br><small class="text-muted">({{ paiement.mission.jours_stationnement_facturables }} jour{{ paiement.mission.jours_stationnement_facturables|pluralize }})</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ paiement.commission_transitaire|floatformat:0 }} CFA</td>
                                     <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
@@ -322,7 +319,8 @@
                                 <tr>
                                     <th><i class="fas fa-route me-2"></i>Mission</th>
                                     <th><i class="fas fa-info-circle me-2"></i>Statut Mission</th>
-                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant Total</th>
+                                    <th><i class="fas fa-parking me-2"></i>Frais Stationnement</th>
                                     <th><i class="fas fa-calendar me-2"></i>Date création</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
@@ -403,7 +401,8 @@
                             <thead class="table-light">
                                 <tr>
                                     <th><i class="fas fa-route me-2"></i>Mission</th>
-                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant</th>
+                                    <th><i class="fas fa-dollar-sign me-2"></i>Montant Total</th>
+                                    <th><i class="fas fa-parking me-2"></i>Frais Stationnement</th>
                                     <th><i class="fas fa-percentage me-2"></i>Commission</th>
                                     <th><i class="fas fa-calendar-check me-2"></i>Date validation</th>
                                     <th class="text-center">Actions</th>
@@ -419,9 +418,19 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="text-success fw-bold">{{ paiement.montant_total }}€</span>
+                                        <span class="text-success fw-bold">{{ paiement.montant_total|floatformat:0 }} CFA</span>
                                     </td>
-                                    <td>{{ paiement.commission_transitaire }}€</td>
+                                    <td>
+                                        {% if paiement.frais_stationnement > 0 %}
+                                            <span class="text-danger fw-bold">{{ paiement.frais_stationnement|floatformat:0 }} CFA</span>
+                                            {% if paiement.mission.jours_stationnement_facturables %}
+                                                <br><small class="text-muted">({{ paiement.mission.jours_stationnement_facturables }} jour{{ paiement.mission.jours_stationnement_facturables|pluralize }})</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ paiement.commission_transitaire|floatformat:0 }} CFA</td>
                                     <td>
                                         {% if paiement.date_validation %}
                                             {{ paiement.date_validation|date:"d/m/Y H:i" }}
@@ -609,4 +618,26 @@
 {% load static %}
 <script src="{% static 'js/paiement-ajax.js' %}"></script>
 <script src="{% static 'js/validation-modal.js' %}"></script>
+
+<!-- Diagnostic script for debugging payment validation -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('========== DIAGNOSTIC PAIEMENT VALIDATION ==========');
+    console.log('✅ DOM loaded');
+    console.log('Bootstrap available:', typeof bootstrap !== 'undefined' ? '✅ YES' : '❌ NO');
+    console.log('ajaxManager available:', typeof ajaxManager !== 'undefined' ? '✅ YES' : '❌ NO');
+    console.log('window.ajaxManager available:', typeof window.ajaxManager !== 'undefined' ? '✅ YES' : '❌ NO');
+    console.log('validationModalManager available:', typeof window.validationModalManager !== 'undefined' ? '✅ YES' : '❌ NO');
+
+    // Check validation buttons
+    const validateButtons = document.querySelectorAll('.btn-validate-payment');
+    console.log('Validation buttons found:', validateButtons.length);
+
+    if (validateButtons.length > 0) {
+        console.log('First button data-paiement-id:', validateButtons[0].dataset.paiementId);
+    }
+
+    console.log('====================================================');
+});
+</script>
 {% endblock %}

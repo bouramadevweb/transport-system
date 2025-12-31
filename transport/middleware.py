@@ -14,8 +14,8 @@ class LoginRequiredMiddleware:
             reverse('inscription_utilisateur'),
         ]
 
-        # Autorise aussi les fichiers statiques et médias
-        if request.path.startswith('/static/') or request.path.startswith('/media/'):
+        # Autorise aussi les fichiers statiques, médias et l'admin Django
+        if request.path.startswith('/static/') or request.path.startswith('/media/'): #or request.path.startswith('/admin/'):
             return self.get_response(request)
 
         # Si pas connecté et pas sur une page publique → redirection

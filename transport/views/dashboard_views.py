@@ -512,8 +512,11 @@ def audit_log_list(request):
     Affiche l'historique complet des actions effectuées dans le système
     Accessible uniquement aux managers et admins
     """
+    from django.db.models import Count
+
     # Récupérer tous les logs
-    logs = AuditLog.objects.select_related('utilisateur').order_by('-timestamp')
+    all_logs = AuditLog.objects.select_related('utilisateur').order_by('-timestamp')
+    logs = all_logs
 
     # Filtrage
     action_filter = request.GET.get('action')
@@ -544,7 +547,21 @@ def audit_log_list(request):
 
     # Pagination: limiter à 100 derniers logs par défaut
     limit = int(request.GET.get('limit', 100))
-    logs = logs[:limit]
+    logs_limited = logs[:limit]
+
+    # Calculer des statistiques sur TOUS les logs (pas seulement les filtrés)
+    stats = {
+        'total': all_logs.count(),
+        'creates': all_logs.filter(action='CREATE').count(),
+        'updates': all_logs.filter(action='UPDATE').count(),
+        'deletes': all_logs.filter(action='DELETE').count(),
+        'validations': all_logs.filter(action__in=['VALIDER_PAIEMENT', 'TERMINER_MISSION']).count(),
+    }
+
+    # Top 5 utilisateurs les plus actifs
+    top_users = all_logs.values('utilisateur__email').annotate(
+        count=Count('pk_audit')
+    ).order_by('-count')[:5]
 
     # Récupérer les utilisateurs pour le filtre
     utilisateurs = Utilisateur.objects.all().order_by('email')
@@ -553,10 +570,12 @@ def audit_log_list(request):
     action_choices = AuditLog.ACTION_CHOICES
 
     return render(request, 'transport/audit/audit_log_list.html', {
-        'logs': logs,
+        'logs': logs_limited,
         'utilisateurs': utilisateurs,
         'action_choices': action_choices,
         'filters': request.GET,
+        'stats': stats,
+        'top_users': top_users,
         'title': "Historique d'audit"
     })
 
@@ -570,5 +589,51 @@ def audit_log_detail(request, pk):
     return render(request, 'transport/audit/audit_log_detail.html', {
         'log': log,
         'title': "Détail de l'audit"
+    })
+
+
+@manager_or_admin_required
+def audit_cleanup(request):
+    """
+    Nettoyer les anciens logs d'audit
+    Accessible uniquement aux administrateurs
+    """
+    from datetime import datetime, timedelta
+    from django.db.models import Count
+
+    if request.method == 'POST':
+        months = int(request.POST.get('months', 6))
+
+        # Calculer la date limite
+        date_limite = datetime.now() - timedelta(days=months * 30)
+
+        # Récupérer les logs à supprimer
+        logs_to_delete = AuditLog.objects.filter(timestamp__lt=date_limite)
+        count = logs_to_delete.count()
+
+        # Supprimer
+        logs_to_delete.delete()
+
+        messages.success(request, f"✅ {count} enregistrement(s) d'audit supprimé(s) (plus de {months} mois)")
+        return redirect('audit_log_list')
+
+    # GET: Afficher la page de confirmation
+    # Calculer les statistiques par période
+    stats_by_period = []
+    for months in [3, 6, 12, 24]:
+        date_limite = datetime.now() - timedelta(days=months * 30)
+        count = AuditLog.objects.filter(timestamp__lt=date_limite).count()
+        stats_by_period.append({
+            'months': months,
+            'count': count,
+            'date_limite': date_limite
+        })
+
+    total_logs = AuditLog.objects.count()
+
+    return render(request, 'transport/audit/audit_cleanup.html', {
+        'stats_by_period': stats_by_period,
+        'total_logs': total_logs,
+        'title': "Nettoyage de l'audit"
     })
 

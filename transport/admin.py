@@ -2,6 +2,9 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import Entreprise, Utilisateur,Chauffeur, Camion, Affectation, Transitaire, Client, CompagnieConteneur, Conteneur, ContratTransport, PrestationDeTransports,Cautions, FraisTrajet,Mission,MissionConteneur,PaiementMission,Mecanicien,Fournisseur,Reparation,ReparationMecanicien,PieceReparee
 
+
+
+
 @admin.register(Entreprise)
 class EntrepriseAdmin(admin.ModelAdmin):
     list_display = (
@@ -182,20 +185,47 @@ class CautionsAdmin(admin.ModelAdmin):
 #admin.site.register(FraisTrajet)
 @admin.register(FraisTrajet)
 class FraisTrajetAdmin(admin.ModelAdmin):
-    list_display = ('pk_frais', 'origine', 'destination', 'frais_route', 'frais_carburant')
-    search_fields = ('pk_frais', 'origine', 'destination')
-    list_filter = ('origine', 'destination')
+    list_display = ('pk_frais', 'get_mission_short', 'get_camion', 'get_chauffeur', 'type_trajet', 'date_trajet', 'origine', 'destination', 'get_total')
+    search_fields = ('pk_frais', 'mission__pk_mission', 'contrat__numero_bl', 'origine', 'destination', 'contrat__camion__immatriculation', 'contrat__chauffeur__nom')
+    list_filter = ('type_trajet', 'date_trajet', 'origine', 'destination')
+    autocomplete_fields = ('mission', 'contrat')
+
+    def get_mission_short(self, obj):
+        """Affiche les 20 premiers caractères de la mission"""
+        if obj.mission:
+            return f"{obj.mission.pk_mission[:20]}..."
+        return "—"
+    get_mission_short.short_description = 'Mission'
+
+    def get_camion(self, obj):
+        """Affiche l'immatriculation du camion"""
+        if obj.contrat and obj.contrat.camion:
+            return obj.contrat.camion.immatriculation
+        return "—"
+    get_camion.short_description = 'Camion'
+
+    def get_chauffeur(self, obj):
+        """Affiche le nom du chauffeur"""
+        if obj.contrat and obj.contrat.chauffeur:
+            return f"{obj.contrat.chauffeur.nom} {obj.contrat.chauffeur.prenom}"
+        return "—"
+    get_chauffeur.short_description = 'Chauffeur'
+
+    def get_total(self, obj):
+        """Affiche le total des frais"""
+        return f"{obj.frais_route + obj.frais_carburant} FCFA"
+    get_total.short_description = 'Total'
 
 #admin.site.register(Mission)
 @admin.register(Mission)
 class MissionAdmin(admin.ModelAdmin):
     list_display = (
         'pk_mission', 'prestation_transport', 'date_depart', 'date_retour',
-        'origine', 'destination', 'frais_trajet', 'contrat', 'statut'
+        'origine', 'destination', 'contrat', 'statut'
     )
     search_fields = ('pk_mission', 'origine', 'destination', 'contrat__pk_contrat')
     list_filter = ('statut', 'origine', 'destination', 'date_depart')
-    autocomplete_fields = ('prestation_transport', 'frais_trajet', 'contrat')
+    autocomplete_fields = ('prestation_transport', 'contrat')
 
 #admin.site.register(MissionConteneur)
 @admin.register(MissionConteneur)

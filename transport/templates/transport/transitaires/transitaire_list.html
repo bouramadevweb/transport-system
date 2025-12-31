@@ -1,6 +1,41 @@
 {% extends "admin.html" %}
 
-{% block page_title %}Liste des Transitaires | Gestion Transport{% endblock %}
+{% block page_title %}Liste des Transitaires | Gestion Transport
+<style>
+    /* Responsive optimizations */
+    @media (max-width: 576px) {
+        h2 { font-size: 1.25rem !important; }
+        h3 { font-size: 1.5rem !important; }
+        h4 { font-size: 1.1rem !important; }
+        .btn { font-size: 0.9rem; padding: 0.4rem 0.6rem; }
+        .btn-sm { font-size: 0.85rem; padding: 0.35rem 0.5rem; }
+        .table { font-size: 0.75rem; }
+        .table th, .table td { padding: 0.4rem 0.3rem; }
+        .table th i { display: none; }
+        .badge { font-size: 0.7rem; padding: 0.25em 0.5em; }
+        .card-body { padding: 0.75rem !important; }
+        .fa-2x { font-size: 1.5rem !important; }
+        .form-control { font-size: 0.9rem; padding: 0.4rem 0.6rem; }
+        small { font-size: 0.75rem !important; }
+        .container-fluid { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+        .empty-state { padding: 2rem 1rem !important; }
+        .empty-state i { font-size: 2rem !important; }
+        .empty-state p { font-size: 0.9rem; }
+    }
+    @media (min-width: 577px) and (max-width: 768px) {
+        h2 { font-size: 1.5rem !important; }
+        .table { font-size: 0.85rem; }
+        .btn { font-size: 0.95rem; }
+    }
+    @media (min-width: 992px) {
+        .btn { transition: all 0.2s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .card { transition: transform 0.2s; }
+        .table tbody tr { transition: background-color 0.2s; }
+    }
+</style>
+
+{% endblock %}
 
 {% block title %}Liste des Transitaires{% endblock %}
 

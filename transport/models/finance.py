@@ -95,8 +95,19 @@ class PaiementMission(models.Model):
     montant_total = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))]
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Montant total incluant les frais de stationnement"
     )
+
+    # ✅ NOUVEAU: Frais de stationnement (demurrage)
+    frais_stationnement = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text="Frais de stationnement/demurrage (25 000 CFA/jour après 3 jours gratuits)"
+    )
+
     commission_transitaire = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -112,6 +123,18 @@ class PaiementMission(models.Model):
     # Nouveau champ pour valider le paiement
     est_valide = models.BooleanField(default=False)
     date_validation = models.DateTimeField(blank=True, null=True)
+
+    # Statut du paiement (pour gestion annulation)
+    statut_paiement = models.CharField(
+        max_length=15,
+        choices=[
+            ('en_attente', 'En attente'),
+            ('valide', 'Validé'),
+            ('annule', 'Annulé'),
+        ],
+        default='en_attente',
+        help_text="Statut du paiement"
+    )
 
     def clean(self):
         """Validation avant sauvegarde - empêcher la validation si mission non terminée ou caution non remboursée"""
@@ -221,11 +244,40 @@ class PaiementMission(models.Model):
             f"statut: {caution_state['statut']})"
         )
 
+    def synchroniser_frais_stationnement(self):
+        """
+        Synchronise les frais de stationnement depuis la mission
+
+        Cette méthode copie le montant_stationnement de la mission vers ce paiement.
+        Elle est appelée automatiquement lors du save().
+        """
+        if self.mission and self.mission.montant_stationnement:
+            self.frais_stationnement = self.mission.montant_stationnement
+
+            # Ajouter une note dans les observations si des frais existent
+            if self.frais_stationnement > 0 and self.mission.jours_stationnement_facturables > 0:
+                note_stationnement = (
+                    f"\n--- Frais de stationnement ---\n"
+                    f"Jours facturables: {self.mission.jours_stationnement_facturables}\n"
+                    f"Montant: {self.frais_stationnement} CFA\n"
+                    f"Date arrivée: {self.mission.date_arrivee.strftime('%d/%m/%Y') if self.mission.date_arrivee else 'N/A'}\n"
+                    f"Date déchargement: {self.mission.date_dechargement.strftime('%d/%m/%Y') if self.mission.date_dechargement else 'N/A'}"
+                )
+
+                # Ajouter la note seulement si elle n'existe pas déjà
+                if self.observation and "Frais de stationnement" not in self.observation:
+                    self.observation += note_stationnement
+                elif not self.observation:
+                    self.observation = note_stationnement
+
     def save(self, *args, **kwargs):
         if not self.pk_paiement:
             base = f"{self.mission}{self.caution}{self.prestation}"
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_paiement = slugify(base)[:250]
+
+        # ✅ NOUVEAU: Synchroniser automatiquement les frais de stationnement
+        self.synchroniser_frais_stationnement()
 
         # Valider avant de sauvegarder
         self.full_clean()

@@ -262,3 +262,199 @@ def export_paiements_csv(request):
         ])
 
     return response
+
+
+@login_required
+def export_utilisateurs_excel(request):
+    """Export des utilisateurs en format Excel"""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        return HttpResponse("❌ Bibliothèque openpyxl non installée. Exécutez: pip install openpyxl", status=500)
+
+    from .models import Utilisateur
+    from .permissions import get_user_role, ROLES
+
+    # Récupérer tous les utilisateurs
+    utilisateurs = Utilisateur.objects.exclude(
+        pk_utilisateur=''
+    ).exclude(
+        pk_utilisateur__isnull=True
+    ).prefetch_related('groups').order_by('nom_utilisateur', 'email')
+
+    # Créer un nouveau workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Utilisateurs"
+
+    # Style de l'en-tête
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+
+    # En-têtes
+    headers = [
+        "Nom d'utilisateur", "Email", "Rôle", "Statut",
+        "Staff", "Superuser", "Date de création", "Entreprise"
+    ]
+
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+
+    # Données
+    for row_idx, user in enumerate(utilisateurs, 2):
+        # Déterminer le rôle
+        role_code = get_user_role(user)
+        if role_code == 'SUPERUSER':
+            role_display = 'Super Admin'
+        elif role_code in ROLES:
+            role_display = ROLES[role_code]['name']
+        else:
+            role_display = 'Aucun rôle'
+
+        # Nom d'affichage
+        display_name = user.nom_utilisateur or user.email or f"User {user.pk_utilisateur}"
+
+        ws.append([
+            display_name,
+            user.email,
+            role_display,
+            'Actif' if user.is_active else 'Inactif',
+            'Oui' if user.is_staff else 'Non',
+            'Oui' if user.is_superuser else 'Non',
+            user.date_creation.strftime('%d/%m/%Y %H:%M') if user.date_creation else '',
+            user.entreprise.nom if user.entreprise else '',
+        ])
+
+    # Ajuster la largeur des colonnes
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column].width = adjusted_width
+
+    # Créer la réponse HTTP
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"utilisateurs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    # Sauvegarder le workbook dans la réponse
+    wb.save(response)
+
+    return response
+
+
+@login_required
+def export_audit_excel(request):
+    """Export de l'historique d'audit en format Excel"""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        return HttpResponse("❌ Bibliothèque openpyxl non installée. Exécutez: pip install openpyxl", status=500)
+
+    from .models import AuditLog
+
+    # Récupérer les logs avec les mêmes filtres que la liste
+    logs = AuditLog.objects.select_related('utilisateur').order_by('-timestamp')
+
+    # Appliquer les filtres depuis les paramètres GET
+    action_filter = request.GET.get('action')
+    if action_filter and action_filter != 'tous':
+        logs = logs.filter(action=action_filter)
+
+    model_filter = request.GET.get('model')
+    if model_filter:
+        logs = logs.filter(model_name__icontains=model_filter)
+
+    user_filter = request.GET.get('utilisateur')
+    if user_filter:
+        logs = logs.filter(utilisateur__pk_utilisateur=user_filter)
+
+    date_debut = request.GET.get('date_debut')
+    if date_debut:
+        try:
+            from django.utils.dateparse import parse_date
+            logs = logs.filter(timestamp__date__gte=parse_date(date_debut))
+        except:
+            pass
+
+    date_fin = request.GET.get('date_fin')
+    if date_fin:
+        try:
+            from django.utils.dateparse import parse_date
+            logs = logs.filter(timestamp__date__lte=parse_date(date_fin))
+        except:
+            pass
+
+    # Limiter les résultats
+    limit = int(request.GET.get('limit', 1000))
+    logs = logs[:limit]
+
+    # Créer un nouveau workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Historique Audit"
+
+    # Style de l'en-tête
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    header_alignment = Alignment(horizontal="center", vertical="center")
+
+    # En-têtes
+    headers = [
+        "Date/Heure", "Utilisateur", "Action", "Modèle",
+        "ID Objet", "Objet", "Adresse IP", "User Agent"
+    ]
+
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+
+    # Données
+    for row_idx, log in enumerate(logs, 2):
+        utilisateur = log.utilisateur.email if log.utilisateur else 'Système'
+
+        ws.append([
+            log.timestamp.strftime('%d/%m/%Y %H:%M:%S') if log.timestamp else '',
+            utilisateur,
+            log.get_action_display(),
+            log.model_name,
+            log.object_id,
+            log.object_repr,
+            log.ip_address or '',
+            log.user_agent[:100] if log.user_agent else '',
+        ])
+
+    # Ajuster la largeur des colonnes
+    column_widths = [20, 30, 20, 15, 25, 40, 15, 50]
+    for idx, width in enumerate(column_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(idx)].width = width
+
+    # Créer la réponse HTTP
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f"audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    # Sauvegarder le workbook dans la réponse
+    wb.save(response)
+
+    return response

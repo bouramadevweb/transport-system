@@ -76,8 +76,9 @@ def mission_list_optimized(request):
         'contrat__camion',
         'contrat__conteneur',
         'contrat__conteneur__compagnie',
-        'prestation_transport',
-        'frais_trajet'
+        'prestation_transport'
+    ).prefetch_related(
+        'frais_trajets'  # Charger tous les frais de trajet (aller + retour)
     ).order_by('-date_depart')
 
     # Appliquer les filtres
@@ -92,6 +93,28 @@ def mission_list_optimized(request):
     missions_terminees = Mission.objects.filter(statut='terminée').count()
     missions_annulees = Mission.objects.filter(statut='annulée').count()
 
+    # 🆕 Compter les missions par type de transport
+    from django.db.models import Q, Exists, OuterRef
+    from .models import FraisTrajet
+
+    # Missions avec aller ET retour
+    missions_aller_retour = Mission.objects.filter(
+        Exists(FraisTrajet.objects.filter(mission=OuterRef('pk'), type_trajet='aller')),
+        Exists(FraisTrajet.objects.filter(mission=OuterRef('pk'), type_trajet='retour'))
+    ).count()
+
+    # Missions avec aller seulement
+    missions_aller_simple = Mission.objects.filter(
+        Exists(FraisTrajet.objects.filter(mission=OuterRef('pk'), type_trajet='aller'))
+    ).exclude(
+        Exists(FraisTrajet.objects.filter(mission=OuterRef('pk'), type_trajet='retour'))
+    ).count()
+
+    # Missions sans trajets
+    missions_sans_trajet = Mission.objects.exclude(
+        Exists(FraisTrajet.objects.filter(mission=OuterRef('pk')))
+    ).count()
+
     context = {
         'missions': missions_paginated,
         'title': 'Liste des missions',
@@ -99,6 +122,11 @@ def mission_list_optimized(request):
         'missions_en_cours': missions_en_cours,
         'missions_terminees': missions_terminees,
         'missions_annulees': missions_annulees,
+
+        # 🆕 Statistiques par type de transport
+        'missions_aller_retour': missions_aller_retour,
+        'missions_aller_simple': missions_aller_simple,
+        'missions_sans_trajet': missions_sans_trajet,
 
         # Pour le formulaire de filtre
         'filter_statut': request.GET.get('statut', ''),

@@ -357,6 +357,7 @@ class AjaxManager {
 
 // Create global instance
 const ajaxManager = new AjaxManager();
+window.ajaxManager = ajaxManager; // Make it explicitly global
 
 // Log initialization
 console.log('✅ AjaxManager initialized');

@@ -93,10 +93,52 @@ def update_contrat(request, pk):
 
 @can_delete_data
 def delete_contrat(request, pk):
+    from ..models import Mission, Cautions
+
     contrat = get_object_or_404(ContratTransport, pk=pk)
+
     if request.method == "POST":
+        # Vérifier si le contrat a des missions
+        nb_missions = Mission.objects.filter(contrat=contrat).count()
+
+        if nb_missions > 0:
+            messages.error(
+                request,
+                f"❌ Impossible de supprimer ce contrat! "
+                f"Il a {nb_missions} mission(s) associée(s). "
+                f"Utilisez plutôt l'annulation pour garder la traçabilité. "
+                f"(Voir la documentation ANALYSE_ANNULATION_CONTRAT.md)"
+            )
+            return redirect('contrat_list')
+
+        # Vérifier si le contrat a des cautions
+        nb_cautions = Cautions.objects.filter(contrat=contrat).count()
+
+        if nb_cautions > 0:
+            messages.error(
+                request,
+                f"❌ Impossible de supprimer ce contrat! "
+                f"Il a {nb_cautions} caution(s) associée(s). "
+                f"Utilisez plutôt l'annulation pour garder la traçabilité."
+            )
+            return redirect('contrat_list')
+
+        # Si aucune donnée associée, autoriser la suppression
         contrat.delete()
+        messages.success(request, "✅ Contrat supprimé avec succès (aucune donnée associée)")
         return redirect('contrat_list')
+
+    # Afficher les avertissements lors de l'affichage du formulaire
+    nb_missions = Mission.objects.filter(contrat=contrat).count()
+    nb_cautions = Cautions.objects.filter(contrat=contrat).count()
+
+    if nb_missions > 0 or nb_cautions > 0:
+        messages.warning(
+            request,
+            f"⚠️ Attention: Ce contrat a {nb_missions} mission(s) et {nb_cautions} caution(s). "
+            f"La suppression sera BLOQUÉE. Utilisez l'annulation à la place."
+        )
+
     return render(request, "transport/contrat/contrat_confirm_delete.html", {"contrat": contrat, "title": "Supprimer le contrat"})
 
 
@@ -143,6 +185,34 @@ def delete_presta_transport(request, pk):
         prestation.delete()
         return redirect('presta_transport_list')
     return render(request, "transport/prestations/prestation_transport_confirm_delete.html", {"prestation": prestation})
+
+# API: Récupérer le client et le transitaire d'un conteneur
+
+@login_required
+def get_conteneur_info(request, conteneur_id):
+    """
+    API pour récupérer automatiquement le client et le transitaire
+    associés à un conteneur sélectionné
+    """
+    try:
+        conteneur = Conteneur.objects.get(pk_conteneur=conteneur_id)
+        return JsonResponse({
+            'success': True,
+            'client_id': conteneur.client.pk_client if conteneur.client else None,
+            'client_nom': conteneur.client.nom if conteneur.client else None,
+            'transitaire_id': conteneur.transitaire.pk_transitaire if conteneur.transitaire else None,
+            'transitaire_nom': conteneur.transitaire.nom if conteneur.transitaire else None,
+        })
+    except Conteneur.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Conteneur non trouvé'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
 
 # Liste des cautions
 

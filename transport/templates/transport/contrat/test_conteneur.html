@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Conteneur API</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        #console { background: #f5f5f5; padding: 15px; margin-top: 20px; border-radius: 4px; max-height: 400px; overflow-y: auto; }
+        .log { margin-bottom: 5px; padding: 5px; border-left: 3px solid #007bff; }
+        .success { background-color: #d1ecf1; border-color: #0c5460; }
+        .error { background-color: #f8d7da; border-color: #721c24; }
+        .warning { background-color: #fff3cd; border-color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test API Conteneur → Client/Transitaire</h1>
+
+    <div class="form-group">
+        <label for="id_conteneur">📦 Conteneur:</label>
+        <select id="id_conteneur" onchange="chargerClientTransitaire()">
+            <option value="">-- Sélectionnez un conteneur --</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="id_client">👤 Client:</label>
+        <select id="id_client">
+            <option value="">-- Sélectionnez un client --</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="id_transitaire">🚢 Transitaire:</label>
+        <select id="id_transitaire">
+            <option value="">-- Sélectionnez un transitaire --</option>
+        </select>
+    </div>
+
+    <div id="console">
+        <h3>📋 Console de diagnostic:</h3>
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = 'log ' + type;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(entry);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(message);
+        }
+
+        // Charger les conteneurs disponibles
+        function chargerConteneurs() {
+            log('🔄 Chargement de la liste des conteneurs...');
+            fetch('/api/conteneur/list/')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('id_conteneur');
+                    // Note: Vous devrez créer cette API ou utiliser les données existantes
+                    log('⚠️ API liste conteneurs non implémentée - utilisation de données de test', 'warning');
+
+                    // Données de test
+                    select.innerHTML = `
+                        <option value="">-- Sélectionnez un conteneur --</option>
+                        <option value="012563dhmkmaerskmaersksackodjiguibasackodjiguibaparticulier0022377775248">012563DHM - K-Maersk</option>
+                    `;
+                })
+                .catch(error => {
+                    log('⚠️ Utilisation de données de test', 'warning');
+                    const select = document.getElementById('id_conteneur');
+                    select.innerHTML = `
+                        <option value="">-- Sélectionnez un conteneur --</option>
+                        <option value="012563dhmkmaerskmaersksackodjiguibasackodjiguibaparticulier0022377775248">012563DHM - K-Maersk</option>
+                    `;
+                });
+        }
+
+        function chargerClientTransitaire() {
+            log('🔍 Fonction chargerClientTransitaire() appelée');
+
+            const conteneurSelect = document.getElementById('id_conteneur');
+            const clientSelect = document.getElementById('id_client');
+            const transitaireSelect = document.getElementById('id_transitaire');
+
+            log(`📋 Éléments: Conteneur=${conteneurSelect ? 'OK' : 'KO'}, Client=${clientSelect ? 'OK' : 'KO'}, Transitaire=${transitaireSelect ? 'OK' : 'KO'}`);
+
+            if (!conteneurSelect || !clientSelect || !transitaireSelect) {
+                log('❌ Éléments manquants dans le formulaire', 'error');
+                return;
+            }
+
+            const conteneurId = conteneurSelect.value;
+            log(`📦 Conteneur sélectionné: ${conteneurId}`);
+
+            if (!conteneurId) {
+                log('⚠️ Aucun conteneur sélectionné', 'warning');
+                return;
+            }
+
+            const apiUrl = `/api/conteneur/${conteneurId}/info/`;
+            log(`🌐 Appel API: ${apiUrl}`);
+
+            fetch(apiUrl)
+                .then(response => {
+                    log(`📡 Réponse API: Status ${response.status}`, response.ok ? 'success' : 'error');
+                    return response.json();
+                })
+                .then(data => {
+                    log(`📦 Données reçues: ${JSON.stringify(data)}`);
+
+                    if (data.success) {
+                        // Client
+                        if (data.client_id) {
+                            log(`✅ Client trouvé: ${data.client_nom} (${data.client_id})`, 'success');
+                            clientSelect.innerHTML = `<option value="${data.client_id}" selected>${data.client_nom}</option>`;
+                            clientSelect.style.backgroundColor = '#d1ecf1';
+                            clientSelect.style.border = '2px solid #0c5460';
+                        } else {
+                            log('⚠️ Aucun client associé', 'warning');
+                            clientSelect.value = '';
+                            clientSelect.style.backgroundColor = '#fff3cd';
+                        }
+
+                        // Transitaire
+                        if (data.transitaire_id) {
+                            log(`✅ Transitaire trouvé: ${data.transitaire_nom} (${data.transitaire_id})`, 'success');
+                            transitaireSelect.innerHTML = `<option value="${data.transitaire_id}" selected>${data.transitaire_nom}</option>`;
+                            transitaireSelect.style.backgroundColor = '#d1ecf1';
+                            transitaireSelect.style.border = '2px solid #0c5460';
+                        } else {
+                            log('⚠️ Aucun transitaire associé', 'warning');
+                            transitaireSelect.value = '';
+                            transitaireSelect.style.backgroundColor = '#fff3cd';
+                        }
+                    } else {
+                        log(`❌ Erreur API: ${data.error}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    log(`❌ Erreur réseau: ${error.message}`, 'error');
+                    clientSelect.style.backgroundColor = '#f8d7da';
+                    transitaireSelect.style.backgroundColor = '#f8d7da';
+                });
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            log('✅ Page chargée - Initialisation...');
+            chargerConteneurs();
+            log('✅ Prêt pour les tests !', 'success');
+        });
+    </script>
+</body>
+</html>

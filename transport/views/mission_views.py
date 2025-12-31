@@ -357,5 +357,395 @@ def delete_mission_conteneur(request, pk):
         'mission_conteneur': mc
     })
 
+# =============================================================================
+# GESTION DU STATIONNEMENT (DEMURRAGE)
+# =============================================================================
+
+@login_required
+@manager_or_admin_required
+def bloquer_stationnement(request, pk):
+    """
+    Bloque une mission pour stationnement (demurrage)
+    Le camion est arrivé et commence la période de stationnement
+    """
+    mission = get_object_or_404(Mission, pk_mission=pk)
+
+    # ✅ VÉRIFICATION: Empêcher le double blocage
+    if mission.date_arrivee:
+        messages.warning(
+            request,
+            f'⚠️ Cette mission est déjà bloquée pour stationnement depuis le {mission.date_arrivee.strftime("%d/%m/%Y")}. '
+            f'Si vous souhaitez modifier la date d\'arrivée, veuillez d\'abord marquer le déchargement ou contacter un administrateur.'
+        )
+        return redirect('mission_list')
+
+    # ✅ VÉRIFICATION: Mission doit être en cours
+    if mission.statut != 'en cours':
+        messages.error(
+            request,
+            f'❌ Impossible de bloquer cette mission. Statut actuel: {mission.get_statut_display()}. '
+            f'Seules les missions "en cours" peuvent être bloquées pour stationnement.'
+        )
+        return redirect('mission_list')
+
+    if request.method == 'POST':
+        date_arrivee = request.POST.get('date_arrivee')
+
+        try:
+            from datetime import datetime
+            from django.utils import timezone
+
+            # Convertir la date si fournie
+            if date_arrivee:
+                date_arrivee = datetime.strptime(date_arrivee, '%Y-%m-%d').date()
+            else:
+                date_arrivee = None
+
+            # ✅ VALIDATIONS SERVEUR
+            if date_arrivee:
+                today = timezone.now().date()
+
+                # Validation 1: Date ne peut pas être dans le futur
+                if date_arrivee > today:
+                    messages.error(request, '❌ La date d\'arrivée ne peut pas être dans le futur.')
+                    return render(request, 'transport/missions/bloquer_stationnement.html', {
+                        'title': 'Bloquer pour stationnement',
+                        'mission': mission
+                    })
+
+                # Validation 2: Date doit être >= date de départ de la mission
+                if date_arrivee < mission.date_depart:
+                    messages.error(
+                        request,
+                        f'❌ La date d\'arrivée ({date_arrivee.strftime("%d/%m/%Y")}) ne peut pas être avant '
+                        f'la date de départ de la mission ({mission.date_depart.strftime("%d/%m/%Y")}).'
+                    )
+                    return render(request, 'transport/missions/bloquer_stationnement.html', {
+                        'title': 'Bloquer pour stationnement',
+                        'mission': mission
+                    })
+
+            # Bloquer pour stationnement
+            frais_info = mission.bloquer_pour_stationnement(date_arrivee)
+
+            # Enregistrer dans l'audit log
+            AuditLog.log_action(
+                utilisateur=request.user,
+                action='UPDATE',
+                model_name='Mission',
+                object_id=mission.pk_mission,
+                object_repr=f"Mission bloquée pour stationnement - {frais_info['message']}",
+                request=request
+            )
+
+            messages.success(
+                request,
+                f"✅ Mission bloquée pour stationnement. {frais_info['message']}. "
+                f"Montant actuel: {frais_info['montant']} CFA"
+            )
+
+            return redirect('mission_list')
+
+        except Exception as e:
+            messages.error(request, f"❌ Erreur: {str(e)}")
+            return redirect('mission_list')
+
+    # GET - Afficher le formulaire
+    return render(request, 'transport/missions/bloquer_stationnement.html', {
+        'title': 'Bloquer pour stationnement',
+        'mission': mission
+    })
+
+
+@login_required
+@manager_or_admin_required
+def marquer_dechargement(request, pk):
+    """
+    Marque le déchargement effectif et calcule les frais finaux
+    """
+    mission = get_object_or_404(Mission, pk_mission=pk)
+
+    # ✅ VÉRIFICATION: La mission doit d'abord être bloquée
+    if not mission.date_arrivee:
+        messages.error(
+            request,
+            '❌ Cette mission n\'a pas été bloquée pour stationnement. '
+            'Veuillez d\'abord bloquer la mission en enregistrant la date d\'arrivée du camion.'
+        )
+        return redirect('bloquer_stationnement', pk=mission.pk_mission)
+
+    # ✅ VÉRIFICATION: Empêcher le double déchargement
+    if mission.date_dechargement:
+        messages.warning(
+            request,
+            f'⚠️ Cette mission a déjà été marquée comme déchargée le {mission.date_dechargement.strftime("%d/%m/%Y")}. '
+            f'Frais de stationnement calculés: {mission.montant_stationnement} CFA.'
+        )
+        return redirect('mission_list')
+
+    # ✅ VÉRIFICATION: Mission doit être en cours
+    if mission.statut != 'en cours':
+        messages.error(
+            request,
+            f'❌ Impossible de marquer le déchargement. Statut actuel: {mission.get_statut_display()}. '
+            f'Seules les missions "en cours" peuvent être déchargées.'
+        )
+        return redirect('mission_list')
+
+    if request.method == 'POST':
+        date_dechargement = request.POST.get('date_dechargement')
+
+        try:
+            from datetime import datetime
+            from django.utils import timezone
+
+            # Convertir la date si fournie
+            if date_dechargement:
+                date_dechargement = datetime.strptime(date_dechargement, '%Y-%m-%d').date()
+            else:
+                date_dechargement = None
+
+            # ✅ VALIDATIONS SERVEUR
+            if date_dechargement:
+                today = timezone.now().date()
+
+                # Validation 1: Date ne peut pas être dans le futur
+                if date_dechargement > today:
+                    messages.error(request, '❌ La date de déchargement ne peut pas être dans le futur.')
+                    return render(request, 'transport/missions/marquer_dechargement.html', {
+                        'title': 'Marquer le déchargement',
+                        'mission': mission
+                    })
+
+                # Validation 2: Date doit être >= date d'arrivée
+                if date_dechargement < mission.date_arrivee:
+                    messages.error(
+                        request,
+                        f'❌ La date de déchargement ({date_dechargement.strftime("%d/%m/%Y")}) ne peut pas être avant '
+                        f'la date d\'arrivée ({mission.date_arrivee.strftime("%d/%m/%Y")}).'
+                    )
+                    return render(request, 'transport/missions/marquer_dechargement.html', {
+                        'title': 'Marquer le déchargement',
+                        'mission': mission
+                    })
+
+            # Marquer le déchargement
+            frais_info = mission.marquer_dechargement(date_dechargement)
+
+            # Enregistrer dans l'audit log
+            AuditLog.log_action(
+                utilisateur=request.user,
+                action='UPDATE',
+                model_name='Mission',
+                object_id=mission.pk_mission,
+                object_repr=f"Déchargement effectué - Frais: {frais_info['montant']} CFA ({frais_info['jours_facturables']} jours)",
+                request=request
+            )
+
+            if frais_info['jours_facturables'] > 0:
+                messages.success(
+                    request,
+                    f"✅ Déchargement effectué. {frais_info['message']}. "
+                    f"💰 FRAIS DE STATIONNEMENT: {frais_info['montant']} CFA"
+                )
+            else:
+                messages.success(
+                    request,
+                    f"✅ Déchargement effectué dans les délais (3 jours gratuits). Aucun frais supplémentaire."
+                )
+
+            return redirect('mission_list')
+
+        except Exception as e:
+            messages.error(request, f"❌ Erreur: {str(e)}")
+            return redirect('mission_list')
+
+    # GET - Afficher le formulaire
+    return render(request, 'transport/missions/marquer_dechargement.html', {
+        'title': 'Marquer le déchargement',
+        'mission': mission
+    })
+
+
+@login_required
+@manager_or_admin_required
+def calculer_stationnement(request, pk):
+    """
+    Recalcule les frais de stationnement en temps réel (AJAX ou page)
+    """
+    mission = get_object_or_404(Mission, pk_mission=pk)
+
+    if not mission.date_arrivee:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': 'Date d\'arrivée non renseignée'
+            })
+        else:
+            messages.error(request, "❌ La date d'arrivée doit être renseignée")
+            return redirect('mission_list')
+
+    # Calculer les frais actuels
+    frais_info = mission.calculer_frais_stationnement()
+
+    # Mettre à jour la mission
+    mission.jours_stationnement_facturables = frais_info['jours_facturables']
+    mission.montant_stationnement = frais_info['montant']
+    mission.statut_stationnement = frais_info['statut']
+    mission.save()
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'success': True,
+            'jours_total': frais_info['jours_total'],
+            'jours_gratuits': frais_info['jours_gratuits'],
+            'jours_facturables': frais_info['jours_facturables'],
+            'montant': str(frais_info['montant']),
+            'message': frais_info['message'],
+            'statut': frais_info['statut']
+        })
+    else:
+        messages.info(request, f"📊 {frais_info['message']}. Montant: {frais_info['montant']} CFA")
+        return redirect('mission_list')
+
+
+@login_required
+@manager_or_admin_required
+def preview_frais_stationnement(request, pk):
+    """
+    Calcule un aperçu des frais de stationnement pour une date de déchargement donnée
+    Cette vue est utilisée pour l'aperçu en temps réel via AJAX
+
+    Paramètres GET:
+        - date_dechargement: Date de déchargement à tester (format YYYY-MM-DD)
+
+    Retourne un JSON avec:
+        - success: True/False
+        - jours_total: Nombre total de jours calendaires
+        - jours_gratuits: Nombre de jours gratuits utilisés
+        - jours_facturables: Nombre de jours facturables
+        - montant: Montant total des frais
+        - debut_gratuit: Date de début de la période gratuite
+        - fin_gratuit: Date de fin de la période gratuite
+        - debut_facturation: Date de début de facturation
+        - message: Message descriptif
+    """
+    from datetime import datetime, timedelta
+    from decimal import Decimal
+
+    mission = get_object_or_404(Mission, pk_mission=pk)
+
+    # Vérifier que la mission est bloquée
+    if not mission.date_arrivee:
+        return JsonResponse({
+            'success': False,
+            'message': 'La mission n\'a pas été bloquée pour stationnement'
+        }, status=400)
+
+    # Récupérer la date de déchargement depuis les paramètres GET
+    date_dechargement_str = request.GET.get('date_dechargement')
+
+    if not date_dechargement_str:
+        return JsonResponse({
+            'success': False,
+            'message': 'Paramètre date_dechargement manquant'
+        }, status=400)
+
+    try:
+        # Parser la date de déchargement
+        date_dechargement = datetime.strptime(date_dechargement_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Format de date invalide (attendu: YYYY-MM-DD)'
+        }, status=400)
+
+    # Validation: date_dechargement >= date_arrivee
+    if date_dechargement < mission.date_arrivee:
+        return JsonResponse({
+            'success': False,
+            'message': f'La date de déchargement ne peut pas être avant la date d\'arrivée ({mission.date_arrivee.strftime("%d/%m/%Y")})'
+        }, status=400)
+
+    # Calculer les frais pour cette date hypothétique
+    # On utilise la même logique que dans Mission.calculer_frais_stationnement()
+    # mais avec la date de déchargement fournie
+
+    TARIF_JOURNALIER = Decimal('25000.00')
+    date_arrivee = mission.date_arrivee
+
+    # Fonction helper pour vérifier si c'est un weekend
+    def est_weekend(date):
+        return date.weekday() >= 5  # 5=samedi, 6=dimanche
+
+    # Étape 1: Trouver le début de la période gratuite
+    debut_gratuit = date_arrivee
+    while est_weekend(debut_gratuit):
+        debut_gratuit += timedelta(days=1)
+
+    # Étape 2: Calculer la fin de la période gratuite (3 jours ouvrables)
+    jours_gratuits_comptes = 0
+    current_date = debut_gratuit
+    fin_gratuit = None
+
+    while jours_gratuits_comptes < 3:
+        if not est_weekend(current_date):
+            jours_gratuits_comptes += 1
+            if jours_gratuits_comptes == 3:
+                fin_gratuit = current_date
+                break
+        current_date += timedelta(days=1)
+
+    # Étape 3: Date de début de facturation (jour après la fin de la période gratuite)
+    debut_facturation = fin_gratuit + timedelta(days=1)
+
+    # Étape 4: Calculer les jours facturables
+    if date_dechargement >= debut_facturation:
+        # TOUS les jours comptent après la période gratuite (y compris weekends)
+        jours_facturables = (date_dechargement - debut_facturation).days + 1
+    else:
+        jours_facturables = 0
+
+    # Calculer le montant
+    montant_total = jours_facturables * TARIF_JOURNALIER
+
+    # Statistiques supplémentaires
+    jours_total = (date_dechargement - date_arrivee).days + 1
+
+    # Compter les jours ouvrables utilisés
+    jours_ouvrables_utilises = 0
+    current = date_arrivee
+    while current <= date_dechargement:
+        if not est_weekend(current):
+            jours_ouvrables_utilises += 1
+        current += timedelta(days=1)
+
+    jours_gratuits_utilises = min(3, jours_ouvrables_utilises)
+
+    # Message descriptif
+    if jours_facturables == 0:
+        message = "Aucun frais - Déchargement dans la période gratuite"
+        statut = "gratuit"
+    else:
+        message = f"{jours_facturables} jour(s) facturable(s) × {TARIF_JOURNALIER:,.0f} CFA = {montant_total:,.0f} CFA"
+        statut = "payant"
+
+    return JsonResponse({
+        'success': True,
+        'jours_total': jours_total,
+        'jours_gratuits': jours_gratuits_utilises,
+        'jours_facturables': jours_facturables,
+        'montant': float(montant_total),
+        'montant_formatted': f'{montant_total:,.0f}'.replace(',', ' '),
+        'debut_gratuit': debut_gratuit.strftime('%Y-%m-%d'),
+        'fin_gratuit': fin_gratuit.strftime('%Y-%m-%d'),
+        'debut_facturation': debut_facturation.strftime('%Y-%m-%d'),
+        'date_arrivee': date_arrivee.strftime('%Y-%m-%d'),
+        'date_dechargement': date_dechargement.strftime('%Y-%m-%d'),
+        'message': message,
+        'statut': statut,
+        'tarif_journalier': float(TARIF_JOURNALIER)
+    })
+
 # Liste
 
