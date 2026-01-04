@@ -203,10 +203,32 @@ class AjaxManager {
                 headers['X-CSRFToken'] = this.csrfToken;
             }
 
+            // Determine if data is FormData
+            let body;
+            console.log('🔍 ajax-utils.js POST - data type:', typeof data);
+            console.log('🔍 ajax-utils.js POST - data constructor:', data.constructor.name);
+            console.log('🔍 ajax-utils.js POST - data instanceof FormData:', data instanceof FormData);
+            console.log('🔍 ajax-utils.js POST - FormData check:', Object.prototype.toString.call(data));
+
+            if (data instanceof FormData || data.constructor.name === 'FormData') {
+                console.log('✅ Detected as FormData, sending as multipart');
+                // For FormData, don't set Content-Type (browser will set it with boundary)
+                delete headers['Content-Type'];
+                delete headers['Accept'];
+                body = data;
+            } else {
+                console.log('📦 Not FormData, converting to JSON');
+                // For regular objects, stringify as JSON
+                body = JSON.stringify(data);
+            }
+
+            console.log('📤 Final headers:', headers);
+            console.log('📤 Final body type:', body.constructor.name);
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: headers,
-                body: JSON.stringify(data),
+                body: body,
                 credentials: 'same-origin'
             });
 
@@ -248,10 +270,21 @@ class AjaxManager {
                 headers['X-CSRFToken'] = this.csrfToken;
             }
 
+            // Determine if data is FormData
+            let body;
+            if (data instanceof FormData) {
+                // For FormData, don't set Content-Type (browser will set it with boundary)
+                delete headers['Content-Type'];
+                body = data;
+            } else {
+                // For regular objects, stringify as JSON
+                body = JSON.stringify(data);
+            }
+
             const response = await fetch(url, {
                 method: 'PUT',
                 headers: headers,
-                body: JSON.stringify(data),
+                body: body,
                 credentials: 'same-origin'
             });
 

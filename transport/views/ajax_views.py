@@ -803,7 +803,22 @@ def ajax_camion_create(request):
     """Créer camion via AJAX"""
     from ..forms.vehicle_forms import CamionForm
     try:
-        form = CamionForm(get_request_data(request))
+        print("\n" + "="*50)
+        print("AJAX CAMION CREATE - DEBUG")
+        print("="*50)
+        print(f"Content-Type: {request.content_type}")
+        print(f"Method: {request.method}")
+        print(f"request.POST: {dict(request.POST)}")
+        print(f"request.FILES: {dict(request.FILES)}")
+
+        request_data = get_request_data(request)
+        print(f"Request data from helper: {dict(request_data)}")
+
+        form = CamionForm(request_data)
+        print(f"Form is_bound: {form.is_bound}")
+        print(f"Form data: {form.data}")
+        print(f"Form errors: {form.errors}")
+
         if form.is_valid():
             camion = form.save()
             AuditLog.objects.create(
@@ -814,11 +829,16 @@ def ajax_camion_create(request):
                 object_repr=str(camion),
                 changes={}
             )
+            print("✅ Camion created successfully!")
+            print("="*50 + "\n")
             return JsonResponse({
                 'success': True,
                 'message': f'Camion "{camion.immatriculation}" créé avec succès'
             })
         else:
+            print("❌ Form validation failed!")
+            print(f"Errors: {form.errors}")
+            print("="*50 + "\n")
             html = render_to_string(
                 'transport/camions/partials/camion_form_modal.html',
                 {'form': form, 'mode': 'create'},
@@ -831,6 +851,10 @@ def ajax_camion_create(request):
                 'errors': form.errors
             })
     except Exception as e:
+        print(f"❌ Exception: {e}")
+        import traceback
+        traceback.print_exc()
+        print("="*50 + "\n")
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
