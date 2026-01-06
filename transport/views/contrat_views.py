@@ -12,6 +12,11 @@ from django.http import JsonResponse
 from ..models import (ContratTransport, PrestationDeTransports, Conteneur, Camion, Chauffeur)
 from ..forms import (ContratTransportForm, PrestationDeTransportsForm)
 from ..decorators import (can_delete_data)
+from django.db import IntegrityError
+import os
+from django.conf import settings
+from utils.generate_contrat_pdf import generate_pdf_contrat
+
 
 
 @login_required
