@@ -13,8 +13,12 @@ from ..models import (ContratTransport)
 
 
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.units import cm
 from io import BytesIO
+from django.http import HttpResponse
 @login_required
 def pdf_contrat(request, pk):
     contrat = get_object_or_404(ContratTransport, pk_contrat=pk)
