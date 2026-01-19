@@ -24,7 +24,7 @@ from django.http import JsonResponse
 
 @login_required
 def camion_list(request):
-    camions = Camion.objects.all()
+    camions = Camion.objects.select_related('entreprise').order_by('-pk_camion')
     return render(request, "transport/camions/camion_list.html", {"camions": camions, "title": "Liste des camions"})
 
 # Ajouter un camion
@@ -72,7 +72,7 @@ def delete_camion(request, pk):
 
 @login_required
 def conteneur_list(request):
-    conteneurs = Conteneur.objects.all().order_by('numero_conteneur')
+    conteneurs = Conteneur.objects.select_related('compagnie').order_by('numero_conteneur')
     return render(request, "transport/conteneurs/conteneur_list.html", {"conteneurs": conteneurs, "title": "Liste des conteneurs"})
 
 # Création d'un conteneur

@@ -33,6 +33,7 @@ class Cautions(models.Model):
         max_length=20,
         choices=STATUT_CAUTION_CHOICES,
         default='en_attente',
+        db_index=True,
         help_text="Statut de la caution"
     )
     montant_rembourser = models.DecimalField(

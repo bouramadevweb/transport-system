@@ -4,17 +4,57 @@ Auth Views.Py
 Vues pour auth
 """
 
+from functools import wraps
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse
+from django.core.cache import cache
 from ..models import (Utilisateur, AuditLog)
 from ..forms import (InscriptionUtilisateurForm, ConnexionForm)
 
 
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
+
+
+def ratelimit(max_attempts=5, timeout=300):
+    """
+    Décorateur de rate limiting pour protéger contre les attaques par force brute.
+
+    Args:
+        max_attempts: Nombre maximum de tentatives autorisées
+        timeout: Durée du blocage en secondes (défaut: 5 minutes)
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if request.method == 'POST':
+                # Utiliser l'IP comme identifiant
+                ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+                if not ip:
+                    ip = request.META.get('REMOTE_ADDR', 'unknown')
+
+                cache_key = f'ratelimit:{view_func.__name__}:{ip}'
+                attempts = cache.get(cache_key, 0)
+
+                if attempts >= max_attempts:
+                    messages.error(
+                        request,
+                        f'Trop de tentatives. Veuillez réessayer dans {timeout // 60} minutes.'
+                    )
+                    return render(request, 'transport/connexion.html', {
+                        'form': ConnexionForm(),
+                        'rate_limited': True
+                    })
+
+                # Incrémenter le compteur
+                cache.set(cache_key, attempts + 1, timeout)
+
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
 @login_required
 def inscription_utilisateur(request):
     if request.method == 'POST':
@@ -27,6 +67,8 @@ def inscription_utilisateur(request):
 
     return render(request, 'transport/UserInscription.html', {'form': form})
 
+
+@ratelimit(max_attempts=5, timeout=300)
 def connexion_utilisateur(request):
     form = ConnexionForm(request.POST or None)
 

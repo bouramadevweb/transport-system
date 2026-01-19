@@ -26,9 +26,9 @@ class ContratTransport(models.Model):
     camion = models.ForeignKey("Camion", on_delete=models.CASCADE)
     chauffeur = models.ForeignKey("Chauffeur", on_delete=models.CASCADE)
 
-    numero_bl = models.CharField(max_length=100, unique=True)
+    numero_bl = models.CharField(max_length=100, unique=True, db_index=True)
     lieu_chargement = models.CharField(max_length=200, default='Bamako', help_text="Lieu de chargement / Origine")
-    destinataire = models.CharField(max_length=200)
+    destinataire = models.CharField(max_length=200, db_index=True)
 
     montant_total = models.DecimalField(
         max_digits=12,
@@ -54,8 +54,8 @@ class ContratTransport(models.Model):
     )
     statut_caution = models.CharField(max_length=10, choices=STATUT_CAUTION_CONTRAT_CHOICES, default='bloquee')
 
-    date_debut = models.DateField()
-    date_limite_retour = models.DateField()
+    date_debut = models.DateField(db_index=True)
+    date_limite_retour = models.DateField(db_index=True)
 
     commentaire = models.TextField(blank=True, null=True)
 
@@ -73,6 +73,7 @@ class ContratTransport(models.Model):
             ('annule', 'Annulé'),
         ],
         default='actif',
+        db_index=True,
         help_text="Statut du contrat"
     )
 

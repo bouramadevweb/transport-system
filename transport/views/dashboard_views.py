@@ -545,8 +545,11 @@ def audit_log_list(request):
         except ValueError:
             pass
 
-    # Pagination: limiter à 100 derniers logs par défaut
-    limit = int(request.GET.get('limit', 100))
+    # Pagination: limiter à 100 derniers logs par défaut, max 1000
+    try:
+        limit = min(int(request.GET.get('limit', 100)), 1000)
+    except (ValueError, TypeError):
+        limit = 100
     logs_limited = logs[:limit]
 
     # Calculer des statistiques sur TOUS les logs (pas seulement les filtrés)

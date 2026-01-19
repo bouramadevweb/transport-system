@@ -5,14 +5,18 @@ Vues AJAX complètes pour tous les modules
 """
 
 import json
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse, QueryDict
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
 from django.urls import reverse
+
+logger = logging.getLogger('transport')
 
 from ..models import (
     Chauffeur, Camion, Affectation, Client, Conteneur, ContratTransport,
@@ -39,7 +43,6 @@ def get_request_data(request):
             # Tenter de parser le body en JSON
             if request.body:
                 json_data = json.loads(request.body)
-                print(f"✅ Parsed JSON data: {json_data}")  # Debug
 
                 # Convertir en QueryDict pour compatibilité Django Forms
                 query_dict = QueryDict('', mutable=True)
@@ -47,12 +50,10 @@ def get_request_data(request):
                     query_dict[key] = value
 
                 return query_dict
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"❌ JSON parsing failed: {e}")  # Debug
+        except (json.JSONDecodeError, ValueError):
             pass
 
     # Sinon retourner request.POST
-    print(f"✅ Using request.POST: {dict(request.POST)}")  # Debug
     return request.POST
 
 
@@ -269,32 +270,28 @@ def ajax_contrat_create(request):
     # POST
     try:
         data = get_request_data(request)
-        print(f"📥 Données reçues pour contrat: {dict(data)}")  # Debug
-
         form = ContratTransportForm(data)
-        print(f"📝 Form errors: {form.errors}")  # Debug
 
         if form.is_valid():
-            print("✅ Formulaire valide, sauvegarde...")  # Debug
-            contrat = form.save()
-            print(f"✅ Contrat créé: {contrat.pk_contrat}")  # Debug
+            with transaction.atomic():
+                contrat = form.save()
 
-            # Log
-            AuditLog.objects.create(
-                utilisateur=request.user,
-                action='CREATE',
-                model_name='ContratTransport',
-                object_id=contrat.pk_contrat,
-                object_repr=str(contrat),
-                changes={}
-            )
+                # Log
+                AuditLog.objects.create(
+                    utilisateur=request.user,
+                    action='CREATE',
+                    model_name='ContratTransport',
+                    object_id=contrat.pk_contrat,
+                    object_repr=str(contrat),
+                    changes={}
+                )
 
+            logger.info(f"Contrat {contrat.numero_bl} créé par {request.user.email}")
             return JsonResponse({
                 'success': True,
                 'message': f'Contrat "{contrat.numero_bl}" créé avec succès'
             })
         else:
-            print(f"❌ Formulaire invalide: {form.errors}")  # Debug
             html = render_to_string(
                 'transport/contrat/partials/contrat_form_modal.html',
                 {'form': form, 'mode': 'create'},
@@ -307,9 +304,7 @@ def ajax_contrat_create(request):
                 'errors': form.errors
             })
     except Exception as e:
-        print(f"💥 Exception dans ajax_contrat_create: {e}")  # Debug
-        import traceback
-        traceback.print_exc()  # Debug
+        logger.error(f"Erreur création contrat: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
             'message': f'Erreur lors de la création: {str(e)}'
@@ -803,21 +798,8 @@ def ajax_camion_create(request):
     """Créer camion via AJAX"""
     from ..forms.vehicle_forms import CamionForm
     try:
-        print("\n" + "="*50)
-        print("AJAX CAMION CREATE - DEBUG")
-        print("="*50)
-        print(f"Content-Type: {request.content_type}")
-        print(f"Method: {request.method}")
-        print(f"request.POST: {dict(request.POST)}")
-        print(f"request.FILES: {dict(request.FILES)}")
-
         request_data = get_request_data(request)
-        print(f"Request data from helper: {dict(request_data)}")
-
         form = CamionForm(request_data)
-        print(f"Form is_bound: {form.is_bound}")
-        print(f"Form data: {form.data}")
-        print(f"Form errors: {form.errors}")
 
         if form.is_valid():
             camion = form.save()
@@ -829,16 +811,11 @@ def ajax_camion_create(request):
                 object_repr=str(camion),
                 changes={}
             )
-            print("✅ Camion created successfully!")
-            print("="*50 + "\n")
             return JsonResponse({
                 'success': True,
                 'message': f'Camion "{camion.immatriculation}" créé avec succès'
             })
         else:
-            print("❌ Form validation failed!")
-            print(f"Errors: {form.errors}")
-            print("="*50 + "\n")
             html = render_to_string(
                 'transport/camions/partials/camion_form_modal.html',
                 {'form': form, 'mode': 'create'},
@@ -851,10 +828,6 @@ def ajax_camion_create(request):
                 'errors': form.errors
             })
     except Exception as e:
-        print(f"❌ Exception: {e}")
-        import traceback
-        traceback.print_exc()
-        print("="*50 + "\n")
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
@@ -932,19 +905,21 @@ def ajax_mission_create(request):
     try:
         form = MissionForm(get_request_data(request))
         if form.is_valid():
-            mission = form.save()
-            AuditLog.objects.create(
-                utilisateur=request.user,
-                action='CREATE',
-                model_name='Mission',
-                object_id=mission.pk_mission,
-                object_repr=str(mission),
-                changes={}
-            )
+            with transaction.atomic():
+                mission = form.save()
+                AuditLog.objects.create(
+                    utilisateur=request.user,
+                    action='CREATE',
+                    model_name='Mission',
+                    object_id=mission.pk_mission,
+                    object_repr=str(mission),
+                    changes={}
+                )
 
             # Redirection vers la page de modification du contrat
             redirect_url = reverse('update_contrat', kwargs={'pk': mission.contrat.pk_contrat})
 
+            logger.info(f"Mission {mission.pk_mission} créée par {request.user.email}")
             return JsonResponse({
                 'success': True,
                 'message': 'Mission créée avec succès',
@@ -963,6 +938,7 @@ def ajax_mission_create(request):
                 'errors': form.errors
             })
     except Exception as e:
+        logger.error(f"Erreur création mission: {e}", exc_info=True)
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
@@ -1110,24 +1086,26 @@ def ajax_terminer_mission(request, pk):
         # Récupérer le flag force
         force = data.get('force') == '1'
 
-        # Ajuster la date de départ si nécessaire
-        if date_retour < mission.date_depart:
-            mission.date_depart = date_retour
-            mission.save()
+        with transaction.atomic():
+            # Ajuster la date de départ si nécessaire
+            if date_retour < mission.date_depart:
+                mission.date_depart = date_retour
+                mission.save()
 
-        # Terminer la mission
-        result = mission.terminer_mission(date_retour=date_retour, force=force)
+            # Terminer la mission
+            result = mission.terminer_mission(date_retour=date_retour, force=force)
 
-        # Log
-        AuditLog.objects.create(
-            utilisateur=request.user,
-            action='TERMINER_MISSION',
-            model_name='Mission',
-            object_id=mission.pk_mission,
-            object_repr=str(mission),
-            changes={'date_retour': str(date_retour), 'force': force}
-        )
+            # Log
+            AuditLog.objects.create(
+                utilisateur=request.user,
+                action='TERMINER_MISSION',
+                model_name='Mission',
+                object_id=mission.pk_mission,
+                object_repr=str(mission),
+                changes={'date_retour': str(date_retour), 'force': force}
+            )
 
+        logger.info(f"Mission {mission.pk_mission} terminée par {request.user.email}")
         return JsonResponse({
             'success': True,
             'message': 'Mission terminée avec succès',
@@ -1135,6 +1113,7 @@ def ajax_terminer_mission(request, pk):
         })
 
     except Exception as e:
+        logger.error(f"Erreur terminaison mission {pk}: {e}", exc_info=True)
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
@@ -1237,25 +1216,28 @@ def ajax_validate_paiement(request, pk):
                     'message': f"Impossible de valider! La caution de {paiement.caution.montant} FCFA n'a pas été remboursée."
                 })
 
-        # Valider le paiement
-        paiement.valider_paiement()
+        with transaction.atomic():
+            # Valider le paiement
+            paiement.valider_paiement()
 
-        # Log
-        AuditLog.objects.create(
-            utilisateur=request.user,
-            action='VALIDER_PAIEMENT',
-            model_name='PaiementMission',
-            object_id=paiement.pk_paiement,
-            object_repr=str(paiement),
-            changes={'montant_total': str(paiement.montant_total)}
-        )
+            # Log
+            AuditLog.objects.create(
+                utilisateur=request.user,
+                action='VALIDER_PAIEMENT',
+                model_name='PaiementMission',
+                object_id=paiement.pk_paiement,
+                object_repr=str(paiement),
+                changes={'montant_total': str(paiement.montant_total)}
+            )
 
+        logger.info(f"Paiement {paiement.pk_paiement} validé par {request.user.email}")
         return JsonResponse({
             'success': True,
             'message': f'Paiement de {paiement.montant_total} FCFA validé avec succès'
         })
 
     except Exception as e:
+        logger.error(f"Erreur validation paiement {pk}: {e}", exc_info=True)
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
@@ -1425,8 +1407,11 @@ def ajax_mark_all_notifications_read(request):
 def ajax_get_notifications(request):
     """Récupérer les notifications via AJAX"""
     try:
-        # Récupérer les notifications de l'utilisateur
-        limit = int(request.GET.get('limit', 10))
+        # Récupérer les notifications de l'utilisateur (max 100)
+        try:
+            limit = min(int(request.GET.get('limit', 10)), 100)
+        except (ValueError, TypeError):
+            limit = 10
         only_unread = request.GET.get('only_unread', 'false').lower() == 'true'
 
         notifications_qs = Notification.objects.filter(utilisateur=request.user).order_by('-created_at')

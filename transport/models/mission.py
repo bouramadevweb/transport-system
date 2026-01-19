@@ -95,17 +95,16 @@ class FraisTrajet(models.Model):
 class Mission(models.Model):
     pk_mission = models.CharField(max_length=250, primary_key=True, editable=False)
     prestation_transport = models.ForeignKey("PrestationDeTransports", on_delete=models.CASCADE)
-    date_depart = models.DateField()
-    date_retour = models.DateField(blank=True, null=True)
+    date_depart = models.DateField(db_index=True)
+    date_retour = models.DateField(blank=True, null=True, db_index=True)
     origine = models.CharField(max_length=200)
     destination = models.CharField(max_length=200)
     itineraire = models.TextField(
         blank=True,
-        # default='Itinéraire à compléter',
         help_text="Décrivez l'itinéraire détaillé de la mission"
     )
     contrat = models.ForeignKey("ContratTransport", on_delete=models.CASCADE)
-    statut = models.CharField(max_length=10, choices=STATUT_MISSION_CHOICES, default='en cours')
+    statut = models.CharField(max_length=10, choices=STATUT_MISSION_CHOICES, default='en cours', db_index=True)
 
     # Gestion du stationnement (demurrage)
     date_arrivee = models.DateField(

@@ -21,7 +21,9 @@ from utils.generate_contrat_pdf import generate_pdf_contrat
 
 @login_required
 def contrat_list(request):
-    contrats = ContratTransport.objects.all().order_by('-date_debut')
+    contrats = ContratTransport.objects.select_related(
+        'conteneur', 'client', 'transitaire', 'entreprise', 'camion', 'chauffeur'
+    ).order_by('-date_debut')
     return render(request, "transport/contrat/contrat_list.html", {"contrats": contrats, "title": "Liste des contrats"})
 
 # Création d'un contrat
