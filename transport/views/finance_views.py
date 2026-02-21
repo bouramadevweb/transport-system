@@ -177,6 +177,10 @@ def valider_paiement_mission(request, pk):
     # Vérifier le statut de la mission
     mission_terminee = paiement.mission.statut == 'terminée'
 
+    # Vérifier que le contrat n'est pas annulé
+    contrat = paiement.mission.contrat
+    contrat_actif = contrat.statut != 'annule'
+
     # Vérifier l'état de la caution
     caution = paiement.caution
     caution_ok = False
@@ -191,14 +195,21 @@ def valider_paiement_mission(request, pk):
             caution_ok = False
             statut_label = caution.get_statut_display()
             caution_message = f"❌ Caution {statut_label.lower()} ({caution.montant} FCFA)"
+    else:
+        caution_message = "⚠️ Aucune caution associée à ce paiement"
 
     if request.method == 'POST':
+        if not contrat_actif:
+            messages.error(request, f"❌ Impossible de valider! Le contrat N° {contrat.numero_bl} est annulé.")
+            return redirect('paiement_mission_list')
+
         if not mission_terminee:
             messages.error(request, f"❌ Impossible de valider! La mission est '{paiement.mission.statut}'. Terminez d'abord la mission.")
             return redirect('paiement_mission_list')
 
         if not caution_ok:
-            messages.error(request, f"❌ Impossible de valider! La caution de {caution.montant} FCFA n'a pas été remboursée. Veuillez rembourser la caution avant de valider le paiement.")
+            montant_info = f"{caution.montant} FCFA" if caution else "inconnue"
+            messages.error(request, f"❌ Impossible de valider! La caution de {montant_info} n'a pas été remboursée. Veuillez rembourser la caution avant de valider le paiement.")
             return redirect('paiement_mission_list')
 
         try:
@@ -231,6 +242,8 @@ def valider_paiement_mission(request, pk):
     return render(request, 'transport/paiements-mission/valider_paiement.html', {
         'paiement': paiement,
         'mission_terminee': mission_terminee,
+        'contrat': contrat,
+        'contrat_actif': contrat_actif,
         'caution': caution,
         'caution_ok': caution_ok,
         'caution_message': caution_message,

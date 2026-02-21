@@ -7,6 +7,7 @@ Formulaires pour contrat
 from decimal import Decimal
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from ..models import (
     ContratTransport, PrestationDeTransports, Conteneur, Camion, Chauffeur,
@@ -101,46 +102,38 @@ class ContratTransportForm(forms.ModelForm):
         self.fields['date_debut'].input_formats = ['%Y-%m-%d']
         self.fields['date_limite_retour'].input_formats = ['%Y-%m-%d']
 
-        # Filtrer pour afficher uniquement les camions disponibles (pas en mission en cours)
-        # Récupérer tous les camions
-        all_camions = Camion.objects.all()
-
-        # Récupérer les IDs des camions en mission (statut='en cours')
+        # IDs des camions actuellement en mission (statut='en cours')
         camions_en_mission_ids = Mission.objects.filter(
             statut='en cours'
         ).values_list('contrat__camion_id', flat=True).distinct()
 
-        # Si on est en mode édition, autoriser le camion actuel même s'il est en mission
-        if self.instance and self.instance.pk and self.instance.camion:
-            camions_disponibles = all_camions.exclude(
-                pk_camion__in=camions_en_mission_ids
-            ) | Camion.objects.filter(pk_camion=self.instance.camion.pk_camion)
+        # En mode édition, inclure le camion du contrat même s'il est en mission
+        if self.instance and self.instance.pk and self.instance.camion_id:
+            camions_disponibles = Camion.objects.filter(
+                Q(pk_camion=self.instance.camion_id) |
+                ~Q(pk_camion__in=camions_en_mission_ids)
+            ).distinct()
         else:
-            # Mode création : uniquement les camions libres
-            camions_disponibles = all_camions.exclude(pk_camion__in=camions_en_mission_ids)
+            camions_disponibles = Camion.objects.exclude(pk_camion__in=camions_en_mission_ids)
 
-        # Mettre à jour le queryset du champ camion
         self.fields['camion'].queryset = camions_disponibles
 
-        # Filtrer pour afficher uniquement les chauffeurs disponibles (pas en mission en cours)
-        all_chauffeurs = Chauffeur.objects.all()
-
-        # Récupérer les IDs des chauffeurs en mission (statut='en cours')
-        chauffeurs_en_mission_ids = Mission.objects.filter(
-            statut='en cours'
-        ).values_list('contrat__chauffeur_id', flat=True).distinct()
-
-        # Si on est en mode édition, autoriser le chauffeur actuel même s'il est en mission
-        if self.instance and self.instance.pk and self.instance.chauffeur:
-            chauffeurs_disponibles = all_chauffeurs.exclude(
-                pk_chauffeur__in=chauffeurs_en_mission_ids
-            ) | Chauffeur.objects.filter(pk_chauffeur=self.instance.chauffeur.pk_chauffeur)
+        # Queryset chauffeur
+        if self.instance and self.instance.pk:
+            # Mode édition : afficher tous les chauffeurs sans restriction,
+            # pour garantir que le chauffeur du contrat est toujours disponible dans la liste
+            self.fields['chauffeur'].queryset = Chauffeur.objects.all()
+            # Forcer la valeur initiale explicitement
+            if self.instance.chauffeur_id:
+                self.initial['chauffeur'] = self.instance.chauffeur_id
         else:
-            # Mode création : uniquement les chauffeurs libres
-            chauffeurs_disponibles = all_chauffeurs.exclude(pk_chauffeur__in=chauffeurs_en_mission_ids)
-
-        # Mettre à jour le queryset du champ chauffeur
-        self.fields['chauffeur'].queryset = chauffeurs_disponibles
+            # Mode création : uniquement les chauffeurs non en mission
+            chauffeurs_en_mission_ids = Mission.objects.filter(
+                statut='en cours'
+            ).values_list('contrat__chauffeur_id', flat=True).distinct()
+            self.fields['chauffeur'].queryset = Chauffeur.objects.exclude(
+                pk_chauffeur__in=chauffeurs_en_mission_ids
+            )
 
         # Ajouter les attributs pour la sélection automatique bidirectionnelle
         self.fields['camion'].widget.attrs.update({

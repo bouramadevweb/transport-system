@@ -338,12 +338,3 @@ class PrestationDeTransports(models.Model):
     def __str__(self):
         return (f"{self.pk_presta_transport}{self.prix_transport}{self.avance}{self.caution}{self.solde}{self.date}")
 
-# Choix de statut pour les cautions
-STATUT_CAUTION_CHOICES = [
-    ('en_attente', 'En attente'),
-    ('remboursee', 'Remboursée'),
-    ('non_remboursee', 'Non remboursée'),
-    ('consommee', 'Consommée'),
-    ('annulee', 'Annulée'),
-]
-

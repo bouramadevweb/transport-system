@@ -465,11 +465,13 @@ class Mission(models.Model):
 
         self.save()
 
-        # 2. Annuler le contrat de transport associé
+        # 2. Ajouter une note dans le contrat de transport associé
+        # Note: on ne change PAS contrat.statut ici car le contrat peut avoir d'autres missions actives.
+        # L'annulation du contrat lui-même se fait via contrat.annuler_contrat().
         if self.contrat:
             if not self.contrat.commentaire:
                 self.contrat.commentaire = ''
-            self.contrat.commentaire += f'\n\n🚫 CONTRAT ANNULÉ\nMission annulée le {date_annulation.strftime("%d/%m/%Y %H:%M")}\nRaison: {raison if raison else "Non spécifiée"}'
+            self.contrat.commentaire += f'\n\n⚠️ MISSION ANNULÉE (contrat toujours {self.contrat.get_statut_display()})\nMission annulée le {date_annulation.strftime("%d/%m/%Y %H:%M")}\nRaison: {raison if raison else "Non spécifiée"}'
             self.contrat.save()
 
         # 3. Annuler toutes les cautions associées
@@ -489,13 +491,15 @@ class Mission(models.Model):
                 paiement.observation = ''
 
             if paiement.est_valide:
-                # Paiement déjà validé - ajouter un avertissement
+                # Paiement déjà validé - annuler et ajouter un avertissement
                 paiement.observation += (
-                    f'\n\n⚠️ PAIEMENT VALIDÉ MAIS MISSION ANNULÉE\n'
+                    f'\n\n⚠️ PAIEMENT VALIDÉ PUIS ANNULÉ (MISSION ANNULÉE)\n'
                     f'Mission annulée le {date_annulation.strftime("%d/%m/%Y %H:%M")}\n'
                     f'Raison: {raison if raison else "Non spécifiée"}\n'
                     f'ACTION REQUISE: Vérifier si remboursement nécessaire'
                 )
+                # Réinitialiser est_valide pour éviter un état incohérent en DB
+                paiement.est_valide = False
             else:
                 # Paiement non validé - marquer comme annulé
                 paiement.observation += (

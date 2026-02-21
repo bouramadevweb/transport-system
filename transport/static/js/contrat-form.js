@@ -253,9 +253,14 @@ function chargerCamionAffecte() {
  * Initialiser les calculs automatiques pour le formulaire de contrat
  */
 function initContratFormCalculs() {
-    // Calculer au chargement si des valeurs existent
-    calculerDateLimiteRetour();
+    // Calculer le reliquat au chargement si des valeurs existent
     calculerReliquat();
+
+    // En mode création (date_limite_retour vide), calculer depuis date_debut
+    const dateLimiteField = document.getElementById('id_date_limite_retour');
+    if (dateLimiteField && !dateLimiteField.value) {
+        calculerDateLimiteRetour();
+    }
 
     // Event listener pour la date de début
     const dateDebutField = document.getElementById('id_date_debut');
@@ -274,7 +279,7 @@ function initContratFormCalculs() {
         avanceField.addEventListener('input', calculerReliquat);
     }
 
-    // Event listeners pour camion/chauffeur
+    // Event listeners pour camion/chauffeur (seulement sur changement utilisateur)
     const camionSelect = document.getElementById('id_camion');
     if (camionSelect) {
         camionSelect.addEventListener('change', chargerChauffeurAffecte);
@@ -285,18 +290,20 @@ function initContratFormCalculs() {
         chauffeurSelect.addEventListener('change', chargerCamionAffecte);
     }
 
-    // Charger le chauffeur si un camion est déjà sélectionné (mode édition)
+    // Auto-remplir le chauffeur depuis l'affectation du camion sélectionné
+    // (aussi bien en création qu'en modification)
     if (camionSelect && camionSelect.value) {
         chargerChauffeurAffecte();
     }
 
-    // Event listener pour conteneur
+    // Event listener pour conteneur (seulement sur changement utilisateur)
     const conteneurSelect = document.getElementById('id_conteneur');
     if (conteneurSelect) {
         conteneurSelect.addEventListener('change', chargerClientTransitaire);
 
-        // Charger le client et le transitaire si un conteneur est déjà sélectionné (mode édition)
-        if (conteneurSelect.value) {
+        // Auto-remplir client/transitaire si conteneur sélectionné mais client vide
+        const clientSelect = document.getElementById('id_client');
+        if (conteneurSelect.value && clientSelect && !clientSelect.value) {
             chargerClientTransitaire();
         }
     }

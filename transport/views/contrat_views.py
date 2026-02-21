@@ -43,8 +43,15 @@ def create_contrat(request):
                     chauffeur_choisi = form.cleaned_data['chauffeur']
 
                     from ..models import Camion, Chauffeur, Mission
+                    from django.db.models import Q
                     Camion.objects.select_for_update().get(pk_camion=camion_choisi.pk_camion)
                     Chauffeur.objects.select_for_update().get(pk_chauffeur=chauffeur_choisi.pk_chauffeur)
+
+                    # Verrouiller aussi les missions actives pour éviter la race condition
+                    list(Mission.objects.select_for_update().filter(
+                        Q(contrat__camion=camion_choisi) | Q(contrat__chauffeur=chauffeur_choisi),
+                        statut='en cours'
+                    ))
 
                     # Re-vérifier la disponibilité après verrouillage
                     if Mission.objects.filter(contrat__camion=camion_choisi, statut='en cours').exists():
@@ -121,8 +128,15 @@ def update_contrat(request, pk):
                     chauffeur_choisi = form.cleaned_data['chauffeur']
 
                     from ..models import Camion, Chauffeur, Mission
+                    from django.db.models import Q
                     Camion.objects.select_for_update().get(pk_camion=camion_choisi.pk_camion)
                     Chauffeur.objects.select_for_update().get(pk_chauffeur=chauffeur_choisi.pk_chauffeur)
+
+                    # Verrouiller aussi les missions actives pour éviter la race condition
+                    list(Mission.objects.select_for_update().filter(
+                        Q(contrat__camion=camion_choisi) | Q(contrat__chauffeur=chauffeur_choisi),
+                        statut='en cours'
+                    ).exclude(contrat=contrat))
 
                     # Re-vérifier la disponibilité après verrouillage (en excluant le contrat en cours d'édition)
                     if Mission.objects.filter(contrat__camion=camion_choisi, statut='en cours').exclude(contrat=contrat).exists():

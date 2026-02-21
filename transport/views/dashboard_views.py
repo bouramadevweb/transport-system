@@ -73,8 +73,8 @@ def dashboard(request):
         "chauffeurs": Chauffeur.objects.count(),
         "camions": Camion.objects.count(),
         "missions": missions_qs.count(),
-        "missions_en_cours": missions_qs.filter(statut="En cours").count(),
-        "missions_terminees": missions_qs.filter(statut__in=["Terminée", "Terminee"]).count(),
+        "missions_en_cours": missions_qs.filter(statut="en cours").count(),
+        "missions_terminees": missions_qs.filter(statut="terminée").count(),
         "reparations": reparations_qs.count(),
         "paiements": paiements_qs.aggregate(total=Sum("montant_total"))["total"] or 0,
         "clients": Client.objects.count(),
@@ -108,15 +108,15 @@ def dashboard(request):
 
     # Missions en cours
     missions_actives = missions_qs.filter(
-        statut="En cours"
+        statut="en cours"
     ).select_related('prestation_transport', 'contrat')[:5]
 
     # Alertes - Missions qui devraient être terminées (date retour passée)
     today = timezone.now().date()
     missions_en_retard = missions_qs.filter(
-        statut="En cours",
+        statut="en cours",
         date_retour__lt=today
-    ).count() if missions_qs.filter(statut="En cours").exists() else 0
+    ).count() if missions_qs.filter(statut="en cours").exists() else 0
 
     # Réparations récentes
     reparations_recentes = reparations_qs.select_related(
