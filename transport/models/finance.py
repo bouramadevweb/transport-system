@@ -4,7 +4,7 @@ Finance.Py
 Modèles pour finance
 """
 
-from django.db import models
+from django.db import models, transaction
 from django.utils.timezone import now
 from django.utils.text import slugify
 from uuid import uuid4
@@ -180,70 +180,76 @@ class PaiementMission(models.Model):
 
         IMPORTANT: Cette méthode ne modifie JAMAIS la caution elle-même.
         Elle enregistre seulement l'état de la caution au moment de la validation.
+
+        Utilise select_for_update() pour éviter la race condition : deux appels
+        simultanés ne peuvent pas tous les deux passer la vérification du statut.
         """
         from django.utils import timezone
         from django.core.exceptions import ValidationError
-
-        # Vérifier que la mission est terminée
-        if self.mission.statut != 'terminée':
-            raise ValidationError(
-                f"❌ La mission n'est pas terminée (statut: {self.mission.statut}). "
-                f"Vous devez terminer la mission avant de valider le paiement."
-            )
-
-        # Vérifier l'état de la caution
-        if self.caution:
-            # La caution doit être remboursée ou consommée
-            if self.caution.statut not in ['remboursee', 'consommee']:
-                raise ValidationError(
-                    f"❌ Impossible de valider le paiement! "
-                    f"La caution de {self.caution.montant} FCFA a le statut '{self.caution.get_statut_display()}'. "
-                    f"Veuillez d'abord mettre à jour le statut de la caution (Remboursée ou Consommée)."
-                )
-
-        # IMPORTANT: Sauvegarder l'état de la caution AVANT validation pour traçabilité
-        # On ne modifie PAS la caution, on enregistre juste son état dans le paiement
-        caution_state = {
-            'statut': self.caution.statut if self.caution else 'en_attente',
-            'montant_rembourser': self.caution.montant_rembourser if self.caution else 0,
-            'montant': self.caution.montant if self.caution else 0,
-        }
-
-        # Marquer le paiement comme validé
-        self.est_valide = True
-        self.date_validation = timezone.now()
-
-        # Enregistrer si la caution était remboursée ou consommée au moment de la validation
-        # (Ne modifie PAS la caution elle-même!)
-        if self.caution and caution_state['statut'] in ['remboursee', 'consommee']:
-            self.caution_est_retiree = True
-
-        # Ajouter l'état de la caution dans l'observation pour traçabilité
-        observation_caution = (
-            f"\n--- État de la caution au moment de la validation ---\n"
-            f"Montant caution: {caution_state['montant']} FCFA\n"
-            f"Statut: {self.caution.get_statut_display() if self.caution else 'N/A'}\n"
-            f"Montant remboursé: {caution_state['montant_rembourser']} FCFA\n"
-            f"Date validation: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
-        )
-
-        if self.observation:
-            self.observation += observation_caution
-        else:
-            self.observation = observation_caution
-
-        # Sauvegarder le paiement (NE TOUCHE PAS À LA CAUTION!)
-        self.save()
-
-        # Log pour vérifier que la caution n'est pas modifiée
         import logging
         logger = logging.getLogger(__name__)
-        logger.info(
-            f"Paiement {self.pk_paiement} validé. "
-            f"Caution {self.caution.pk_caution if self.caution else 'N/A'} "
-            f"PRÉSERVÉE (montant: {caution_state['montant']}, "
-            f"statut: {caution_state['statut']})"
-        )
+
+        with transaction.atomic():
+            # Vérifier que la mission est terminée
+            if self.mission.statut != 'terminée':
+                raise ValidationError(
+                    f"❌ La mission n'est pas terminée (statut: {self.mission.statut}). "
+                    f"Vous devez terminer la mission avant de valider le paiement."
+                )
+
+            # Recharger la caution avec un verrou ligne pour éviter la race condition
+            caution = None
+            if self.caution_id:
+                caution = Cautions.objects.select_for_update().get(pk_caution=self.caution_id)
+
+            # Vérifier l'état de la caution (sur la version verrouillée)
+            if caution:
+                if caution.statut not in ['remboursee', 'consommee']:
+                    raise ValidationError(
+                        f"❌ Impossible de valider le paiement! "
+                        f"La caution de {caution.montant} FCFA a le statut '{caution.get_statut_display()}'. "
+                        f"Veuillez d'abord mettre à jour le statut de la caution (Remboursée ou Consommée)."
+                    )
+
+            # IMPORTANT: Sauvegarder l'état de la caution AVANT validation pour traçabilité
+            # On ne modifie PAS la caution, on enregistre juste son état dans le paiement
+            caution_state = {
+                'statut': caution.statut if caution else 'en_attente',
+                'montant_rembourser': caution.montant_rembourser if caution else 0,
+                'montant': caution.montant if caution else 0,
+            }
+
+            # Marquer le paiement comme validé
+            self.est_valide = True
+            self.date_validation = timezone.now()
+
+            # Enregistrer si la caution était remboursée ou consommée au moment de la validation
+            if caution and caution_state['statut'] in ['remboursee', 'consommee']:
+                self.caution_est_retiree = True
+
+            # Ajouter l'état de la caution dans l'observation pour traçabilité
+            observation_caution = (
+                f"\n--- État de la caution au moment de la validation ---\n"
+                f"Montant caution: {caution_state['montant']} FCFA\n"
+                f"Statut: {caution.get_statut_display() if caution else 'N/A'}\n"
+                f"Montant remboursé: {caution_state['montant_rembourser']} FCFA\n"
+                f"Date validation: {timezone.now().strftime('%d/%m/%Y %H:%M')}"
+            )
+
+            if self.observation:
+                self.observation += observation_caution
+            else:
+                self.observation = observation_caution
+
+            # Sauvegarder le paiement (NE TOUCHE PAS À LA CAUTION!)
+            self.save()
+
+            logger.info(
+                f"Paiement {self.pk_paiement} validé. "
+                f"Caution {caution.pk_caution if caution else 'N/A'} "
+                f"PRÉSERVÉE (montant: {caution_state['montant']}, "
+                f"statut: {caution_state['statut']})"
+            )
 
     def synchroniser_frais_stationnement(self):
         """

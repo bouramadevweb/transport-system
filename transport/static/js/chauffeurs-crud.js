@@ -133,6 +133,9 @@
                 credentials: 'same-origin'
             });
 
+            if (!fetchResponse.ok) {
+                throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+            }
             const response = await fetchResponse.json();
             console.log('📥 Create form response:', response.success);
 
@@ -172,6 +175,9 @@
                 credentials: 'same-origin'
             });
 
+            if (!fetchResponse.ok) {
+                throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+            }
             const response = await fetchResponse.json();
             console.log('📥 Edit form response:', response.success);
 
@@ -262,6 +268,9 @@
                 credentials: 'same-origin'
             });
 
+            if (!fetchResponse.ok && fetchResponse.status !== 400) {
+                throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+            }
             const response = await fetchResponse.json();
             console.log('📥 Submit response:', response.success, response.message);
 

@@ -175,13 +175,22 @@ function updateNoResultsMessage(table, show, searchTerm) {
       const colCount = table.querySelector('thead tr').cells.length;
       noResultsRow = document.createElement('tr');
       noResultsRow.className = 'no-results-row';
-      noResultsRow.innerHTML = `
-        <td colspan="${colCount}" class="text-center py-5">
-          <i class="fas fa-search fa-3x text-muted mb-3 opacity-50"></i>
-          <h5 class="text-muted">Aucun résultat trouvé</h5>
-          <p class="text-muted">Aucun élément ne correspond à "${searchTerm}"</p>
-        </td>
+
+      const td = document.createElement('td');
+      td.colSpan = colCount;
+      td.className = 'text-center py-5';
+      // Utiliser innerHTML uniquement pour le contenu statique (pas de données utilisateur)
+      td.innerHTML = `
+        <i class="fas fa-search fa-3x text-muted mb-3 opacity-50"></i>
+        <h5 class="text-muted">Aucun résultat trouvé</h5>
       `;
+      // Utiliser textContent pour searchTerm (données utilisateur) — évite le XSS
+      const p = document.createElement('p');
+      p.className = 'text-muted';
+      p.textContent = `Aucun élément ne correspond à "${searchTerm}"`;
+      td.appendChild(p);
+
+      noResultsRow.appendChild(td);
       table.querySelector('tbody').appendChild(noResultsRow);
     }
   } else {

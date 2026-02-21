@@ -629,7 +629,12 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AuditLog
-        fields = '__all__'
+        fields = [
+            'id', 'utilisateur', 'utilisateur_nom',
+            'action', 'model_name', 'object_id',
+            'timestamp', 'ip_address',
+        ]
+        read_only_fields = fields
 
 
 # =============================================================================

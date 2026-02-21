@@ -49,7 +49,7 @@ def create_camion(request):
 
 @login_required
 def update_camion(request, pk):
-    camion = get_object_or_404(Camion, pk=pk)
+    camion = get_object_or_404(Camion, pk=pk, entreprise=request.user.entreprise)
     if request.method == "POST":
         form = CamionForm(request.POST, instance=camion)
         if form.is_valid():
@@ -64,7 +64,7 @@ def update_camion(request, pk):
 
 @can_delete_data
 def delete_camion(request, pk):
-    camion = get_object_or_404(Camion, pk=pk)
+    camion = get_object_or_404(Camion, pk=pk, entreprise=request.user.entreprise)
     if request.method == "POST":
         camion.delete()
         messages.success(request, "🗑️ Camion supprimé avec succès!")
@@ -361,23 +361,4 @@ def delete_piece_reparee(request, pk):
         'title': 'Supprimer une pièce réparée'
     })
 
-# Connexion 
-def connexion_utilisateur(request):
-    form = ConnexionForm(request.POST or None)
-    
-    if request.method == 'POST':
-        if form.is_valid():
-            email = form.cleaned_data['email']
-            password = form.cleaned_data['password']
-            user = authenticate(request, email=email, password=password)
-
-            if user is not None:
-                login(request, user)
-                return redirect('dashboard')  # Redirige vers une page après connexion
-            else:
-                form.add_error(None, "Email ou mot de passe invalide.")
-
-    return render(request, 'transport/connexion.html', {'form': form})
-
-#tableau de bord
 

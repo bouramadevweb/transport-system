@@ -41,8 +41,8 @@ STATUT_CONTENEUR_CHOICES = [
 ]
 
 STATUT_CAUTION_CONTRAT_CHOICES = [
-    ('bloquée', 'Bloquée'),
-    ('débloquée', 'Débloquée'),
+    ('bloquee', 'Bloquée'),
+    ('debloquee', 'Débloquée'),
 ]
 
 STATUT_MISSION_CHOICES = [

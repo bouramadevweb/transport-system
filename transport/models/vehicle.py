@@ -127,7 +127,7 @@ class Conteneur(models.Model):
 
     def get_mission_en_cours(self):
         """Retourne la mission en cours pour ce conteneur (si existe)"""
-        from models import Mission
+        from .mission import Mission
         return Mission.objects.filter(
             contrat__conteneur=self,
             statut='en cours'
@@ -155,8 +155,8 @@ class Reparation(models.Model):
         return ReparationMecanicien.objects.filter(reparation=self).exists()
 
     def get_mecaniciens(self):
-        from models import Mecanicien
         """Retourne la liste des mécaniciens assignés à cette réparation"""
+        from .personnel import Mecanicien
         return Mecanicien.objects.filter(
             reparationmecanicien__reparation=self
         )

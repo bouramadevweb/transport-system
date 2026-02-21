@@ -21,6 +21,13 @@ class Transitaire(models.Model):
     email = models.EmailField(blank=True, null=True)
     score_fidelite = models.IntegerField(default=100)
     etat_paiement = models.CharField(max_length=10, choices=ETAT_PAIEMENT_CHOICES, default='bon')
+    commission_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+        help_text="Pourcentage de commission du transitaire (0-100)"
+    )
     commentaire = models.TextField(blank=True, null=True)
     
     def save(self, *args, **kwargs):

@@ -94,7 +94,7 @@ def dashboard(request):
     )
 
     mois_labels = [p["mois"].strftime("%b %Y") for p in paiements_mensuels]
-    montant_values = [float(p["total"]) for p in paiements_mensuels]
+    montant_values = [round(float(p["total"]), 2) if p["total"] else 0.0 for p in paiements_mensuels]
 
     # Dernières missions (5 plus récentes)
     dernieres_missions = missions_qs.select_related(

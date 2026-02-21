@@ -219,24 +219,12 @@ class CrudModalManager {
      * Soumettre le formulaire via AJAX
      */
     async submitForm(form) {
+        // Envoyer le FormData directement — ajaxManager détecte automatiquement
+        // multipart/form-data et préserve les fichiers uploadés (input type="file").
+        // L'ancienne conversion en {} perdait tous les fichiers.
         const formData = new FormData(form);
 
-        // Convertir FormData en objet JSON
-        const data = {};
-        formData.forEach((value, key) => {
-            // Gérer les champs multiples (select multiple, checkboxes)
-            if (data[key]) {
-                if (Array.isArray(data[key])) {
-                    data[key].push(value);
-                } else {
-                    data[key] = [data[key], value];
-                }
-            } else {
-                data[key] = value;
-            }
-        });
-
-        console.log('📤 Submitting form:', data);
+        console.log('📤 Submitting form (FormData)');
 
         try {
             let url;
@@ -250,7 +238,7 @@ class CrudModalManager {
 
             const response = await ajaxManager.post(
                 url,
-                data,
+                formData,
                 { showLoading: false }
             );
 

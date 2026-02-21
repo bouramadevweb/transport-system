@@ -172,8 +172,8 @@ class ContratTransportForm(forms.ModelForm):
         numero_bl = numero_bl.strip().upper()
 
         # Si on est en mode édition (instance existe), exclure l'instance actuelle
-        if self.instance and self.instance.pk:
-            if ContratTransport.objects.filter(numero_bl=numero_bl).exclude(pk=self.instance.pk).exists():
+        if self.instance and self.instance.pk_contrat:
+            if ContratTransport.objects.filter(numero_bl=numero_bl).exclude(pk_contrat=self.instance.pk_contrat).exists():
                 raise forms.ValidationError(
                     f"Le numéro BL '{numero_bl}' existe déjà. Veuillez utiliser un numéro BL unique."
                 )

@@ -114,7 +114,7 @@ def paiement_mission_list(request):
         paiements_page = paginator.page(paginator.num_pages)
 
     # Récupérer les données pour les filtres
-    chauffeurs = Chauffeur.objects.all().order_by('nom')
+    chauffeurs = Chauffeur.objects.filter(entreprise=request.user.entreprise).order_by('nom')
 
     return render(request, 'transport/paiements-mission/paiement_mission_list.html', {
         'paiements': paiements_page,

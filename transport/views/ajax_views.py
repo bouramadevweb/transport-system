@@ -1197,12 +1197,18 @@ def ajax_filter_paiements(request):
         paiements_valides = paiements.filter(est_valide=True).count()
         paiements_attente = paiements.filter(est_valide=False).count()
 
+        total = paiements.count()
         return JsonResponse({
             'success': True,
             'html': html,
-            'count': paiements.count(),
+            # Clés attendues par paiement-ajax.js
+            'total_count': total,
+            'validated_count': paiements_valides,
+            'pending_count': paiements_attente,
+            # Alias pour compatibilité
+            'count': total,
             'paiements_valides': paiements_valides,
-            'paiements_attente': paiements_attente
+            'paiements_attente': paiements_attente,
         })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1391,7 +1397,7 @@ def ajax_dashboard_filter(request):
             'stats': stats,
             'mission_par_statut': mission_par_statut,
             'paiements_mensuels': paiements_mensuels,
-            'revenus_mois_actuel': float(revenus_mois_actuel),
+            'revenus_mois_actuel': str(revenus_mois_actuel),
             'missions_en_retard': missions_en_retard
         })
 

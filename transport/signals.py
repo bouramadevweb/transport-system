@@ -4,11 +4,18 @@ from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import ValidationError
 import logging
+import threading
+
+# Verrou threading.local pour protéger creer_workflow_complet_contrat contre
+# la ré-entrance : si un .save() interne déclenche un nouveau post_save
+# ContratTransport (ex: via un autre signal), on ignore la ré-entrance.
+_workflow_lock = threading.local()
 
 from .models import (
     ContratTransport, PrestationDeTransports, Cautions, Mission,
     PaiementMission, Notification, Reparation, Chauffeur
 )
+from .models.choices import STATUT_CAUTION_CHOICES
 
 # Import du système de notifications email
 from .email_notifications import (
@@ -70,7 +77,7 @@ def notifier_mission_terminee(sender, instance, created, **kwargs):
                     color='success',
                     mission=instance
                 )
-                logger.info(f"✅ Notification créée pour le chauffeur {chauffeur.nom} {chauffeur.prenom}")
+                logger.info(f"✅ Notification créée pour le chauffeur #{chauffeur.pk_chauffeur}")
 
             # 📧 NOUVEAU: Envoyer email de notification
             try:
@@ -106,7 +113,7 @@ def notifier_paiement_valide(sender, instance, created, **kwargs):
                     paiement=instance,
                     mission=instance.mission
                 )
-                logger.info(f"✅ Notification de paiement créée pour le chauffeur {chauffeur.nom} {chauffeur.prenom}")
+                logger.info(f"✅ Notification de paiement créée pour le chauffeur #{chauffeur.pk_chauffeur}")
 
             # 📧 NOUVEAU: Envoyer email de confirmation paiement
             try:
@@ -210,6 +217,20 @@ def creer_workflow_complet_contrat(sender, instance, created, **kwargs):  # noqa
 
     Utilise une transaction atomique pour garantir la cohérence des données.
     """
+    # Protection contre la ré-entrance : les .save() internes (prestation, caution,
+    # mission, paiement) peuvent déclencher d'autres signaux qui eux-mêmes
+    # pourraient sauvegarder un ContratTransport et retrigger ce signal.
+    if getattr(_workflow_lock, 'running', False):
+        return
+    _workflow_lock.running = True
+    try:
+        _creer_workflow_complet_contrat_impl(instance, created)
+    finally:
+        _workflow_lock.running = False
+
+
+def _creer_workflow_complet_contrat_impl(instance, created):
+    """Implémentation réelle du workflow (appelée sans risque de ré-entrance)."""
     if created:  # Lors de la création
         logger.info(f"🔄 Création automatique du workflow pour le contrat {instance.pk_contrat}")
 
@@ -243,7 +264,7 @@ def creer_workflow_complet_contrat(sender, instance, created, **kwargs):  # noqa
             logger.warning(f"⚠️ Le camion {instance.camion.immatriculation} est déjà affecté à une mission en cours")
 
         if missions_en_cours_chauffeur.exists():
-            logger.warning(f"⚠️ Le chauffeur {instance.chauffeur.nom} {instance.chauffeur.prenom} est déjà affecté à une mission en cours")
+            logger.warning(f"⚠️ Le chauffeur #{instance.chauffeur.pk_chauffeur} est déjà affecté à une mission en cours")
 
         # 🆕 VÉRIFICATION CRITIQUE: Le conteneur doit être disponible
         if instance.conteneur and not instance.conteneur.est_disponible():

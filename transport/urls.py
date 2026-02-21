@@ -143,6 +143,9 @@ urlpatterns = [
     # AJAX URLs for missions
     path('missions/ajax/create/', ajax_views.ajax_mission_create, name='ajax_mission_create'),
     path('missions/<str:pk>/ajax/update/', ajax_views.ajax_mission_update, name='ajax_mission_update'),
+    # Aliases GET pour le chargement du formulaire (utilisés par missions-crud.js)
+    path('missions/ajax/create-form/', ajax_views.ajax_mission_create, name='ajax_mission_create_form'),
+    path('missions/<str:pk>/ajax/update-form/', ajax_views.ajax_mission_update, name='ajax_mission_update_form'),
 
     path('mission-conteneurs/', views.mission_conteneur_list, name='mission_conteneur_list'),
     path('mission-conteneurs/create/', views.create_mission_conteneur, name='create_mission_conteneur'),

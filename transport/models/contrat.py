@@ -85,6 +85,12 @@ class ContratTransport(models.Model):
             )
         ]
 
+    def _auto_compute_date_limite_retour(self):
+        """Calcule date_limite_retour = date_debut + 23 jours si non définie."""
+        if self.date_debut and not self.date_limite_retour:
+            from datetime import timedelta
+            self.date_limite_retour = self.date_debut + timedelta(days=23)
+
     def clean(self):
         """Validation personnalisée des montants et champs obligatoires"""
         super().clean()
@@ -93,9 +99,7 @@ class ContratTransport(models.Model):
         # UNIQUEMENT si on crée un nouveau contrat (pas de pk_contrat)
         # ou si date_limite_retour n'est pas définie
         # En mode édition, on garde la valeur saisie par l'utilisateur
-        if self.date_debut and not self.date_limite_retour:
-            from datetime import timedelta
-            self.date_limite_retour = self.date_debut + timedelta(days=23)
+        self._auto_compute_date_limite_retour()
 
         # Vérifier les champs obligatoires en utilisant les IDs
         errors = {}
@@ -110,18 +114,23 @@ class ContratTransport(models.Model):
             errors['transitaire'] = 'Le transitaire est obligatoire'
 
         # Vérifier la disponibilité du camion et du chauffeur
+        # select_for_update() verrouille les lignes pour éviter la race condition
+        # (deux contrats créés simultanément avec le même camion/chauffeur)
         if self.camion_id and self.chauffeur_id:
+            from django.db import connection
+            _use_lock = connection.vendor != 'sqlite'  # SQLite ne supporte pas le locking de ligne
+
             # Vérifier si le camion est déjà affecté à une mission en cours
-            missions_camion = Mission.objects.filter(
+            missions_camion_qs = Mission.objects.filter(
                 contrat__camion_id=self.camion_id,
                 statut='en cours'
             )
-            # Exclure le contrat actuel si on est en mode édition
+            if _use_lock:
+                missions_camion_qs = missions_camion_qs.select_for_update()
             if self.pk_contrat:
-                missions_camion = missions_camion.exclude(contrat__pk_contrat=self.pk_contrat)
+                missions_camion_qs = missions_camion_qs.exclude(contrat__pk_contrat=self.pk_contrat)
 
-            if missions_camion.exists():
-                # Récupérer l'objet camion pour afficher son immatriculation
+            if missions_camion_qs.exists():
                 try:
                     camion = Camion.objects.get(pk=self.camion_id)
                     errors['camion'] = f'Le camion {camion.immatriculation} est déjà affecté à une mission en cours'
@@ -129,19 +138,19 @@ class ContratTransport(models.Model):
                     errors['camion'] = 'Le camion sélectionné est déjà affecté à une mission en cours'
 
             # Vérifier si le chauffeur est déjà affecté à une mission en cours
-            missions_chauffeur = Mission.objects.filter(
+            missions_chauffeur_qs = Mission.objects.filter(
                 contrat__chauffeur_id=self.chauffeur_id,
                 statut='en cours'
             )
-            # Exclure le contrat actuel si on est en mode édition
+            if _use_lock:
+                missions_chauffeur_qs = missions_chauffeur_qs.select_for_update()
             if self.pk_contrat:
-                missions_chauffeur = missions_chauffeur.exclude(contrat__pk_contrat=self.pk_contrat)
+                missions_chauffeur_qs = missions_chauffeur_qs.exclude(contrat__pk_contrat=self.pk_contrat)
 
-            if missions_chauffeur.exists():
-                # Récupérer l'objet chauffeur pour afficher son nom
+            if missions_chauffeur_qs.exists():
                 try:
                     chauffeur = Chauffeur.objects.get(pk=self.chauffeur_id)
-                    errors['chauffeur'] = f'Le chauffeur {chauffeur.nom} {chauffeur.prenom} est déjà affecté à une mission en cours'
+                    errors['chauffeur'] = f'Le chauffeur #{chauffeur.pk_chauffeur} est déjà affecté à une mission en cours'
                 except Chauffeur.DoesNotExist:
                     errors['chauffeur'] = 'Le chauffeur sélectionné est déjà affecté à une mission en cours'
 
@@ -180,11 +189,8 @@ class ContratTransport(models.Model):
             self.pk_contrat = slugify(base)[:250]
 
         # Calcul automatique de la date limite de retour : date_debut + 23 jours
-        # Note: Ce calcul est maintenant fait dans clean() mais on le garde ici
-        # comme sécurité au cas où clean() n'est pas appelé (ex: bulk_create, update)
-        if self.date_debut and not self.date_limite_retour:
-            from datetime import timedelta
-            self.date_limite_retour = self.date_debut + timedelta(days=23)
+        # Sécurité au cas où clean() n'est pas appelé (ex: bulk_create, update)
+        self._auto_compute_date_limite_retour()
 
         # Calcul automatique du reliquat
         self.reliquat_transport = Decimal(self.montant_total) - Decimal(self.avance_transport)

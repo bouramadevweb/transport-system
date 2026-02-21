@@ -78,7 +78,7 @@
                             <td>{{ f.origine }}</td>
                             <td>{{ f.destination }}</td>
                             <td>
-                                <strong class="text-success">{{ f.frais_route|add:f.frais_carburant|floatformat:0 }} FCFA</strong>
+                                <strong class="text-success">{{ f.total_frais|floatformat:0 }} FCFA</strong>
                                 <br>
                                 <small class="text-muted">
                                     <i class="fas fa-road"></i> {{ f.frais_route|floatformat:0 }} +

@@ -114,7 +114,8 @@ class MissionCRUDManager {
         // Injecter le contenu
         document.getElementById('modalContentContainer').innerHTML = htmlContent;
 
-        // Attacher l'événement de soumission
+        // Attacher l'événement de soumission avec { once: true }
+        // pour éviter l'accumulation de listeners lors des réaffichages successifs
         const form = document.getElementById('missionForm');
         if (form) {
             form.addEventListener('submit', (e) => {
@@ -124,7 +125,7 @@ class MissionCRUDManager {
                 } else {
                     this.submitUpdate(missionId);
                 }
-            });
+            }, { once: true });
         }
 
         // Afficher le modal
@@ -162,13 +163,13 @@ class MissionCRUDManager {
                 if (response.html) {
                     document.getElementById('modalContentContainer').innerHTML = response.html;
 
-                    // Réattacher l'événement de soumission
+                    // Réattacher le listener sur le nouveau form avec { once: true }
                     const newForm = document.getElementById('missionForm');
                     if (newForm) {
                         newForm.addEventListener('submit', (e) => {
                             e.preventDefault();
                             this.submitCreate();
-                        });
+                        }, { once: true });
                     }
                 }
 
@@ -212,13 +213,13 @@ class MissionCRUDManager {
                 if (response.html) {
                     document.getElementById('modalContentContainer').innerHTML = response.html;
 
-                    // Réattacher l'événement de soumission
+                    // Réattacher le listener sur le nouveau form avec { once: true }
                     const newForm = document.getElementById('missionForm');
                     if (newForm) {
                         newForm.addEventListener('submit', (e) => {
                             e.preventDefault();
                             this.submitUpdate(missionId);
-                        });
+                        }, { once: true });
                     }
                 }
 

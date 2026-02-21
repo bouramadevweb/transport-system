@@ -19,10 +19,17 @@ def notifications_processor(request):
             is_read=False
         ).count()
 
-        # Compter les missions en cours
-        missions_en_cours_count = Mission.objects.filter(
-            statut='en cours'
-        ).count()
+        # Compter les missions en cours (filtrées par rôle)
+        # Un chauffeur ne voit que ses propres missions ; les autres voient tout
+        if getattr(request.user, 'role', None) == 'chauffeur':
+            missions_en_cours_count = Mission.objects.filter(
+                statut='en cours',
+                contrat__chauffeur__utilisateur=request.user
+            ).count()
+        else:
+            missions_en_cours_count = Mission.objects.filter(
+                statut='en cours'
+            ).count()
 
         return {
             'notifications': notifications,

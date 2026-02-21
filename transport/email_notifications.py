@@ -59,8 +59,8 @@ class EmailNotifier:
             # Ajouter le contenu HTML
             email.attach_alternative(html_content, "text/html")
 
-            # Envoyer
-            email.send(fail_silently=fail_silently)
+            # Envoyer — toujours False ici pour que notre except capte l'erreur
+            email.send(fail_silently=False)
 
             logger.info(f"✅ Email envoyé: {subject} → {', '.join(recipient_list)}")
             return True

@@ -14,7 +14,15 @@ from ..models import (
 class MissionForm(forms.ModelForm):
     class Meta:
         model = Mission
-        fields = '__all__'
+        fields = [
+            'prestation_transport', 'contrat',
+            'date_depart', 'date_retour',
+            'origine', 'destination', 'itineraire',
+            'statut',
+            'date_arrivee', 'date_dechargement',
+            # Les champs stationnement (statut_stationnement, jours_stationnement_facturables,
+            # montant_stationnement) sont auto-calculés — exclus du formulaire utilisateur.
+        ]
         widgets = {
             'date_depart': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
             'date_retour': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),

@@ -67,11 +67,28 @@ from .serializers import (
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def login_api_view(request):
+def login_api_view(request):  # noqa: C901
     """API endpoint pour la connexion - exemptée de CSRF pour les apps mobiles"""
-    # Debug log
-    print(f"🔐 LOGIN REQUEST from {request.META.get('REMOTE_ADDR')} - User-Agent: {request.META.get('HTTP_USER_AGENT', 'N/A')[:50]}")
-    print(f"🔐 Data: {request.data}")
+    from django.core.cache import cache as _cache
+    import logging as _log
+    _logger = _log.getLogger(__name__)
+
+    ip = request.META.get('REMOTE_ADDR', 'unknown')
+    _logger.info(
+        f"LOGIN REQUEST from {ip} - "
+        f"User-Agent: {request.META.get('HTTP_USER_AGENT', 'N/A')[:50]}"
+    )
+    # Ne jamais logger email ni password
+
+    # Rate limiting : 5 tentatives par IP sur 15 minutes
+    _cache_key = f'login_attempts:{ip}'
+    _attempts = _cache.get(_cache_key, 0)
+    if _attempts >= 5:
+        _logger.warning(f"Brute-force détecté depuis {ip} ({_attempts} tentatives)")
+        return Response(
+            {'detail': 'Trop de tentatives de connexion. Réessayez dans 15 minutes.'},
+            status=status.HTTP_429_TOO_MANY_REQUESTS
+        )
 
     email = request.data.get('email')
     password = request.data.get('password')
@@ -86,6 +103,9 @@ def login_api_view(request):
     user = authenticate(request, username=email, password=password)
 
     if user is None:
+        # Incrémenter le compteur de tentatives échouées (expire dans 15 min)
+        _cache.set(_cache_key, _attempts + 1, 900)
+        _logger.warning(f"Échec de connexion depuis {ip} (tentative {_attempts + 1}/5)")
         return Response(
             {'detail': 'Identifiants incorrects'},
             status=status.HTTP_401_UNAUTHORIZED
@@ -96,6 +116,9 @@ def login_api_view(request):
             {'detail': 'Compte désactivé'},
             status=status.HTTP_401_UNAUTHORIZED
         )
+
+    # Connexion réussie : réinitialiser le compteur de tentatives
+    _cache.delete(_cache_key)
 
     # Générer les tokens JWT
     refresh = RefreshToken.for_user(user)
@@ -410,7 +433,7 @@ class ContratTransportViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(statut=statut)
         return queryset
 
-    @action(detail=True, methods=['get'], permission_classes=[AllowAny])
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
     def pdf(self, request, pk=None):
         """Génère et retourne le PDF du contrat (Feuille de Route)"""
         from reportlab.lib.pagesizes import A4
@@ -462,7 +485,9 @@ class ContratTransportViewSet(viewsets.ModelViewSet):
         story.append(Spacer(1, 14))
 
         story.append(Paragraph(f"<b>Nature de la marchandise :</b> Produits divers", styles["Normal"]))
-        story.append(Paragraph(f"<b>Transitaire :</b> {contrat.transitaire.nom} — {contrat.transitaire.telephone}", styles["Normal"]))
+        _trans_nom = contrat.transitaire.nom if contrat.transitaire else "Non spécifié"
+        _trans_tel = contrat.transitaire.telephone if contrat.transitaire else "N/A"
+        story.append(Paragraph(f"<b>Transitaire :</b> {_trans_nom} — {_trans_tel}", styles["Normal"]))
         story.append(Spacer(1, 12))
 
         text = """

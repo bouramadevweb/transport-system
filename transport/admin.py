@@ -178,7 +178,7 @@ class CautionsAdmin(admin.ModelAdmin):
         'conteneur__numero_conteneur',
         'contrat__pk_contrat',
         'client__nom',
-        'transiteur__nom',
+        'transitaire__nom',
         'chauffeur__nom',
         'camion__immatriculation',
     )
@@ -186,7 +186,7 @@ class CautionsAdmin(admin.ModelAdmin):
 @admin.register(FraisTrajet)
 class FraisTrajetAdmin(admin.ModelAdmin):
     list_display = ('pk_frais', 'get_mission_short', 'get_camion', 'get_chauffeur', 'type_trajet', 'date_trajet', 'origine', 'destination', 'get_total')
-    search_fields = ('pk_frais', 'mission__pk_mission', 'contrat__numero_bl', 'origine', 'destination', 'contrat__camion__immatriculation', 'contrat__chauffeur__nom')
+    search_fields = ('^pk_frais', '^contrat__numero_bl', 'origine', 'destination', '^contrat__camion__immatriculation')
     list_filter = ('type_trajet', 'date_trajet', 'origine', 'destination')
     autocomplete_fields = ('mission', 'contrat')
 
@@ -213,7 +213,7 @@ class FraisTrajetAdmin(admin.ModelAdmin):
 
     def get_total(self, obj):
         """Affiche le total des frais"""
-        return f"{obj.frais_route + obj.frais_carburant} FCFA"
+        return f"{obj.total_frais} FCFA"
     get_total.short_description = 'Total'
 
 #admin.site.register(Mission)

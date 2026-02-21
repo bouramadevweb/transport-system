@@ -42,8 +42,8 @@ def mission_list(request):
         missions_page = paginator.page(paginator.num_pages)
 
     # Récupérer les données pour les filtres
-    chauffeurs = Chauffeur.objects.all().order_by('nom')
-    clients = Client.objects.all().order_by('nom')
+    chauffeurs = Chauffeur.objects.filter(entreprise=request.user.entreprise).order_by('nom')
+    clients = Client.objects.all().order_by('nom')  # Client n'a pas de FK entreprise
 
     return render(request, 'transport/missions/mission_list.html', {
         'missions': missions_page,
@@ -134,16 +134,18 @@ def terminer_mission(request, pk):
         ajustement_necessaire = False
         date_depart_originale = None
 
-    en_retard = date_retour > mission.contrat.date_limite_retour if mission.contrat else False
+    contrat = mission.contrat
+    date_limite = contrat.date_limite_retour if contrat else None
+    en_retard = bool(date_limite and date_retour > date_limite)
     info_penalite = None
 
     if en_retard:
-        jours_retard = (date_retour - mission.contrat.date_limite_retour).days
+        jours_retard = (date_retour - date_limite).days
         penalite = jours_retard * 25000
         info_penalite = {
             'jours_retard': jours_retard,
             'penalite': penalite,
-            'date_limite': mission.contrat.date_limite_retour
+            'date_limite': date_limite
         }
 
     if request.method == 'POST':
@@ -735,7 +737,7 @@ def preview_frais_stationnement(request, pk):
         'jours_total': jours_total,
         'jours_gratuits': jours_gratuits_utilises,
         'jours_facturables': jours_facturables,
-        'montant': float(montant_total),
+        'montant': str(montant_total),
         'montant_formatted': f'{montant_total:,.0f}'.replace(',', ' '),
         'debut_gratuit': debut_gratuit.strftime('%Y-%m-%d'),
         'fin_gratuit': fin_gratuit.strftime('%Y-%m-%d'),
@@ -744,7 +746,7 @@ def preview_frais_stationnement(request, pk):
         'date_dechargement': date_dechargement.strftime('%Y-%m-%d'),
         'message': message,
         'statut': statut,
-        'tarif_journalier': float(TARIF_JOURNALIER)
+        'tarif_journalier': str(TARIF_JOURNALIER)
     })
 
 # Liste

@@ -9,6 +9,7 @@ from django.utils.text import slugify
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from decimal import Decimal
+from uuid import uuid4
 import hashlib
 
 from .choices import *
@@ -73,16 +74,23 @@ class FraisTrajet(models.Model):
                 contrat_id = str(self.contrat.pk_contrat)[:30]
                 base = f"{mission_hash}_{contrat_id}_{self.date_trajet}_{self.type_trajet}"
             else:
-                # Ancien format (pour données existantes): origine_destination_montants
-                base = f"{self.origine}_{self.destination}_{int(self.frais_route)}_{int(self.frais_carburant)}"
+                # Fallback: inclure type_trajet + UUID pour garantir l'unicité
+                # (l'ancien format origine/destination/montants causait des collisions
+                # et pouvait crasher avec int(None) si les montants étaient vides)
+                base = f"{self.origine or ''}_{self.destination or ''}_{self.type_trajet or ''}_{uuid4().hex[:8]}"
             self.pk_frais = slugify(base)[:250]
         super().save(*args, **kwargs)
+
+    @property
+    def total_frais(self):
+        """Total des frais de trajet (route + carburant) en Decimal."""
+        return (self.frais_route or Decimal('0')) + (self.frais_carburant or Decimal('0'))
 
     def __str__(self):
         # Informations de base
         type_str = self.type_trajet.upper()
         trajet_str = f"{self.origine} → {self.destination}"
-        montant_total = self.frais_route + self.frais_carburant
+        montant_total = self.total_frais
 
         # Informations contextuelles
         mission_str = f"Mission: {self.mission.pk_mission[:20]}..." if self.mission else "Aucune mission"
@@ -416,16 +424,19 @@ class Mission(models.Model):
                     f'Confirmez pour terminer quand même.'
                 )
 
-        self.date_retour = date_retour
-        self.statut = 'terminée'
-        self.save()
+        from django.db import transaction
+        import logging
+        _logger = logging.getLogger(__name__)
 
-        # 🆕 RETOURNER LE CONTENEUR AU PORT
-        if self.contrat and self.contrat.conteneur:
-            self.contrat.conteneur.retourner_au_port()
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info(f"🚢 Conteneur {self.contrat.conteneur.numero_conteneur} retourné au port (disponible)")
+        with transaction.atomic():
+            self.date_retour = date_retour
+            self.statut = 'terminée'
+            self.save()
+
+            # Retourner le conteneur au port dans la même transaction
+            if self.contrat and self.contrat.conteneur:
+                self.contrat.conteneur.retourner_au_port()
+                _logger.info(f"🚢 Conteneur {self.contrat.conteneur.numero_conteneur} retourné au port (disponible)")
 
         return info_penalite
 
@@ -524,7 +535,7 @@ class Mission(models.Model):
         """Retourne le frais de trajet aller de cette mission"""
         try:
             return self.frais_trajets.get(type_trajet='aller')
-        except:
+        except (FraisTrajet.DoesNotExist, FraisTrajet.MultipleObjectsReturned):
             return None
 
     @property
@@ -532,7 +543,7 @@ class Mission(models.Model):
         """Retourne le frais de trajet retour de cette mission"""
         try:
             return self.frais_trajets.get(type_trajet='retour')
-        except:
+        except (FraisTrajet.DoesNotExist, FraisTrajet.MultipleObjectsReturned):
             return None
 
     def get_total_frais_trajet(self):

@@ -79,9 +79,13 @@ function calculerReliquat() {
 }
 
 /**
- * Variable pour éviter les boucles infinies lors de la sélection bidirectionnelle
+ * AbortControllers indépendants pour annuler les requêtes en cours
+ * Remplace l'ancien flag global isUpdatingVehicleDriver qui bloquait
+ * les deux fonctions en même temps.
  */
-let isUpdatingVehicleDriver = false;
+let chauffeurAbortController = null;
+let camionAbortController = null;
+let conteneurAbortController = null;
 
 /**
  * Charger automatiquement le client et le transitaire du conteneur sélectionné
@@ -96,17 +100,23 @@ function chargerClientTransitaire() {
     }
 
     const conteneurId = conteneurSelect.value;
-
     if (!conteneurId) {
         return;
     }
 
-    // Appel AJAX pour récupérer le client et le transitaire du conteneur
-    fetch(`/api/conteneur/${conteneurId}/info/`)
-        .then(response => response.json())
+    // Annuler la requête précédente si elle est encore en cours
+    if (conteneurAbortController) {
+        conteneurAbortController.abort();
+    }
+    conteneurAbortController = new AbortController();
+
+    fetch(`/api/conteneur/${conteneurId}/info/`, { signal: conteneurAbortController.signal })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                // Sélectionner automatiquement le client si disponible
                 if (data.client_id) {
                     clientSelect.value = data.client_id;
                     clientSelect.style.backgroundColor = '#d1ecf1';
@@ -119,7 +129,6 @@ function chargerClientTransitaire() {
                     clientSelect.title = '⚠️ Aucun client associé à ce conteneur';
                 }
 
-                // Sélectionner automatiquement le transitaire si disponible
                 if (data.transitaire_id) {
                     transitaireSelect.value = data.transitaire_id;
                     transitaireSelect.style.backgroundColor = '#d1ecf1';
@@ -139,11 +148,15 @@ function chargerClientTransitaire() {
             }
         })
         .catch(error => {
+            if (error.name === 'AbortError') return; // Annulation volontaire, pas une erreur
             console.error('Erreur chargement conteneur:', error);
             clientSelect.style.backgroundColor = '#f8d7da';
             clientSelect.style.border = '1px solid #dc3545';
             transitaireSelect.style.backgroundColor = '#f8d7da';
             transitaireSelect.style.border = '1px solid #dc3545';
+        })
+        .finally(() => {
+            conteneurAbortController = null;
         });
 }
 
@@ -151,36 +164,32 @@ function chargerClientTransitaire() {
  * Charger automatiquement le chauffeur affecté au camion sélectionné
  */
 function chargerChauffeurAffecte() {
-    if (isUpdatingVehicleDriver) return;
-
     const camionSelect = document.getElementById('id_camion');
     const chauffeurSelect = document.getElementById('id_chauffeur');
 
-    if (!camionSelect || !chauffeurSelect) {
-        return;
-    }
+    if (!camionSelect || !chauffeurSelect) return;
 
     const camionId = camionSelect.value;
-    if (!camionId) {
-        return;
+    if (!camionId) return;
+
+    // Annuler la requête chauffeur précédente (indépendant de chargerCamionAffecte)
+    if (chauffeurAbortController) {
+        chauffeurAbortController.abort();
     }
+    chauffeurAbortController = new AbortController();
 
-    isUpdatingVehicleDriver = true;
-
-    // Appel AJAX pour récupérer le chauffeur affecté au camion
-    fetch(`/api/camion/${camionId}/chauffeur/`)
-        .then(response => response.json())
+    fetch(`/api/camion/${camionId}/chauffeur/`, { signal: chauffeurAbortController.signal })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
         .then(data => {
             if (data.success && data.chauffeur_id) {
-                // Sélectionner automatiquement le chauffeur
                 chauffeurSelect.value = data.chauffeur_id;
-
-                // Indication visuelle
                 chauffeurSelect.style.backgroundColor = '#d1ecf1';
                 chauffeurSelect.style.border = '2px solid #0c5460';
                 chauffeurSelect.title = `Chauffeur affecté : ${data.chauffeur_nom}`;
             } else {
-                // Aucun chauffeur affecté
                 chauffeurSelect.value = '';
                 chauffeurSelect.style.backgroundColor = '#fff3cd';
                 chauffeurSelect.style.border = '1px solid #ffc107';
@@ -188,13 +197,14 @@ function chargerChauffeurAffecte() {
             }
         })
         .catch(error => {
+            if (error.name === 'AbortError') return;
             console.error('Erreur chargement chauffeur:', error);
             chauffeurSelect.style.backgroundColor = '#f8d7da';
             chauffeurSelect.style.border = '1px solid #dc3545';
             chauffeurSelect.title = '❌ Erreur lors de la récupération du chauffeur';
         })
         .finally(() => {
-            isUpdatingVehicleDriver = false;
+            chauffeurAbortController = null;
         });
 }
 
@@ -202,36 +212,32 @@ function chargerChauffeurAffecte() {
  * Charger automatiquement le camion affecté au chauffeur sélectionné
  */
 function chargerCamionAffecte() {
-    if (isUpdatingVehicleDriver) return;
-
     const camionSelect = document.getElementById('id_camion');
     const chauffeurSelect = document.getElementById('id_chauffeur');
 
-    if (!camionSelect || !chauffeurSelect) {
-        return;
-    }
+    if (!camionSelect || !chauffeurSelect) return;
 
     const chauffeurId = chauffeurSelect.value;
-    if (!chauffeurId) {
-        return;
+    if (!chauffeurId) return;
+
+    // Annuler la requête camion précédente (indépendant de chargerChauffeurAffecte)
+    if (camionAbortController) {
+        camionAbortController.abort();
     }
+    camionAbortController = new AbortController();
 
-    isUpdatingVehicleDriver = true;
-
-    // Appel AJAX pour récupérer le camion affecté au chauffeur
-    fetch(`/api/chauffeur/${chauffeurId}/camion/`)
-        .then(response => response.json())
+    fetch(`/api/chauffeur/${chauffeurId}/camion/`, { signal: camionAbortController.signal })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
         .then(data => {
             if (data.success && data.camion_id) {
-                // Sélectionner automatiquement le camion
                 camionSelect.value = data.camion_id;
-
-                // Indication visuelle
                 camionSelect.style.backgroundColor = '#d1ecf1';
                 camionSelect.style.border = '2px solid #0c5460';
                 camionSelect.title = `Camion affecté : ${data.camion_immatriculation}`;
             } else {
-                // Aucun camion affecté
                 camionSelect.value = '';
                 camionSelect.style.backgroundColor = '#fff3cd';
                 camionSelect.style.border = '1px solid #ffc107';
@@ -239,13 +245,14 @@ function chargerCamionAffecte() {
             }
         })
         .catch(error => {
+            if (error.name === 'AbortError') return;
             console.error('Erreur chargement camion:', error);
             camionSelect.style.backgroundColor = '#f8d7da';
             camionSelect.style.border = '1px solid #dc3545';
             camionSelect.title = '❌ Erreur lors de la récupération du camion';
         })
         .finally(() => {
-            isUpdatingVehicleDriver = false;
+            camionAbortController = null;
         });
 }
 
