@@ -16,8 +16,8 @@ class MissionForm(forms.ModelForm):
         model = Mission
         fields = '__all__'
         widgets = {
-            'date_depart': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_retour': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_depart': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_retour': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
             'itineraire': forms.Textarea(attrs={'class': 'form-control', 'rows': 6, 'placeholder': 'Décrivez l\'itinéraire détaillé de la mission...'}),
         }
 
@@ -83,7 +83,7 @@ class FraisTrajetForm(forms.ModelForm):
             'date_trajet': forms.DateInput(attrs={
                 'type': 'date',
                 'class': 'form-control'
-            }),
+            }, format='%Y-%m-%d'),
             'origine': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Ex: Abidjan'

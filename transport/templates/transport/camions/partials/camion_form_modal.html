@@ -85,6 +85,38 @@
                     Capacité de chargement en tonnes (Ex: 10.5)
                 </small>
             </div>
+
+            <!-- Date d'entrée -->
+            <div class="col-md-6">
+                <label for="{{ form.date_entree.id_for_label }}" class="form-label">
+                    <i class="fas fa-calendar-plus text-success me-1"></i>
+                    Date d'entrée dans la flotte
+                </label>
+                {{ form.date_entree }}
+                {% if form.date_entree.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.date_entree.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Date de sortie -->
+            <div class="col-md-6">
+                <label for="{{ form.date_sortie.id_for_label }}" class="form-label">
+                    <i class="fas fa-calendar-minus text-danger me-1"></i>
+                    Date de sortie de la flotte
+                    <small class="text-muted">(optionnel)</small>
+                </label>
+                {{ form.date_sortie }}
+                {% if form.date_sortie.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.date_sortie.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">
+                    Laisser vide si le camion est toujours actif
+                </small>
+            </div>
         </div>
     </div>
 

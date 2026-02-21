@@ -15,12 +15,14 @@ from ..models import (
 class CamionForm(forms.ModelForm):
     class Meta:
         model = Camion
-        fields = ['entreprise', 'immatriculation', 'modele', 'capacite_tonnes']
+        fields = ['entreprise', 'immatriculation', 'modele', 'capacite_tonnes', 'date_entree', 'date_sortie']
         widgets = {
             'entreprise': forms.Select(attrs={'class': 'form-select'}),
             'immatriculation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: ABC-123'}),
             'modele': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Volvo FH'}),
             'capacite_tonnes': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ex: 10.5'}),
+            'date_entree': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'date_sortie': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
         }
 
 class ConteneurForm(forms.ModelForm):
@@ -52,7 +54,7 @@ class ReparationForm(forms.ModelForm):
         widgets = {
             'camion': forms.Select(attrs={'class': 'form-select'}),
             'chauffeur': forms.Select(attrs={'class': 'form-select'}),
-            'date_reparation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_reparation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
             'cout': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }

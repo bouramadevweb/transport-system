@@ -21,6 +21,8 @@ class Camion(models.Model):
     modele = models.CharField(max_length=50, blank=True, null=True)
     capacite_tonnes = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     est_affecter = models.BooleanField(default=False)
+    date_entree = models.DateField(null=True, blank=True, verbose_name="Date d'entrée dans la flotte")
+    date_sortie = models.DateField(null=True, blank=True, verbose_name="Date de sortie de la flotte")
 
     def save(self, *args, **kwargs):
         if not self.pk_camion:

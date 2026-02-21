@@ -7,7 +7,7 @@ import logging
 
 from .models import (
     ContratTransport, PrestationDeTransports, Cautions, Mission,
-    PaiementMission, Notification, Reparation
+    PaiementMission, Notification, Reparation, Chauffeur
 )
 
 # Import du système de notifications email
@@ -24,6 +24,25 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # SIGNAUX POUR LES NOTIFICATIONS AUTOMATIQUES
 # ============================================================================
+
+@receiver(post_save, sender=Mission)
+def synchroniser_statut_contrat(sender, instance, created, **kwargs):
+    """
+    Synchronise le statut du ContratTransport quand la mission change de statut.
+    - Mission 'terminée' → Contrat 'termine'
+    - Mission 'annulée' → Contrat 'annule'
+    """
+    if created or not instance.contrat:
+        return
+
+    contrat = instance.contrat
+    if instance.statut == 'terminée' and contrat.statut == 'actif':
+        ContratTransport.objects.filter(pk_contrat=contrat.pk_contrat).update(statut='termine')
+        logger.info(f"✅ Contrat {contrat.pk_contrat} marqué comme terminé (mission terminée)")
+    elif instance.statut == 'annulée' and contrat.statut == 'actif':
+        ContratTransport.objects.filter(pk_contrat=contrat.pk_contrat).update(statut='annule')
+        logger.info(f"✅ Contrat {contrat.pk_contrat} marqué comme annulé (mission annulée)")
+
 
 @receiver(post_save, sender=Mission)
 def notifier_mission_terminee(sender, instance, created, **kwargs):

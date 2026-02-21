@@ -4,14 +4,17 @@ Personnel Views.Py
 Vues pour personnel
 """
 
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Count, Sum, F
-from django.http import JsonResponse
-from ..models import (Chauffeur, Affectation, Mecanicien)
+from django.db import transaction
+
+from ..models import (Chauffeur, Affectation, Mecanicien, AuditLog)
 from ..forms import (ChauffeurForm, AffectationForm, MecanicienForm)
-from ..decorators import (can_delete_data)
+from ..decorators import can_delete_data
+
+logger = logging.getLogger('transport')
 
 
 @login_required
@@ -81,16 +84,26 @@ def create_affectation(request):
         form = AffectationForm(request.POST)
         if form.is_valid():
             try:
-                form.save()
-                messages.success(request, "✅ Affectation ajoutée avec succès!")
+                with transaction.atomic():
+                    affectation = form.save()
+                    AuditLog.objects.create(
+                        utilisateur=request.user,
+                        action='CREATE',
+                        model_name='Affectation',
+                        object_id=affectation.pk_affectation,
+                        object_repr=f"{affectation.chauffeur} -> {affectation.camion}",
+                        changes={}
+                    )
+                logger.info(f"Affectation créée par {request.user.email}: {affectation.chauffeur} -> {affectation.camion}")
+                messages.success(request, "Affectation ajoutée avec succès!")
                 return redirect('affectation_list')
             except Exception as e:
-                messages.error(request, f"❌ Erreur lors de l'affectation : {str(e)}")
+                logger.error(f"Erreur création affectation: {e}", exc_info=True)
+                messages.error(request, f"Erreur lors de l'affectation : {str(e)}")
         else:
-            # Afficher les erreurs de validation
-            for field, errors in form.errors.items():
+            for _, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f"❌ {error}")
+                    messages.error(request, f"{error}")
     else:
         form = AffectationForm()
     return render(request, "transport/affectations/affectation_form.html", {"form": form, "title": "Ajouter une affectation"})
@@ -126,16 +139,27 @@ def terminer_affectation(request, pk):
 
     # Vérifier que l'affectation est active
     if affectation.date_fin_affectation is not None:
-        messages.warning(request, "⚠️ Cette affectation est déjà terminée.")
+        messages.warning(request, "Cette affectation est déjà terminée.")
         return redirect('affectation_list')
 
     if request.method == "POST":
         try:
-            affectation.terminer_affectation()
-            messages.success(request, f"✅ Affectation terminée avec succès! Le camion {affectation.camion.immatriculation} est maintenant disponible.")
+            with transaction.atomic():
+                affectation.terminer_affectation()
+                AuditLog.objects.create(
+                    utilisateur=request.user,
+                    action='UPDATE',
+                    model_name='Affectation',
+                    object_id=affectation.pk_affectation,
+                    object_repr=f"Fin affectation: {affectation.chauffeur} -> {affectation.camion}",
+                    changes={'action': 'terminer_affectation'}
+                )
+            logger.info(f"Affectation terminée par {request.user.email}: {affectation.pk_affectation}")
+            messages.success(request, f"Affectation terminée! Le camion {affectation.camion.immatriculation} est disponible.")
             return redirect('affectation_list')
         except Exception as e:
-            messages.error(request, f"❌ Erreur lors de la fin de l'affectation : {str(e)}")
+            logger.error(f"Erreur terminaison affectation {pk}: {e}", exc_info=True)
+            messages.error(request, f"Erreur lors de la fin de l'affectation : {str(e)}")
             return redirect('affectation_list')
 
     return render(request, "transport/affectations/terminer_affectation.html", {

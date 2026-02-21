@@ -350,7 +350,17 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="text-success fw-bold">{{ paiement.montant_total }}€</span>
+                                        <span class="text-success fw-bold">{{ paiement.montant_total|floatformat:0 }} CFA</span>
+                                    </td>
+                                    <td>
+                                        {% if paiement.frais_stationnement > 0 %}
+                                            <span class="text-danger fw-bold">{{ paiement.frais_stationnement|floatformat:0 }} CFA</span>
+                                            {% if paiement.mission.jours_stationnement_facturables %}
+                                                <br><small class="text-muted">({{ paiement.mission.jours_stationnement_facturables }} jour{{ paiement.mission.jours_stationnement_facturables|pluralize }})</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
                                     <td class="text-center">

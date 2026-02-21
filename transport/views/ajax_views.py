@@ -37,24 +37,61 @@ def get_request_data(request):
     """
     content_type = request.content_type or ''
 
+    logger.debug(f"get_request_data - Content-Type: {content_type}")
+
     # Vérifier si c'est du JSON
     if 'application/json' in content_type:
+        # On ne log la taille du body que pour JSON (pour multipart, request.body
+        # lèverait RawPostDataException si request.POST a déjà été accédé par le
+        # middleware CSRF)
+        logger.debug(f"get_request_data - Body length: {len(request.body) if request.body else 0}")
         try:
             # Tenter de parser le body en JSON
             if request.body:
                 json_data = json.loads(request.body)
+                logger.debug(f"get_request_data - JSON data keys: {list(json_data.keys())}")
 
                 # Convertir en QueryDict pour compatibilité Django Forms
                 query_dict = QueryDict('', mutable=True)
                 for key, value in json_data.items():
-                    query_dict[key] = value
+                    # Ignorer le token CSRF (géré par header)
+                    if key == 'csrfmiddlewaretoken':
+                        continue
+                    # Convertir les valeurs en string pour Django Forms
+                    if value is None:
+                        query_dict[key] = ''
+                    elif isinstance(value, bool):
+                        # Les checkboxes HTML n'envoient rien quand non cochées.
+                        # Django BooleanField attend 'on' pour True, absence pour False.
+                        if value:
+                            query_dict[key] = 'on'
+                        # Pour False : ne pas ajouter la clé (comportement HTML natif)
+                    elif isinstance(value, (list, tuple)):
+                        # Pour les champs multi-valeurs
+                        for v in value:
+                            query_dict.appendlist(key, str(v) if v is not None else '')
+                    else:
+                        query_dict[key] = str(value)
 
+                logger.debug(f"get_request_data - QueryDict: {dict(query_dict)}")
                 return query_dict
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Erreur parsing JSON: {e}")
             pass
 
     # Sinon retourner request.POST
+    logger.debug(f"get_request_data - Using request.POST: {dict(request.POST)}")
     return request.POST
+
+
+def get_form_errors_json(form):
+    """
+    Convertit les erreurs de formulaire Django en format JSON sérialisable.
+    """
+    errors = {}
+    for field, error_list in form.errors.items():
+        errors[field] = [str(e) for e in error_list]
+    return errors
 
 
 # ============================================================================
@@ -174,7 +211,7 @@ def ajax_conteneur_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({
@@ -238,7 +275,7 @@ def ajax_conteneur_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
 
     except Exception as e:
@@ -301,7 +338,7 @@ def ajax_contrat_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         logger.error(f"Erreur création contrat: {e}", exc_info=True)
@@ -366,7 +403,7 @@ def ajax_contrat_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
 
     except Exception as e:
@@ -429,7 +466,7 @@ def ajax_prestation_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({
@@ -497,7 +534,7 @@ def ajax_prestation_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
 
     except Exception as e:
@@ -517,6 +554,8 @@ def ajax_client_create(request):
     """Créer un client via AJAX"""
     from ..forms.commercial_forms import ClientForm
 
+    logger.info(f"ajax_client_create - Method: {request.method}")
+
     if request.method == 'GET':
         form = ClientForm()
         html = render_to_string(
@@ -528,7 +567,12 @@ def ajax_client_create(request):
 
     # POST
     try:
-        form = ClientForm(get_request_data(request))
+        request_data = get_request_data(request)
+        logger.info(f"ajax_client_create - Request data: {dict(request_data)}")
+
+        form = ClientForm(request_data)
+        logger.info(f"ajax_client_create - Form valid: {form.is_valid()}")
+
         if form.is_valid():
             client = form.save()
 
@@ -541,11 +585,13 @@ def ajax_client_create(request):
                 changes={}
             )
 
+            logger.info(f"ajax_client_create - Client created: {client.pk_client}")
             return JsonResponse({
                 'success': True,
                 'message': f'Client "{client.nom}" créé avec succès'
             })
         else:
+            logger.warning(f"ajax_client_create - Form errors: {form.errors}")
             html = render_to_string(
                 'transport/clients/partials/client_form_modal.html',
                 {'form': form, 'mode': 'create'},
@@ -555,9 +601,10 @@ def ajax_client_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
+        logger.error(f"ajax_client_create - Exception: {e}", exc_info=True)
         return JsonResponse({
             'success': False,
             'message': f'Erreur lors de la création: {str(e)}'
@@ -618,7 +665,7 @@ def ajax_client_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
 
     except Exception as e:
@@ -691,7 +738,7 @@ def ajax_chauffeur_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({
@@ -754,7 +801,7 @@ def ajax_chauffeur_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs du formulaire',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
 
     except Exception as e:
@@ -780,29 +827,26 @@ def ajax_search_chauffeurs(request):
     return JsonResponse({'results': results})
 
 @login_required
-@require_http_methods(["GET"])
-def ajax_camion_create_form(request):
-    """Formulaire de création camion via AJAX"""
-    from ..forms.vehicle_forms import CamionForm
-    form = CamionForm()
-    html = render_to_string(
-        'transport/camions/partials/camion_form_modal.html',
-        {'form': form, 'mode': 'create'},
-        request=request
-    )
-    return JsonResponse({'success': True, 'html': html})
-
-@login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def ajax_camion_create(request):
-    """Créer camion via AJAX"""
+    """Créer un camion via AJAX"""
     from ..forms.vehicle_forms import CamionForm
-    try:
-        request_data = get_request_data(request)
-        form = CamionForm(request_data)
 
+    if request.method == 'GET':
+        form = CamionForm()
+        html = render_to_string(
+            'transport/camions/partials/camion_form_modal.html',
+            {'form': form, 'mode': 'create'},
+            request=request
+        )
+        return JsonResponse({'success': True, 'html': html})
+
+    # POST
+    try:
+        form = CamionForm(get_request_data(request))
         if form.is_valid():
             camion = form.save()
+
             AuditLog.objects.create(
                 utilisateur=request.user,
                 action='CREATE',
@@ -811,6 +855,7 @@ def ajax_camion_create(request):
                 object_repr=str(camion),
                 changes={}
             )
+
             return JsonResponse({
                 'success': True,
                 'message': f'Camion "{camion.immatriculation}" créé avec succès'
@@ -825,38 +870,39 @@ def ajax_camion_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
-@login_required
-@require_http_methods(["GET"])
-def ajax_camion_update_form(request, pk):
-    """Formulaire de modification camion via AJAX"""
-    from ..forms.vehicle_forms import CamionForm
-    try:
-        camion = get_object_or_404(Camion, pk_camion=pk)
-        form = CamionForm(instance=camion)
-        html = render_to_string(
-            'transport/camions/partials/camion_form_modal.html',
-            {'form': form, 'mode': 'update', 'camion': camion},
-            request=request
-        )
-        return JsonResponse({'success': True, 'html': html})
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def ajax_camion_update(request, pk):
-    """Modifier camion via AJAX"""
+    """Modifier un camion via AJAX"""
     from ..forms.vehicle_forms import CamionForm
+
     try:
         camion = get_object_or_404(Camion, pk_camion=pk)
+
+        if request.method == 'GET':
+            form = CamionForm(instance=camion)
+            html = render_to_string(
+                'transport/camions/partials/camion_form_modal.html',
+                {
+                    'form': form,
+                    'mode': 'update',
+                    'camion': camion
+                },
+                request=request
+            )
+            return JsonResponse({'success': True, 'html': html})
+
+        # POST
         form = CamionForm(get_request_data(request), instance=camion)
         if form.is_valid():
             camion = form.save()
+
             AuditLog.objects.create(
                 utilisateur=request.user,
                 action='UPDATE',
@@ -865,6 +911,7 @@ def ajax_camion_update(request, pk):
                 object_repr=str(camion),
                 changes={}
             )
+
             return JsonResponse({
                 'success': True,
                 'message': f'Camion "{camion.immatriculation}" modifié avec succès'
@@ -872,36 +919,39 @@ def ajax_camion_update(request, pk):
         else:
             html = render_to_string(
                 'transport/camions/partials/camion_form_modal.html',
-                {'form': form, 'mode': 'update', 'camion': camion},
+                {
+                    'form': form,
+                    'mode': 'update',
+                    'camion': camion
+                },
                 request=request
             )
             return JsonResponse({
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
+
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
-@require_http_methods(["GET"])
-def ajax_mission_create_form(request):
-    """Formulaire de création mission via AJAX"""
-    from ..forms.mission_forms import MissionForm
-    form = MissionForm()
-    html = render_to_string(
-        'transport/missions/partials/mission_form_modal.html',
-        {'form': form, 'mode': 'create'},
-        request=request
-    )
-    return JsonResponse({'success': True, 'html': html})
-
-@login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def ajax_mission_create(request):
-    """Créer mission via AJAX"""
+    """Créer une mission via AJAX"""
     from ..forms.mission_forms import MissionForm
+
+    if request.method == 'GET':
+        form = MissionForm()
+        html = render_to_string(
+            'transport/missions/partials/mission_form_modal.html',
+            {'form': form, 'mode': 'create'},
+            request=request
+        )
+        return JsonResponse({'success': True, 'html': html})
+
+    # POST
     try:
         form = MissionForm(get_request_data(request))
         if form.is_valid():
@@ -935,39 +985,40 @@ def ajax_mission_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         logger.error(f"Erreur création mission: {e}", exc_info=True)
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
-@login_required
-@require_http_methods(["GET"])
-def ajax_mission_update_form(request, pk):
-    """Formulaire de modification mission via AJAX"""
-    from ..forms.mission_forms import MissionForm
-    try:
-        mission = get_object_or_404(Mission, pk_mission=pk)
-        form = MissionForm(instance=mission)
-        html = render_to_string(
-            'transport/missions/partials/mission_form_modal.html',
-            {'form': form, 'mode': 'update', 'mission': mission},
-            request=request
-        )
-        return JsonResponse({'success': True, 'html': html})
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def ajax_mission_update(request, pk):
-    """Modifier mission via AJAX"""
+    """Modifier une mission via AJAX"""
     from ..forms.mission_forms import MissionForm
+
     try:
         mission = get_object_or_404(Mission, pk_mission=pk)
+
+        if request.method == 'GET':
+            form = MissionForm(instance=mission)
+            html = render_to_string(
+                'transport/missions/partials/mission_form_modal.html',
+                {
+                    'form': form,
+                    'mode': 'update',
+                    'mission': mission
+                },
+                request=request
+            )
+            return JsonResponse({'success': True, 'html': html})
+
+        # POST
         form = MissionForm(get_request_data(request), instance=mission)
         if form.is_valid():
             mission = form.save()
+
             AuditLog.objects.create(
                 utilisateur=request.user,
                 action='UPDATE',
@@ -988,15 +1039,20 @@ def ajax_mission_update(request, pk):
         else:
             html = render_to_string(
                 'transport/missions/partials/mission_form_modal.html',
-                {'form': form, 'mode': 'update', 'mission': mission},
+                {
+                    'form': form,
+                    'mode': 'update',
+                    'mission': mission
+                },
                 request=request
             )
             return JsonResponse({
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
+
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
@@ -1292,8 +1348,8 @@ def ajax_dashboard_filter(request):
             "chauffeurs": Chauffeur.objects.count(),
             "camions": Camion.objects.count(),
             "missions": missions_qs.count(),
-            "missions_en_cours": missions_qs.filter(statut="En cours").count(),
-            "missions_terminees": missions_qs.filter(statut__in=["Terminée", "Terminee"]).count(),
+            "missions_en_cours": missions_qs.filter(statut="en cours").count(),
+            "missions_terminees": missions_qs.filter(statut="terminée").count(),
             "reparations": reparations_qs.count(),
             "paiements": paiements_qs.aggregate(total=Sum("montant_total"))["total"] or 0,
             "clients": Client.objects.count(),
@@ -1326,9 +1382,9 @@ def ajax_dashboard_filter(request):
         # Missions en retard
         today = timezone.now().date()
         missions_en_retard = missions_qs.filter(
-            statut="En cours",
+            statut="en cours",
             date_retour__lt=today
-        ).count() if missions_qs.filter(statut="En cours").exists() else 0
+        ).count() if missions_qs.filter(statut="en cours").exists() else 0
 
         return JsonResponse({
             'success': True,
@@ -1422,16 +1478,19 @@ def ajax_get_notifications(request):
         notifications_qs = notifications_qs[:limit]
 
         # Convertir en liste de dictionnaires
+        from django.utils.timesince import timesince
         notifications_list = []
         for notif in notifications_qs:
             notifications_list.append({
                 'pk_notification': notif.pk_notification,
                 'title': notif.title,
                 'message': notif.message,
-                'type': notif.type,
+                'type': notif.type_notification,
+                'icon': notif.icon,
+                'color': notif.color,
                 'is_read': notif.is_read,
                 'created_at': notif.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                'link': notif.link if hasattr(notif, 'link') else None
+                'timesince': timesince(notif.created_at),
             })
 
         # Compter les notifications non lues
@@ -1490,7 +1549,7 @@ def ajax_affectation_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1550,7 +1609,7 @@ def ajax_affectation_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
 
     except Exception as e:
@@ -1601,7 +1660,7 @@ def ajax_entreprise_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1661,7 +1720,7 @@ def ajax_entreprise_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
 
     except Exception as e:
@@ -1715,7 +1774,7 @@ def ajax_transitaire_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1766,7 +1825,7 @@ def ajax_transitaire_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1819,7 +1878,7 @@ def ajax_compagnie_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1870,7 +1929,7 @@ def ajax_compagnie_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1923,7 +1982,7 @@ def ajax_fournisseur_create(request):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
@@ -1974,7 +2033,7 @@ def ajax_fournisseur_update(request, pk):
                 'success': False,
                 'message': 'Veuillez corriger les erreurs',
                 'html': html,
-                'errors': form.errors
+                'errors': get_form_errors_json(form)
             })
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)

@@ -35,21 +35,50 @@ class AjaxManager {
     }
 
     /**
-     * Extract CSRF token from cookie
+     * Extract CSRF token from multiple sources:
+     * 1. Cookie (csrftoken)
+     * 2. Meta tag (csrf-token)
+     * 3. Hidden input field (csrfmiddlewaretoken)
      * @returns {string|null} CSRF token
      */
     getCSRFToken() {
+        // 1. Try to get from cookie
         const name = 'csrftoken';
         const cookies = document.cookie.split(';');
 
         for (let cookie of cookies) {
             cookie = cookie.trim();
             if (cookie.startsWith(name + '=')) {
+                console.log('🍪 CSRF token found in cookie');
                 return decodeURIComponent(cookie.substring(name.length + 1));
             }
         }
 
+        // 2. Try to get from meta tag
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag && metaTag.getAttribute('content')) {
+            console.log('🏷️ CSRF token found in meta tag');
+            return metaTag.getAttribute('content');
+        }
+
+        // 3. Try to get from hidden input field
+        const hiddenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (hiddenInput && hiddenInput.value) {
+            console.log('📝 CSRF token found in hidden input');
+            return hiddenInput.value;
+        }
+
+        console.warn('❌ CSRF token not found in any source');
         return null;
+    }
+
+    /**
+     * Refresh CSRF token (useful after DOM changes)
+     */
+    refreshCSRFToken() {
+        this.csrfToken = this.getCSRFToken();
+        console.log('🔄 refreshCSRFToken called, token found:', this.csrfToken ? 'YES (' + this.csrfToken.substring(0, 10) + '...)' : 'NO');
+        return this.csrfToken;
     }
 
     /**
@@ -198,9 +227,13 @@ class AjaxManager {
 
             const headers = { ...this.defaultHeaders };
 
-            // Add CSRF token for POST requests
+            // Refresh and add CSRF token for POST requests
+            this.refreshCSRFToken();
             if (this.csrfToken) {
                 headers['X-CSRFToken'] = this.csrfToken;
+                console.log('✅ CSRF Token found and added to headers');
+            } else {
+                console.warn('⚠️ No CSRF token found!');
             }
 
             // Determine if data is FormData
@@ -394,4 +427,8 @@ window.ajaxManager = ajaxManager; // Make it explicitly global
 
 // Log initialization
 console.log('✅ AjaxManager initialized');
-console.log('CSRF Token:', ajaxManager.csrfToken ? '✅ Found' : '❌ Not found');
+if (ajaxManager.csrfToken) {
+    console.log('CSRF Token: ✅ Found (length:', ajaxManager.csrfToken.length + ')');
+} else {
+    console.log('CSRF Token: ❌ Not found at init (will retry before POST)');
+}

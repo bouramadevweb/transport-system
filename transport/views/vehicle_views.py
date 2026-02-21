@@ -4,23 +4,17 @@ Vehicle Views.Py
 Vues pour vehicle
 """
 
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required 
-from django.contrib import messages
-from django.db.models import Count, Sum, F
-from django.http import JsonResponse
-from ..models import (Camion, Conteneur, Reparation, ReparationMecanicien, PieceReparee)
-from ..forms import (CamionForm, ConteneurForm, ReparationForm, ReparationMecanicienForm, PieceRepareeForm, ConnexionForm)
-from ..decorators import (can_delete_data)
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import PasswordChangeForm
-from django.db import IntegrityError
 from django.contrib import messages
-from django.db.models import Count, Sum, F
-from django.db.models.functions import TruncMonth, TruncYear
-from django.http import JsonResponse
+from django.db import IntegrityError, transaction
+
+from ..models import (Camion, Conteneur, Reparation, ReparationMecanicien, PieceReparee, AuditLog)
+from ..forms import (CamionForm, ConteneurForm, ReparationForm, ReparationMecanicienForm, PieceRepareeForm)
+from ..decorators import can_delete_data
+
+logger = logging.getLogger('transport')
 
 @login_required
 def camion_list(request):
@@ -34,8 +28,18 @@ def create_camion(request):
     if request.method == "POST":
         form = CamionForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "✅ Camion ajouté avec succès!")
+            with transaction.atomic():
+                camion = form.save()
+                AuditLog.objects.create(
+                    utilisateur=request.user,
+                    action='CREATE',
+                    model_name='Camion',
+                    object_id=camion.pk_camion,
+                    object_repr=f"Camion {camion.immatriculation}",
+                    changes={}
+                )
+            logger.info(f"Camion {camion.immatriculation} créé par {request.user.email}")
+            messages.success(request, f"Camion {camion.immatriculation} ajouté avec succès!")
             return redirect('camion_list')
     else:
         form = CamionForm()
@@ -82,7 +86,18 @@ def create_conteneur(request):
     if request.method == "POST":
         form = ConteneurForm(request.POST)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                conteneur = form.save()
+                AuditLog.objects.create(
+                    utilisateur=request.user,
+                    action='CREATE',
+                    model_name='Conteneur',
+                    object_id=conteneur.pk_conteneur,
+                    object_repr=f"Conteneur {conteneur.numero_conteneur}",
+                    changes={}
+                )
+            logger.info(f"Conteneur {conteneur.numero_conteneur} créé par {request.user.email}")
+            messages.success(request, f"Conteneur {conteneur.numero_conteneur} ajouté avec succès!")
             return redirect('conteneur_list')
     else:
         form = ConteneurForm()
@@ -160,16 +175,29 @@ def create_reparation(request):
     if request.method == 'POST':
         form = ReparationForm(request.POST)
         if form.is_valid():
-            reparation = form.save()
-            nb_mecaniciens = reparation.get_mecaniciens().count()
-            messages.success(request, f"✅ Réparation créée avec succès ({nb_mecaniciens} mécanicien(s) assigné(s))")
-            messages.info(request, f"🔧 Vous pouvez maintenant ajouter les pièces utilisées pour cette réparation.")
-            # Rediriger vers l'ajout de pièces avec la réparation pré-remplie
-            return redirect('create_piece_reparee', reparation_id=reparation.pk_reparation)
+            try:
+                with transaction.atomic():
+                    reparation = form.save()
+                    AuditLog.objects.create(
+                        utilisateur=request.user,
+                        action='CREATE',
+                        model_name='Reparation',
+                        object_id=reparation.pk_reparation,
+                        object_repr=f"Réparation {reparation.camion}",
+                        changes={}
+                    )
+                nb_mecaniciens = reparation.get_mecaniciens().count()
+                logger.info(f"Réparation créée par {request.user.email} pour {reparation.camion}")
+                messages.success(request, f"Réparation créée avec succès ({nb_mecaniciens} mécanicien(s) assigné(s))")
+                messages.info(request, "Vous pouvez maintenant ajouter les pièces utilisées.")
+                return redirect('create_piece_reparee', reparation_id=reparation.pk_reparation)
+            except Exception as e:
+                logger.error(f"Erreur création réparation: {e}", exc_info=True)
+                messages.error(request, f"Erreur: {str(e)}")
         else:
-            for field, errors in form.errors.items():
+            for _, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f"❌ {error}")
+                    messages.error(request, f"{error}")
     else:
         form = ReparationForm()
     return render(request, 'transport/reparations/reparation_form.html', {'form': form, 'title': 'Ajouter une réparation'})

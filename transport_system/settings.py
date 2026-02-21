@@ -26,8 +26,8 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-only-key-c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-# Hosts autorisés - configurer selon l'environnement
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+# Hosts autorisés - '*' pour le développement (accepte toutes les IPs)
+ALLOWED_HOSTS = ['*']
 
 
 AUTH_USER_MODEL = 'transport.Utilisateur'
@@ -43,6 +43,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',  # Pour les filtres humanize (timesince, etc.)
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'corsheaders',
     'transport',
     'django_bootstrap5'
 ]
@@ -50,7 +53,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'transport.middleware.CsrfExemptAPIMiddleware',  # Exempte les routes /api/ de CSRF
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -130,6 +135,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'transport' / 'static',
 ]
+
+# Media files (uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -228,3 +237,87 @@ LOGGING = {
         },
     },
 }
+
+
+# =============================================================================
+# PARAMÈTRES DE SÉCURITÉ
+# =============================================================================
+
+# Protection CSRF
+CSRF_COOKIE_SECURE = not DEBUG  # Cookie CSRF en HTTPS uniquement en production
+CSRF_COOKIE_HTTPONLY = True  # Empêche JavaScript d'accéder au cookie CSRF
+
+# Protection des sessions
+SESSION_COOKIE_SECURE = not DEBUG  # Cookie session en HTTPS uniquement en production
+SESSION_COOKIE_HTTPONLY = True  # Empêche JavaScript d'accéder au cookie session
+SESSION_COOKIE_AGE = 86400  # Session expire après 24h (en secondes)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Protection XSS et autres headers de sécurité
+SECURE_BROWSER_XSS_FILTER = True  # Active le filtre XSS du navigateur
+SECURE_CONTENT_TYPE_NOSNIFF = True  # Empêche le sniffing du type MIME
+X_FRAME_OPTIONS = 'DENY'  # Empêche le chargement dans une iframe
+
+# HTTPS en production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True  # Redirige HTTP vers HTTPS
+    SECURE_HSTS_SECONDS = 31536000  # 1 an
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Validation des mots de passe renforcée
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8},
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+
+# =============================================================================
+# DJANGO REST FRAMEWORK & JWT CONFIGURATION
+# =============================================================================
+
+from datetime import timedelta
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'USER_ID_FIELD': 'pk_utilisateur',  # Champ ID personnalisé du modèle Utilisateur
+    'USER_ID_CLAIM': 'user_id',
+}
+
+# CORS Configuration pour React Native - Tout autoriser en dev
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = ['*']
+CORS_ALLOW_HEADERS = ['*']

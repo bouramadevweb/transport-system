@@ -1,77 +1,78 @@
 <form id="affectationForm" method="post">
     {% csrf_token %}
 
-    <div class="row g-3">
-        <!-- Chauffeur -->
-        <div class="col-12">
-            <label for="{{ form.chauffeur.id_for_label }}" class="form-label">
-                <i class="fas fa-user text-primary me-1"></i>Chauffeur <span class="text-danger">*</span>
-            </label>
-            {{ form.chauffeur }}
-            {% if form.chauffeur.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.chauffeur.errors }}
-                </div>
-            {% endif %}
-            <small class="form-text text-muted">
-                {{ form.chauffeur.help_text }}
-            </small>
-        </div>
+    <div class="modal-body">
+        <div class="row g-3">
+            <!-- Chauffeur -->
+            <div class="col-12">
+                <label for="{{ form.chauffeur.id_for_label }}" class="form-label">
+                    <i class="fas fa-user text-primary me-1"></i>Chauffeur <span class="text-danger">*</span>
+                </label>
+                {{ form.chauffeur }}
+                {% if form.chauffeur.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.chauffeur.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">
+                    {{ form.chauffeur.help_text }}
+                </small>
+            </div>
 
-        <!-- Camion -->
-        <div class="col-12">
-            <label for="{{ form.camion.id_for_label }}" class="form-label">
-                <i class="fas fa-truck text-primary me-1"></i>Camion <span class="text-danger">*</span>
-            </label>
-            {{ form.camion }}
-            {% if form.camion.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.camion.errors }}
-                </div>
-            {% endif %}
-            <small class="form-text text-muted">
-                {{ form.camion.help_text }}
-            </small>
-        </div>
+            <!-- Camion -->
+            <div class="col-12">
+                <label for="{{ form.camion.id_for_label }}" class="form-label">
+                    <i class="fas fa-truck text-primary me-1"></i>Camion <span class="text-danger">*</span>
+                </label>
+                {{ form.camion }}
+                {% if form.camion.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.camion.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">
+                    {{ form.camion.help_text }}
+                </small>
+            </div>
 
-        <!-- Date d'affectation -->
-        <div class="col-md-6">
-            <label for="{{ form.date_affectation.id_for_label }}" class="form-label">
-                <i class="fas fa-calendar-alt text-success me-1"></i>Date d'affectation <span class="text-danger">*</span>
-            </label>
-            {{ form.date_affectation }}
-            {% if form.date_affectation.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.date_affectation.errors }}
-                </div>
-            {% endif %}
-        </div>
+            <!-- Date d'affectation -->
+            <div class="col-md-6">
+                <label for="{{ form.date_affectation.id_for_label }}" class="form-label">
+                    <i class="fas fa-calendar-alt text-success me-1"></i>Date d'affectation <span class="text-danger">*</span>
+                </label>
+                {{ form.date_affectation }}
+                {% if form.date_affectation.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.date_affectation.errors }}
+                    </div>
+                {% endif %}
+            </div>
 
-        <!-- Date de fin -->
-        <div class="col-md-6">
-            <label for="{{ form.date_fin_affectation.id_for_label }}" class="form-label">
-                <i class="fas fa-calendar-check text-warning me-1"></i>Date de fin
-            </label>
-            {{ form.date_fin_affectation }}
-            {% if form.date_fin_affectation.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ form.date_fin_affectation.errors }}
-                </div>
-            {% endif %}
-            <small class="form-text text-muted">
-                {{ form.date_fin_affectation.help_text }}
-            </small>
+            <!-- Date de fin -->
+            <div class="col-md-6">
+                <label for="{{ form.date_fin_affectation.id_for_label }}" class="form-label">
+                    <i class="fas fa-calendar-check text-warning me-1"></i>Date de fin
+                </label>
+                {{ form.date_fin_affectation }}
+                {% if form.date_fin_affectation.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.date_fin_affectation.errors }}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">
+                    {{ form.date_fin_affectation.help_text }}
+                </small>
+            </div>
         </div>
     </div>
 
-    <!-- Boutons -->
-    <div class="d-grid gap-2 mt-4">
-        <button type="submit" class="btn btn-primary btn-lg">
-            <i class="fas fa-save me-2"></i>
-            {% if mode == 'create' %}Créer l'affectation{% else %}Enregistrer les modifications{% endif %}
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Annuler
         </button>
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            <i class="fas fa-times me-2"></i>Annuler
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>
+            {% if mode == 'create' %}Créer l'affectation{% else %}Enregistrer{% endif %}
         </button>
     </div>
 </form>

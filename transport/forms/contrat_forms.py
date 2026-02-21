@@ -4,6 +4,7 @@ Contrat Forms.Py
 Formulaires pour contrat
 """
 
+from decimal import Decimal
 from django import forms
 from django.core.exceptions import ValidationError
 
@@ -171,6 +172,12 @@ class ContratTransportForm(forms.ModelForm):
         """Valide l'unicité du numéro BL"""
         numero_bl = self.cleaned_data.get('numero_bl')
 
+        if not numero_bl:
+            raise forms.ValidationError("Le numéro BL est obligatoire.")
+
+        # Nettoyer le numéro BL
+        numero_bl = numero_bl.strip().upper()
+
         # Si on est en mode édition (instance existe), exclure l'instance actuelle
         if self.instance and self.instance.pk:
             if ContratTransport.objects.filter(numero_bl=numero_bl).exclude(pk=self.instance.pk).exists():
@@ -185,6 +192,85 @@ class ContratTransportForm(forms.ModelForm):
                 )
 
         return numero_bl
+
+    def clean_montant_total(self):
+        """Valide le montant total"""
+        montant = self.cleaned_data.get('montant_total')
+
+        if montant is None:
+            raise forms.ValidationError("Le montant total est obligatoire.")
+
+        if montant <= 0:
+            raise forms.ValidationError("Le montant total doit être supérieur à 0.")
+
+        if montant > Decimal('999999999999'):
+            raise forms.ValidationError("Le montant total est trop élevé.")
+
+        return montant
+
+    def clean_avance_transport(self):
+        """Valide l'avance transport"""
+        avance = self.cleaned_data.get('avance_transport')
+
+        if avance is None:
+            raise forms.ValidationError("L'avance transport est obligatoire.")
+
+        if avance < 0:
+            raise forms.ValidationError("L'avance transport ne peut pas être négative.")
+
+        return avance
+
+    def clean_caution(self):
+        """Valide la caution"""
+        caution = self.cleaned_data.get('caution')
+
+        if caution is None:
+            raise forms.ValidationError("La caution est obligatoire.")
+
+        if caution < 0:
+            raise forms.ValidationError("La caution ne peut pas être négative.")
+
+        return caution
+
+    def clean_conteneur(self):
+        """Valide que le conteneur n'est pas déjà en mission"""
+        conteneur = self.cleaned_data.get('conteneur')
+
+        if not conteneur:
+            raise forms.ValidationError("Le conteneur est obligatoire.")
+
+        # Vérifier si le conteneur est déjà en mission
+        missions_en_cours = Mission.objects.filter(
+            contrat__conteneur=conteneur,
+            statut='en cours'
+        )
+
+        # Exclure le contrat actuel si on est en mode édition
+        if self.instance and self.instance.pk:
+            missions_en_cours = missions_en_cours.exclude(contrat__pk_contrat=self.instance.pk)
+
+        if missions_en_cours.exists():
+            raise forms.ValidationError(
+                f"Le conteneur {conteneur.numero_conteneur} est déjà en mission. "
+                "Veuillez terminer la mission en cours avant de créer un nouveau contrat."
+            )
+
+        return conteneur
+
+    def clean_destinataire(self):
+        """Valide la destination"""
+        destinataire = self.cleaned_data.get('destinataire')
+
+        if not destinataire:
+            raise forms.ValidationError("La destination est obligatoire.")
+
+        # Nettoyer et capitaliser
+        destinataire = destinataire.strip().title()
+
+        if len(destinataire) < 2:
+            raise forms.ValidationError("La destination doit contenir au moins 2 caractères.")
+
+        return destinataire
 
     def clean(self):
         """Validation globale du formulaire"""
@@ -222,13 +308,45 @@ class PrestationDeTransportsForm(forms.ModelForm):
         fields = ['contrat_transport', 'camion', 'client', 'transitaire', 'prix_transport', 'avance', 'caution', 'solde', 'date']
         widgets = {
             'date': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
-            'prix_transport': forms.NumberInput(attrs={'class': 'form-control'}),
-            'avance': forms.NumberInput(attrs={'class': 'form-control'}),
-            'caution': forms.NumberInput(attrs={'class': 'form-control'}),
-            'solde': forms.NumberInput(attrs={'class': 'form-control'}),
+            'prix_transport': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'avance': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'caution': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'solde': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
             'contrat_transport': forms.Select(attrs={'class': 'form-select'}),
             'camion': forms.Select(attrs={'class': 'form-select'}),
             'client': forms.Select(attrs={'class': 'form-select'}),
             'transitaire': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def clean_prix_transport(self):
+        """Valide le prix de transport"""
+        prix = self.cleaned_data.get('prix_transport')
+        if prix is not None and prix < 0:
+            raise forms.ValidationError("Le prix de transport ne peut pas être négatif.")
+        return prix
+
+    def clean_avance(self):
+        """Valide l'avance"""
+        avance = self.cleaned_data.get('avance')
+        if avance is not None and avance < 0:
+            raise forms.ValidationError("L'avance ne peut pas être négative.")
+        return avance
+
+    def clean_caution(self):
+        """Valide la caution"""
+        caution = self.cleaned_data.get('caution')
+        if caution is not None and caution < 0:
+            raise forms.ValidationError("La caution ne peut pas être négative.")
+        return caution
+
+    def clean(self):
+        """Validation globale"""
+        cleaned_data = super().clean()
+        prix = cleaned_data.get('prix_transport')
+        avance = cleaned_data.get('avance')
+
+        if prix and avance and avance > prix:
+            self.add_error('avance', "L'avance ne peut pas dépasser le prix de transport.")
+
+        return cleaned_data
 

@@ -24,7 +24,8 @@ class CrudModalManager {
     }
 
     /**
-     * Créer le modal Bootstrap dynamiquement
+     * Créer le modal Bootstrap dynamiquement (élément DOM uniquement)
+     * L'instance Bootstrap.Modal est créée de façon lazy dans getModal()
      */
     createModal() {
         const modalHtml = `
@@ -52,7 +53,22 @@ class CrudModalManager {
 
         document.body.insertAdjacentHTML('beforeend', modalHtml);
         this.modalElement = document.getElementById(`${this.entityName}CrudModal`);
-        this.modal = new bootstrap.Modal(this.modalElement);
+        // NE PAS créer new bootstrap.Modal() ici — Bootstrap peut ne pas être
+        // encore chargé si le script est différé. On crée l'instance de façon lazy.
+    }
+
+    /**
+     * Obtenir (ou créer) l'instance Bootstrap.Modal de façon lazy
+     */
+    getModal() {
+        if (!this.modal) {
+            if (typeof bootstrap === 'undefined') {
+                console.error('❌ bootstrap is not defined! Make sure Bootstrap JS is loaded.');
+                return null;
+            }
+            this.modal = new bootstrap.Modal(this.modalElement);
+        }
+        return this.modal;
     }
 
     /**
@@ -94,7 +110,9 @@ class CrudModalManager {
         this.updateModalTitle('create');
 
         // Afficher le modal avec loading
-        this.modal.show();
+        const modal = this.getModal();
+        if (!modal) return;
+        modal.show();
         this.showLoading();
 
         try {
@@ -135,7 +153,9 @@ class CrudModalManager {
         this.updateModalTitle('update');
 
         // Afficher le modal avec loading
-        this.modal.show();
+        const modal = this.getModal();
+        if (!modal) return;
+        modal.show();
         this.showLoading();
 
         try {
@@ -243,7 +263,8 @@ class CrudModalManager {
                 }
 
                 // Fermer le modal
-                this.modal.hide();
+                const modal = this.getModal();
+                if (modal) modal.hide();
 
                 // Rediriger si redirect_url est fourni, sinon rafraîchir
                 if (response.redirect_url) {

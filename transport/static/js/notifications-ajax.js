@@ -183,11 +183,11 @@ class NotificationsManager {
         notifications.forEach(notif => {
             const unreadClass = !notif.is_read ? 'unread' : '';
             html += `
-                <div class="notification-item ${unreadClass}" data-notification-id="${notif.id}">
+                <div class="notification-item ${unreadClass}" data-notification-id="${notif.pk_notification}">
                     <i class="fas fa-${notif.icon} text-${notif.color}"></i>
                     <div class="notification-content">
                         <p><strong>${notif.title}</strong></p>
-                        <span class="text-muted">${notif.timesince}</span>
+                        <span class="text-muted">${notif.timesince || notif.created_at}</span>
                     </div>
                 </div>
             `;

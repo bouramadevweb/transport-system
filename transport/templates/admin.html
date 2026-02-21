@@ -5,6 +5,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block page_title %}Gestion Transport | Tableau de bord{% endblock %}</title>
 
   {% bootstrap_css %}
@@ -25,11 +26,22 @@
 
   <!-- Custom Styles -->
   <link rel="stylesheet" href="{% static 'css/table-styles.css' %}">
+  <link rel="stylesheet" href="{% static 'css/skeleton-loaders.css' %}">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
 
   {% block extra_css %}{% endblock %}
 </head>
 
 <body>
+  <!-- CSRF Token for AJAX requests -->
+  <div id="csrf-token-container" style="display:none">{% csrf_token %}</div>
+
   <div class="app-container">
     <!-- SIDEBAR -->
     <nav class="sidebar" id="sidebar">
@@ -304,22 +316,22 @@
           <!-- User Menu -->
           <div class="dropdown">
             <button class="user-menu-btn" id="userMenuBtn">
-              <img src="https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username }}&background=3b82f6&color=fff"
+              <img src="https://ui-avatars.com/api/?name={{ user.nom_utilisateur|default:user.email }}&background=3b82f6&color=fff"
                    alt="Avatar" class="user-avatar"
                    onerror="this.src='https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff'">
               <div class="user-info">
-                <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
-                <span class="user-role">{{ user.groups.first.name|default:"Utilisateur" }}</span>
+                <span class="user-name">{{ user.nom_utilisateur|default:user.email }}</span>
+                <span class="user-role">{{ user.get_role_display|default:"Utilisateur" }}</span>
               </div>
               <i class="fas fa-chevron-down"></i>
             </button>
             <div class="dropdown-menu user-dropdown" id="userDropdown">
               <div class="dropdown-header user-dropdown-header">
-                <img src="https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username }}&background=3b82f6&color=fff"
+                <img src="https://ui-avatars.com/api/?name={{ user.nom_utilisateur|default:user.email }}&background=3b82f6&color=fff"
                      alt="Avatar"
                      onerror="this.src='https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff'">
                 <div>
-                  <strong>{{ user.get_full_name|default:user.username }}</strong>
+                  <strong>{{ user.nom_utilisateur|default:user.email }}</strong>
                   <p class="text-muted">{{ user.email|default:"Email non défini" }}</p>
                 </div>
               </div>
@@ -1589,7 +1601,23 @@
   <script src="{% static 'js/table-enhancements.js' %}"></script>
   <script src="{% static 'js/ajax-utils.js' %}"></script>
   <script src="{% static 'js/notifications-ajax.js' %}"></script>
+  <script src="{% static 'js/skeleton-loaders.js' %}"></script>
   <!-- <script src="{% static 'js/test-modals.js' %}"></script> -->
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('PWA: Service Worker enregistré avec succès:', registration.scope);
+          })
+          .catch(error => {
+            console.log('PWA: Échec de l\'enregistrement du Service Worker:', error);
+          });
+      });
+    }
+  </script>
 
   {% block extra_js %}{% endblock %}
 </body>

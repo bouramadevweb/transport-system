@@ -1,0 +1,47 @@
+{#
+    Template partial réutilisable pour les confirmations de suppression.
+
+    Variables à passer avec {% include %}:
+    - object_name: Nom de l'objet à afficher (ex: "client.nom", "camion.immatriculation")
+    - object_type: Type d'objet en français (ex: "le client", "le camion")
+    - cancel_url: URL de retour (ex: "client_list")
+    - warning_message: (optionnel) Message d'avertissement personnalisé
+#}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-xl-5">
+            <div class="card shadow-sm border-0 border-top border-danger border-3">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                    <h4 class="text-center mb-3">Confirmer la suppression</h4>
+                    <p class="text-center text-muted mb-4">
+                        Voulez-vous vraiment supprimer {{ object_type }}
+                        <strong class="text-dark">{{ object_name }}</strong> ?
+                    </p>
+                    <div class="alert alert-warning mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% if warning_message %}
+                            {{ warning_message }}
+                        {% else %}
+                            Cette action est irréversible.
+                        {% endif %}
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="{% url cancel_url %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i> Oui, supprimer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -4,20 +4,26 @@ Finance Views.Py
 Vues pour finance
 """
 
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Count, Sum, F
+from django.db import transaction
 from django.http import JsonResponse
+
 from ..models import (Cautions, PaiementMission, Chauffeur, AuditLog)
 from ..forms import (CautionsForm, PaiementMissionForm)
 from ..decorators import (can_delete_data, can_validate_payment)
 from ..filters import PaiementMissionFilter
 
+logger = logging.getLogger('transport')
+
 
 @login_required
 def cautions_list(request):
-    cautions = Cautions.objects.all()
+    cautions = Cautions.objects.select_related(
+        'conteneur', 'contrat', 'transitaire', 'client', 'chauffeur', 'camion'
+    ).order_by('-pk_caution')
     return render(request, "transport/cautions/cautions_list.html", {"cautions": cautions, "title": "Liste des cautions"})
 
 # Création
@@ -27,13 +33,23 @@ def create_caution(request):
     if request.method == "POST":
         form = CautionsForm(request.POST)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                caution = form.save()
+                AuditLog.objects.create(
+                    utilisateur=request.user,
+                    action='CREATE',
+                    model_name='Cautions',
+                    object_id=caution.pk_caution,
+                    object_repr=f"Caution {caution.montant} FCFA",
+                    changes={}
+                )
+            logger.info(f"Caution créée par {request.user.email}: {caution.montant} FCFA")
+            messages.success(request, f"Caution de {caution.montant} FCFA créée avec succès!")
             return redirect('cautions_list')
     else:
         form = CautionsForm()
     return render(request, "transport/cautions/caution_form.html", {"form": form, "title": "Ajouter une caution"})
 
-# Modification
 
 @login_required
 def update_caution(request, pk):
@@ -41,7 +57,18 @@ def update_caution(request, pk):
     if request.method == "POST":
         form = CautionsForm(request.POST, instance=caution)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                caution = form.save()
+                AuditLog.objects.create(
+                    utilisateur=request.user,
+                    action='UPDATE',
+                    model_name='Cautions',
+                    object_id=caution.pk_caution,
+                    object_repr=f"Caution {caution.montant} FCFA",
+                    changes={}
+                )
+            logger.info(f"Caution modifiée par {request.user.email}: {caution.pk_caution}")
+            messages.success(request, "Caution mise à jour avec succès!")
             return redirect('cautions_list')
     else:
         form = CautionsForm(instance=caution)
@@ -175,27 +202,30 @@ def valider_paiement_mission(request, pk):
             return redirect('paiement_mission_list')
 
         try:
-            # Valider le paiement
-            paiement.valider_paiement()
+            with transaction.atomic():
+                # Valider le paiement
+                paiement.valider_paiement()
 
-            # Enregistrer l'action dans l'historique d'audit
-            AuditLog.log_action(
-                utilisateur=request.user,
-                action='VALIDER_PAIEMENT',
-                model_name='PaiementMission',
-                object_id=paiement.pk_paiement,
-                object_repr=f"Paiement de {paiement.montant_total} FCFA pour mission {paiement.mission.destination}",
-                changes={
-                    'est_valide': {'old': False, 'new': True},
-                    'montant_total': paiement.montant_total
-                },
-                request=request
-            )
+                # Enregistrer l'action dans l'historique d'audit
+                AuditLog.log_action(
+                    utilisateur=request.user,
+                    action='VALIDER_PAIEMENT',
+                    model_name='PaiementMission',
+                    object_id=paiement.pk_paiement,
+                    object_repr=f"Paiement de {paiement.montant_total} FCFA pour mission {paiement.mission.destination}",
+                    changes={
+                        'est_valide': {'old': False, 'new': True},
+                        'montant_total': str(paiement.montant_total)
+                    },
+                    request=request
+                )
 
-            messages.success(request, f"✅ Paiement validé avec succès! Montant: {paiement.montant_total} FCFA")
+            logger.info(f"Paiement {paiement.pk_paiement} validé par {request.user.email}")
+            messages.success(request, f"Paiement validé avec succès! Montant: {paiement.montant_total} FCFA")
             return redirect('paiement_mission_list')
         except Exception as e:
-            messages.error(request, f"❌ Erreur lors de la validation : {str(e)}")
+            logger.error(f"Erreur validation paiement {pk}: {e}", exc_info=True)
+            messages.error(request, f"Erreur lors de la validation : {str(e)}")
             return redirect('paiement_mission_list')
 
     return render(request, 'transport/paiements-mission/valider_paiement.html', {

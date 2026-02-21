@@ -69,6 +69,12 @@
                             <th class="sortable" onclick="sortTable(3, 'camionTable')">
                                 <i class="fas fa-weight me-1"></i>Capacité (Tonnes) <i class="fas fa-sort ms-1 text-muted"></i>
                             </th>
+                            <th class="sortable d-none d-md-table-cell" onclick="sortTable(4, 'camionTable')">
+                                <i class="fas fa-calendar-plus me-1"></i>Entrée <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
+                            <th class="sortable d-none d-md-table-cell" onclick="sortTable(5, 'camionTable')">
+                                <i class="fas fa-calendar-minus me-1"></i>Sortie <i class="fas fa-sort ms-1 text-muted"></i>
+                            </th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -81,6 +87,20 @@
                                 <span class="badge bg-secondary">{{ camion.entreprise.nom }}</span>
                             </td>
                             <td>{{ camion.capacite_tonnes }}</td>
+                            <td class="d-none d-md-table-cell">
+                                {% if camion.date_entree %}
+                                    {{ camion.date_entree|date:"d/m/Y" }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                {% if camion.date_sortie %}
+                                    <span class="badge bg-danger">{{ camion.date_sortie|date:"d/m/Y" }}</span>
+                                {% else %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% endif %}
+                            </td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <button type="button"

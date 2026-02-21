@@ -20,7 +20,6 @@ from django.urls import path,include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('transport.urls')),
-    #path('', include('transport.urls')),
-
-
+    # API REST pour React Native
+    path('api/v1/', include('transport.api.urls')),
 ]

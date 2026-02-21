@@ -18,6 +18,14 @@ from .choices import *
 class Chauffeur(models.Model):
     pk_chauffeur = models.CharField(max_length=250, primary_key=True, editable=False)
     entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE)
+    utilisateur = models.OneToOneField(
+        "Utilisateur",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='chauffeur_profile',
+        help_text="Compte utilisateur lié à ce chauffeur (pour les notifications)"
+    )
     nom = models.CharField(max_length=50)
     prenom = models.CharField(max_length=50)
     telephone = models.CharField(max_length=20, blank=True, null=True)

@@ -4,18 +4,21 @@ Contrat Views.Py
 Vues pour contrat
 """
 
+import os
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Count, Sum, F
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
-from ..models import (ContratTransport, PrestationDeTransports, Conteneur, Camion, Chauffeur)
+from django.conf import settings
+
+from ..models import (ContratTransport, PrestationDeTransports, Conteneur, AuditLog)
 from ..forms import (ContratTransportForm, PrestationDeTransportsForm)
 from ..decorators import (can_delete_data)
-from django.db import IntegrityError
-import os
-from django.conf import settings
 from utils.generate_contrat_pdf import generate_pdf_contrat
+
+logger = logging.getLogger('transport')
 
 
 
@@ -34,34 +37,64 @@ def create_contrat(request):
         form = ContratTransportForm(request.POST)
         if form.is_valid():
             try:
-                # 1 Sauvegarde du contrat dans la base
-                contrat = form.save()
+                with transaction.atomic():
+                    # Verrouiller le camion et le chauffeur pour éviter la race condition
+                    camion_choisi = form.cleaned_data['camion']
+                    chauffeur_choisi = form.cleaned_data['chauffeur']
 
-                # 2 Définition du chemin final du PDF
-                folder = os.path.join(settings.MEDIA_ROOT, "contrats")
-                os.makedirs(folder, exist_ok=True)
+                    from ..models import Camion, Chauffeur, Mission
+                    Camion.objects.select_for_update().get(pk_camion=camion_choisi.pk_camion)
+                    Chauffeur.objects.select_for_update().get(pk_chauffeur=chauffeur_choisi.pk_chauffeur)
 
-                pdf_filename = f"{contrat.pk_contrat}.pdf"
-                pdf_path = os.path.join(folder, pdf_filename)
+                    # Re-vérifier la disponibilité après verrouillage
+                    if Mission.objects.filter(contrat__camion=camion_choisi, statut='en cours').exists():
+                        form.add_error('camion', 'Ce camion vient d\'être affecté à une mission. Veuillez en choisir un autre.')
+                        raise ValueError('camion_indisponible')
+                    if Mission.objects.filter(contrat__chauffeur=chauffeur_choisi, statut='en cours').exists():
+                        form.add_error('chauffeur', 'Ce chauffeur vient d\'être affecté à une mission. Veuillez en choisir un autre.')
+                        raise ValueError('chauffeur_indisponible')
 
-                # 3 Génération du PDF
-                generate_pdf_contrat(contrat, pdf_path)
+                    # 1. Sauvegarde du contrat dans la base
+                    contrat = form.save()
 
-                # 4 Enregistrement du PDF dans le modèle
-                contrat.pdf_file = f"contrats/{pdf_filename}"
-                contrat.save()
+                    # 2. Définition du chemin final du PDF
+                    folder = os.path.join(settings.MEDIA_ROOT, "contrats")
+                    os.makedirs(folder, exist_ok=True)
 
-                # 5 Message de succès et redirection
-                messages.success(request, "✅ Contrat créé avec succès!")
+                    pdf_filename = f"{contrat.pk_contrat}.pdf"
+                    pdf_path = os.path.join(folder, pdf_filename)
+
+                    # 3. Génération du PDF
+                    generate_pdf_contrat(contrat, pdf_path)
+
+                    # 4. Enregistrement du PDF dans le modèle
+                    contrat.pdf_file = f"contrats/{pdf_filename}"
+                    contrat.save()
+
+                    # 5. Audit log
+                    AuditLog.objects.create(
+                        utilisateur=request.user,
+                        action='CREATE',
+                        model_name='ContratTransport',
+                        object_id=contrat.pk_contrat,
+                        object_repr=f"Contrat {contrat.numero_bl}",
+                        changes={'numero_bl': contrat.numero_bl}
+                    )
+
+                logger.info(f"Contrat {contrat.numero_bl} créé par {request.user.email}")
+                messages.success(request, "Contrat créé avec succès!")
                 return redirect("contrat_list")
 
             except IntegrityError:
-                messages.error(request, f"❌ Erreur: Le numéro BL '{form.cleaned_data.get('numero_bl')}' existe déjà. Veuillez utiliser un numéro BL unique.")
+                logger.warning(f"Tentative de création contrat avec BL dupliqué: {form.cleaned_data.get('numero_bl')}")
+                messages.error(request, f"Erreur: Le numéro BL '{form.cleaned_data.get('numero_bl')}' existe déjà.")
+            except Exception as e:
+                logger.error(f"Erreur création contrat: {e}", exc_info=True)
+                messages.error(request, f"Erreur lors de la création du contrat: {str(e)}")
         else:
-            # Afficher les erreurs de validation
-            for field, errors in form.errors.items():
+            for _, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f"❌ {error}")
+                    messages.error(request, f"{error}")
 
     else:
         form = ContratTransportForm()
@@ -82,16 +115,48 @@ def update_contrat(request, pk):
         form = ContratTransportForm(request.POST, instance=contrat)
         if form.is_valid():
             try:
-                form.save()
-                messages.success(request, "✅ Contrat mis à jour avec succès!")
+                with transaction.atomic():
+                    # Verrouiller le camion et le chauffeur pour éviter la race condition
+                    camion_choisi = form.cleaned_data['camion']
+                    chauffeur_choisi = form.cleaned_data['chauffeur']
+
+                    from ..models import Camion, Chauffeur, Mission
+                    Camion.objects.select_for_update().get(pk_camion=camion_choisi.pk_camion)
+                    Chauffeur.objects.select_for_update().get(pk_chauffeur=chauffeur_choisi.pk_chauffeur)
+
+                    # Re-vérifier la disponibilité après verrouillage (en excluant le contrat en cours d'édition)
+                    if Mission.objects.filter(contrat__camion=camion_choisi, statut='en cours').exclude(contrat=contrat).exists():
+                        form.add_error('camion', 'Ce camion vient d\'être affecté à une mission. Veuillez en choisir un autre.')
+                        raise ValueError('camion_indisponible')
+                    if Mission.objects.filter(contrat__chauffeur=chauffeur_choisi, statut='en cours').exclude(contrat=contrat).exists():
+                        form.add_error('chauffeur', 'Ce chauffeur vient d\'être affecté à une mission. Veuillez en choisir un autre.')
+                        raise ValueError('chauffeur_indisponible')
+
+                    contrat = form.save()
+
+                    # Audit log
+                    AuditLog.objects.create(
+                        utilisateur=request.user,
+                        action='UPDATE',
+                        model_name='ContratTransport',
+                        object_id=contrat.pk_contrat,
+                        object_repr=f"Contrat {contrat.numero_bl}",
+                        changes={}
+                    )
+
+                logger.info(f"Contrat {contrat.numero_bl} modifié par {request.user.email}")
+                messages.success(request, "Contrat mis à jour avec succès!")
                 return redirect('contrat_list')
             except IntegrityError:
-                messages.error(request, f"❌ Erreur: Le numéro BL '{form.cleaned_data.get('numero_bl')}' existe déjà. Veuillez utiliser un numéro BL unique.")
+                logger.warning(f"Tentative de modification contrat avec BL dupliqué: {form.cleaned_data.get('numero_bl')}")
+                messages.error(request, f"Erreur: Le numéro BL '{form.cleaned_data.get('numero_bl')}' existe déjà.")
+            except Exception as e:
+                logger.error(f"Erreur modification contrat {pk}: {e}", exc_info=True)
+                messages.error(request, f"Erreur lors de la modification: {str(e)}")
         else:
-            # Afficher les erreurs de validation
-            for field, errors in form.errors.items():
+            for _, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f"❌ {error}")
+                    messages.error(request, f"{error}")
     else:
         form = ContratTransportForm(instance=contrat)
     return render(request, "transport/contrat/contrat_form.html", {"form": form, "title": "Modifier le contrat"})
@@ -153,7 +218,9 @@ def delete_contrat(request, pk):
 
 @login_required
 def presta_transport_list(request):
-    prestations = PrestationDeTransports.objects.all()
+    prestations = PrestationDeTransports.objects.select_related(
+        'contrat_transport', 'camion', 'client', 'transitaire'
+    ).order_by('-date')
     return render(request, "transport/prestations/prestation_transport_list.html", {"prestations": prestations, "title": "Prestations de transport"})
 
 # Création

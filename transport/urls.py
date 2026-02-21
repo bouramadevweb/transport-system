@@ -8,6 +8,7 @@ from . import invoice_views
 from . import reports_views
 from . import user_crud_views
 from . import salary_views
+from . import pwa_views
 from .views import ajax_views
 from .views.annulation_views import (
     annuler_contrat_view,
@@ -42,11 +43,10 @@ urlpatterns = [
 
     path('camions/', views.camion_list, name='camion_list'),
     path('camions/create/', views.create_camion, name='create_camion'),
+    # AJAX URLs for camions (avant les patterns <str:pk> pour éviter toute ambiguïté)
+    path('camions/ajax/create/', ajax_views.ajax_camion_create, name='ajax_camion_create'),
     path('camions/<str:pk>/update/', views.update_camion, name='update_camion'),
     path('camions/<str:pk>/delete/', views.delete_camion, name='delete_camion'),
-    path('camions/ajax/create-form/', ajax_views.ajax_camion_create_form, name='ajax_camion_create_form'),
-    path('camions/ajax/create/', ajax_views.ajax_camion_create, name='ajax_camion_create'),
-    path('camions/<str:pk>/ajax/update-form/', ajax_views.ajax_camion_update_form, name='ajax_camion_update_form'),
     path('camions/<str:pk>/ajax/update/', ajax_views.ajax_camion_update, name='ajax_camion_update'),
 
     path('affectations/', views.affectation_list, name='affectation_list'),
@@ -140,9 +140,8 @@ urlpatterns = [
     path('missions/<str:pk>/marquer-dechargement/', views.marquer_dechargement, name='marquer_dechargement'),
     path('missions/<str:pk>/calculer-stationnement/', views.calculer_stationnement, name='calculer_stationnement'),
     path('missions/<str:pk>/preview-frais-stationnement/', views.preview_frais_stationnement, name='preview_frais_stationnement'),
-    path('missions/ajax/create-form/', ajax_views.ajax_mission_create_form, name='ajax_mission_create_form'),
+    # AJAX URLs for missions
     path('missions/ajax/create/', ajax_views.ajax_mission_create, name='ajax_mission_create'),
-    path('missions/<str:pk>/ajax/update-form/', ajax_views.ajax_mission_update_form, name='ajax_mission_update_form'),
     path('missions/<str:pk>/ajax/update/', ajax_views.ajax_mission_update, name='ajax_mission_update'),
 
     path('mission-conteneurs/', views.mission_conteneur_list, name='mission_conteneur_list'),
@@ -266,6 +265,12 @@ urlpatterns = [
     path('reports/financial/', reports_views.financial_reports, name='financial_reports'),
     path('reports/financial/export/', reports_views.export_financial_report_excel, name='export_financial_report_excel'),
     path('reports/client/<str:client_id>/', reports_views.client_report, name='client_report'),
+
+    # PWA (Progressive Web App)
+    path('manifest.json', pwa_views.manifest, name='manifest'),
+    path('sw.js', pwa_views.service_worker, name='service_worker'),
+    path('offline/', pwa_views.offline, name='offline'),
+    path('clear-cache/', pwa_views.clear_cache, name='clear_cache'),
 
     path('logout/', views.logout_utilisateur, name='logout'),
 

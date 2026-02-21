@@ -250,7 +250,7 @@
 {% block extra_js %}
 {% load static %}
 <script src="{% static 'js/ajax-list-search.js' %}"></script>
-<script src="{% static 'js/crud-modal.js' %}"></script>
+<script src="{% static 'js/chauffeurs-crud.js' %}"></script>
 <script>
 // Initialize AJAX search for chauffeurs
 new AjaxListSearch({
@@ -259,15 +259,6 @@ new AjaxListSearch({
     counterSelector: '#rowCount',
     ajaxUrl: '{% url "ajax_search_chauffeurs" %}',
     debounceDelay: 300
-});
-
-// Initialize CRUD modal for chauffeurs
-new CrudModalManager({
-    entityName: 'chauffeur',
-    entityNameDisplay: 'Chauffeur',
-    createUrl: '{% url "ajax_chauffeur_create" %}',
-    updateUrlPattern: '/chauffeurs/{id}/ajax/update/',
-    listSelector: '#chauffeurTableBody'
 });
 </script>
 {% endblock %}

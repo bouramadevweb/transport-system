@@ -1,5 +1,6 @@
 /**
  * Camions CRUD - Version simplifiée et robuste
+ * Pattern identique à chauffeurs-crud.js (qui fonctionne)
  */
 
 (function() {
@@ -7,237 +8,296 @@
 
     console.log('🚀 Camions CRUD Simple - Initializing...');
 
-    // Helper pour récupérer le cookie CSRF
-    function getCookie(name) {
-        let cookieValue = null;
+    let currentModal = null;
+    let currentMode = 'create';
+    let currentCamionId = null;
+
+    // Wrapper sécurisé pour toastManager (optionnel)
+    function showToast(type, msg) {
+        if (typeof toastManager !== 'undefined') toastManager[type](msg);
+    }
+
+    // Récupère le token CSRF depuis cookie, meta tag ou input caché
+    // CSRF_COOKIE_HTTPONLY=True empêche la lecture du cookie par JS,
+    // on utilise donc le meta tag en fallback.
+    function getCsrfToken() {
+        // 1. Essayer le cookie (fonctionne si CSRF_COOKIE_HTTPONLY=False)
+        const name = 'csrftoken';
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    return decodeURIComponent(cookie.substring(name.length + 1));
                 }
             }
         }
-        return cookieValue;
+        // 2. Meta tag (admin.html: <meta name="csrf-token" content="{{ csrf_token }}">)
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        if (meta && meta.getAttribute('content')) {
+            return meta.getAttribute('content');
+        }
+        // 3. Input caché dans le formulaire
+        const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (input && input.value) {
+            return input.value;
+        }
+        return null;
     }
 
-    // Attendre que le DOM et les dépendances soient prêts
     function init() {
-        console.log('📋 Init function called');
+        console.log('📋 Camions CRUD - Init...');
 
-        // Vérifier les dépendances
         if (typeof bootstrap === 'undefined') {
             console.error('❌ bootstrap not found!');
             return;
         }
-        if (typeof toastManager === 'undefined') {
-            console.error('❌ toastManager not found!');
-            return;
-        }
-        if (typeof loadingManager === 'undefined') {
-            console.error('❌ loadingManager not found!');
-            return;
-        }
 
-        console.log('✅ All dependencies found');
+        console.log('✅ Bootstrap found, attaching event listeners');
 
-        // Trouver le bouton de création
-        const createBtn = document.querySelector('[data-action="create-camion"]');
-        console.log('🔍 Create button:', createBtn);
+        // Event delegation - bouton créer
+        document.addEventListener('click', function(e) {
+            const createBtn = e.target.closest('[data-action="create-camion"]');
+            if (createBtn) {
+                e.preventDefault();
+                console.log('🎯 Create camion button clicked!');
+                openCreateModal();
+            }
 
-        if (!createBtn) {
-            console.warn('⚠️ No create button found on this page');
-            return;
-        }
-
-        console.log('✅ Create button found, attaching event');
-
-        // Attacher l'événement de clic
-        createBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('🎯 Create button clicked!');
-            openCreateModal();
+            const editBtn = e.target.closest('[data-action="edit-camion"]');
+            if (editBtn) {
+                e.preventDefault();
+                const camionId = editBtn.dataset.camionId;
+                console.log('🎯 Edit camion button clicked! ID:', camionId);
+                if (camionId) {
+                    openEditModal(camionId);
+                }
+            }
         });
 
-        console.log('✅ Event attached successfully');
+        console.log('✅ Event listeners attached');
     }
 
-    // Ouvrir le modal de création
+    function getOrCreateModal() {
+        let modalEl = document.getElementById('camionModal');
+        if (!modalEl) {
+            modalEl = document.createElement('div');
+            modalEl.id = 'camionModal';
+            modalEl.className = 'modal fade';
+            modalEl.setAttribute('tabindex', '-1');
+            modalEl.innerHTML = `
+                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="camionModalTitle">
+                                <i class="fas fa-truck me-2"></i>
+                                <span id="camionModalTitleText">Camion</span>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div id="camionModalBody">
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                                <p class="mt-3 text-muted">Chargement...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalEl);
+        }
+        return modalEl;
+    }
+
+    function updateModalTitle(mode) {
+        const titleText = document.getElementById('camionModalTitleText');
+        const header = document.querySelector('#camionModal .modal-header');
+        if (!titleText || !header) return;
+
+        if (mode === 'create') {
+            titleText.textContent = 'Nouveau Camion';
+            header.className = 'modal-header bg-success text-white';
+        } else {
+            titleText.textContent = 'Modifier le Camion';
+            header.className = 'modal-header bg-warning text-dark';
+        }
+    }
+
+    function showError(message) {
+        const modalBody = document.getElementById('camionModalBody');
+        if (modalBody) {
+            modalBody.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-exclamation-circle text-danger fa-3x mb-3"></i>
+                    <p class="text-danger mb-0">${message}</p>
+                </div>
+            `;
+        }
+        showToast('error', message);
+    }
+
     async function openCreateModal() {
-        console.log('📂 Opening create modal...');
+        currentMode = 'create';
+        currentCamionId = null;
 
         try {
-            // Charger le formulaire avec fetch direct
-            console.log('🌐 Fetching form from server...');
+            const modalEl = getOrCreateModal();
+            updateModalTitle('create');
 
-            loadingManager.show();
+            // Réutiliser l'instance existante si possible
+            currentModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            currentModal.show();
 
-            const fetchResponse = await fetch('/camions/ajax/create-form/', {
+            const fetchResponse = await fetch('/camions/ajax/create/', {
                 method: 'GET',
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
                 credentials: 'same-origin'
             });
 
             const response = await fetchResponse.json();
-            loadingManager.hide();
-
-            console.log('📥 Response received:', response);
+            console.log('📥 Create form response:', response.success);
 
             if (!response || !response.success) {
                 console.error('❌ Invalid response from server');
-                toastManager.error('Erreur lors du chargement du formulaire');
+                showError('Erreur lors du chargement du formulaire');
                 return;
             }
 
-            console.log('✅ Form HTML received, creating modal...');
-
-            // Créer ou récupérer le modal
-            let modalEl = document.getElementById('camionModal');
-            if (!modalEl) {
-                console.log('🆕 Creating new modal element');
-                modalEl = document.createElement('div');
-                modalEl.id = 'camionModal';
-                modalEl.className = 'modal fade';
-                modalEl.innerHTML = `
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header bg-success text-white">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-truck me-2"></i>
-                                    Créer un camion
-                                </h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div id="camionModalBody"></div>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modalEl);
-            }
-
-            // Injecter le formulaire
-            console.log('📝 Injecting form HTML...');
             const modalBody = document.getElementById('camionModalBody');
             modalBody.innerHTML = response.html;
-
-            // Créer l'instance Bootstrap Modal
-            const modal = new bootstrap.Modal(modalEl);
-
-            // Attacher l'événement submit au formulaire
-            setTimeout(() => {
-                const form = document.getElementById('camionForm');
-                console.log('🔍 Form after injection:', form);
-
-                if (!form) {
-                    console.error('❌ Form not found after injection!');
-                    return;
-                }
-
-                console.log('✅ Form found, attaching submit handler');
-
-                // Retirer les anciens listeners
-                const newForm = form.cloneNode(true);
-                form.parentNode.replaceChild(newForm, form);
-
-                // Attacher le submit
-                newForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-
-                    console.log('🎯 FORM SUBMITTED!');
-
-                    await submitForm(newForm, modal);
-                }, {capture: true});
-
-                console.log('✅ Submit handler attached');
-            }, 50);
-
-            // Afficher le modal
-            console.log('🎭 Showing modal...');
-            modal.show();
+            attachFormHandler();
 
         } catch (error) {
-            console.error('❌ Error opening modal:', error);
-            toastManager.error('Erreur lors de l\'ouverture du formulaire');
+            console.error('❌ Error opening create modal:', error);
+            showError('Erreur lors de l\'ouverture du formulaire');
         }
     }
 
-    // Soumettre le formulaire
-    async function submitForm(form, modal) {
-        console.log('📤 Submitting form...');
-
-        const formData = new FormData(form);
-
-        // Afficher les données
-        console.log('Form data:');
-        for (let [key, value] of formData.entries()) {
-            console.log(`  ${key}: "${value}"`);
-        }
+    async function openEditModal(camionId) {
+        currentMode = 'update';
+        currentCamionId = camionId;
 
         try {
-            // UTILISER FETCH DIRECTEMENT au lieu de ajaxManager
-            console.log('🚀 Using direct fetch with FormData...');
+            const modalEl = getOrCreateModal();
+            updateModalTitle('update');
 
-            loadingManager.show();
+            currentModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            currentModal.show();
 
-            const fetchResponse = await fetch('/camions/ajax/create/', {
-                method: 'POST',
-                body: formData,  // FormData directement, pas de JSON
+            const fetchResponse = await fetch(`/camions/${camionId}/ajax/update/`, {
+                method: 'GET',
                 headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
                 credentials: 'same-origin'
             });
 
             const response = await fetchResponse.json();
-            loadingManager.hide();
+            console.log('📥 Edit form response:', response.success);
 
-            console.log('📥 Submit response:', response);
-
-            if (response.success) {
-                console.log('✅ Camion created successfully!');
-                toastManager.success(response.message || 'Camion créé avec succès');
-                modal.hide();
-
-                // Recharger la page après 1 seconde
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            } else {
-                console.error('❌ Server returned error:', response.message);
-                toastManager.error(response.message || 'Erreur lors de la création');
-
-                // Si le serveur renvoie un nouveau HTML avec les erreurs
-                if (response.html) {
-                    console.log('📝 Updating form with errors...');
-                    document.getElementById('camionModalBody').innerHTML = response.html;
-
-                    // Réattacher le submit
-                    setTimeout(() => {
-                        const newForm = document.getElementById('camionForm');
-                        if (newForm) {
-                            newForm.addEventListener('submit', async function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                await submitForm(newForm, modal);
-                            }, {capture: true});
-                        }
-                    }, 50);
-                }
+            if (!response || !response.success) {
+                console.error('❌ Invalid response from server');
+                showError('Erreur lors du chargement du formulaire');
+                return;
             }
+
+            const modalBody = document.getElementById('camionModalBody');
+            modalBody.innerHTML = response.html;
+            attachFormHandler();
+
         } catch (error) {
-            console.error('❌ Error submitting form:', error);
-            toastManager.error('Erreur lors de l\'envoi du formulaire');
+            console.error('❌ Error opening edit modal:', error);
+            showError('Erreur lors de l\'ouverture du formulaire');
         }
     }
 
-    // Initialiser au chargement
+    function attachFormHandler() {
+        setTimeout(() => {
+            const form = document.getElementById('camionForm');
+            console.log('🔍 camionForm found:', !!form);
+
+            if (!form) {
+                console.error('❌ Form #camionForm not found!');
+                return;
+            }
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                console.log('📤 Submitting camion form...');
+                await submitForm(form);
+            });
+
+            console.log('✅ Form handler attached');
+        }, 100);
+    }
+
+    async function submitForm(form) {
+        try {
+            const formData = new FormData(form);
+            const csrfToken = getCsrfToken();
+
+            let url;
+            if (currentMode === 'create') {
+                url = '/camions/ajax/create/';
+            } else {
+                url = `/camions/${currentCamionId}/ajax/update/`;
+            }
+
+            // Convertir FormData en JSON (comme chauffeurs-crud.js)
+            const data = {};
+            formData.forEach((value, key) => {
+                if (key !== 'csrfmiddlewaretoken') {
+                    data[key] = value;
+                }
+            });
+
+            console.log('🌐 POST to:', url, '| data keys:', Object.keys(data));
+
+            const fetchResponse = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(data),
+                credentials: 'same-origin'
+            });
+
+            const response = await fetchResponse.json();
+            console.log('📥 Submit response:', response.success, response.message);
+
+            if (response.success) {
+                showToast('success', response.message || 'Opération réussie');
+                if (currentModal) {
+                    currentModal.hide();
+                }
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                if (response.html) {
+                    const modalBody = document.getElementById('camionModalBody');
+                    if (modalBody) {
+                        modalBody.innerHTML = response.html;
+                        attachFormHandler();
+                    }
+                }
+                showToast('error', response.message || 'Veuillez corriger les erreurs');
+            }
+
+        } catch (error) {
+            console.error('❌ Error submitting form:', error);
+            showToast('error', 'Erreur lors de l\'envoi du formulaire');
+        }
+    }
+
+    // Initialiser quand le DOM est prêt
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

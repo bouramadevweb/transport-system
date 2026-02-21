@@ -62,8 +62,8 @@ class AffectationForm(forms.ModelForm):
         widgets = {
             'chauffeur': forms.Select(attrs={'class': 'form-select'}),
             'camion': forms.Select(attrs={'class': 'form-select'}),
-            'date_affectation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'date_fin_affectation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_affectation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
+            'date_fin_affectation': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}, format='%Y-%m-%d'),
         }
         labels = {
             'chauffeur': 'Chauffeur',
