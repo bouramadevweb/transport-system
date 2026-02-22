@@ -18,7 +18,7 @@ logger = logging.getLogger('transport')
 
 @login_required
 def camion_list(request):
-    camions = Camion.objects.select_related('entreprise').order_by('-pk_camion')
+    camions = Camion.objects.filter(entreprise=request.user.entreprise).select_related('entreprise').order_by('-pk_camion')
     return render(request, "transport/camions/camion_list.html", {"camions": camions, "title": "Liste des camions"})
 
 # Ajouter un camion
@@ -76,7 +76,10 @@ def delete_camion(request, pk):
 
 @login_required
 def conteneur_list(request):
-    conteneurs = Conteneur.objects.select_related('compagnie').order_by('numero_conteneur')
+    # Filtrer les conteneurs via les contrats de l'entreprise (Conteneur n'a pas de FK entreprise directe)
+    conteneurs = Conteneur.objects.filter(
+        contrattransport__entreprise=request.user.entreprise
+    ).select_related('compagnie').order_by('numero_conteneur').distinct()
     return render(request, "transport/conteneurs/conteneur_list.html", {"conteneurs": conteneurs, "title": "Liste des conteneurs"})
 
 # Création d'un conteneur
@@ -153,13 +156,20 @@ def reparation_list(request):
             pass
 
     # ========== APPLICATION DES FILTRES ==========
-    reparations = Reparation.objects.select_related('camion', 'chauffeur').order_by('-date_reparation')
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    qs = Reparation.objects.filter(camion__entreprise=request.user.entreprise).select_related('camion', 'chauffeur').order_by('-date_reparation')
 
     # Apply date filters if provided
     if date_debut:
-        reparations = reparations.filter(date_reparation__gte=date_debut)
+        qs = qs.filter(date_reparation__gte=date_debut)
     if date_fin:
-        reparations = reparations.filter(date_reparation__lte=date_fin)
+        qs = qs.filter(date_reparation__lte=date_fin)
+
+    paginator = Paginator(qs, 20)
+    try:
+        reparations = paginator.page(request.GET.get('page', 1))
+    except (EmptyPage, PageNotAnInteger):
+        reparations = paginator.page(1)
 
     return render(request, 'transport/reparations/reparation_list.html', {
         'date_debut': date_debut,

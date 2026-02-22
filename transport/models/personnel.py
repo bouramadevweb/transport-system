@@ -66,9 +66,10 @@ class Chauffeur(models.Model):
 
 class Mecanicien(models.Model):
     pk_mecanicien = models.CharField(max_length=250, primary_key=True)
+    entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE, null=True, blank=True)
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, unique=True)
-    email = models.EmailField(blank=True, null=True, unique=True)
+    telephone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -78,6 +79,14 @@ class Mecanicien(models.Model):
             slug = slugify(base)[:240]
             self.pk_mecanicien = f"{slug}-{uuid4().hex[:8]}"
         super().save(*args, **kwargs)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nom', 'telephone', 'entreprise'],
+                name='unique_mecanicien'
+            )
+        ]
 
     def __str__(self):
         return f"{self.nom} - {self.telephone}"

@@ -110,7 +110,10 @@ function chargerClientTransitaire() {
     }
     conteneurAbortController = new AbortController();
 
-    fetch(`/api/conteneur/${conteneurId}/info/`, { signal: conteneurAbortController.signal })
+    const baseUrl = (window.CONTRAT_FORM_URLS && window.CONTRAT_FORM_URLS.conteneurInfo)
+        ? window.CONTRAT_FORM_URLS.conteneurInfo + conteneurId + '/'
+        : `/api/conteneur/${conteneurId}/info/`;
+    fetch(baseUrl, { signal: conteneurAbortController.signal })
         .then(response => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
@@ -178,7 +181,10 @@ function chargerChauffeurAffecte() {
     }
     chauffeurAbortController = new AbortController();
 
-    fetch(`/api/camion/${camionId}/chauffeur/`, { signal: chauffeurAbortController.signal })
+    const camionUrl = (window.CONTRAT_FORM_URLS && window.CONTRAT_FORM_URLS.camionChauffeur)
+        ? window.CONTRAT_FORM_URLS.camionChauffeur + camionId + '/chauffeur/'
+        : `/api/camion/${camionId}/chauffeur/`;
+    fetch(camionUrl, { signal: chauffeurAbortController.signal })
         .then(response => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
@@ -226,7 +232,10 @@ function chargerCamionAffecte() {
     }
     camionAbortController = new AbortController();
 
-    fetch(`/api/chauffeur/${chauffeurId}/camion/`, { signal: camionAbortController.signal })
+    const chauffeurUrl = (window.CONTRAT_FORM_URLS && window.CONTRAT_FORM_URLS.chauffeurCamion)
+        ? window.CONTRAT_FORM_URLS.chauffeurCamion + chauffeurId + '/camion/'
+        : `/api/chauffeur/${chauffeurId}/camion/`;
+    fetch(chauffeurUrl, { signal: camionAbortController.signal })
         .then(response => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();

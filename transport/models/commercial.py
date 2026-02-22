@@ -16,8 +16,9 @@ from .choices import *
 
 class Transitaire(models.Model):
     pk_transitaire = models.CharField(max_length=250, primary_key=True)
+    entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE, null=True, blank=True)
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, blank=True, null=True, unique=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     score_fidelite = models.IntegerField(default=100)
     etat_paiement = models.CharField(max_length=10, choices=ETAT_PAIEMENT_CHOICES, default='bon')
@@ -29,20 +30,18 @@ class Transitaire(models.Model):
         help_text="Pourcentage de commission du transitaire (0-100)"
     )
     commentaire = models.TextField(blank=True, null=True)
-    
+
     def save(self, *args, **kwargs):
         if not self.pk_transitaire:
             base = f"{self.nom}{self.telephone}"
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
             self.pk_transitaire = slugify(base)[:250]
         super().save(*args, **kwargs)
-    # class Meta:
-    #     unique_together = ('nom', 'telephone')
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['nom', 'telephone'],
+                fields=['nom', 'telephone', 'entreprise'],
                 name='unique_transitaire'
             )
         ]
@@ -52,6 +51,7 @@ class Transitaire(models.Model):
 
 class Client(models.Model):
     pk_client = models.CharField(max_length=250, primary_key=True)
+    entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE, null=True, blank=True)
     nom = models.CharField(max_length=100)
     type_client = models.CharField(max_length=50, choices=TYPE_CLIENT_CHOICES)
     telephone = models.CharField(max_length=20, blank=True, null=True)
@@ -60,20 +60,17 @@ class Client(models.Model):
     etat_paiement = models.CharField(max_length=10, choices=ETAT_PAIEMENT_CHOICES, default='bon')
     commentaire = models.TextField(blank=True, null=True)
 
-    def save(self,*args, **kwargs):
+    def save(self, *args, **kwargs):
         if not self.pk_client:
             base = f"{self.nom}{self.type_client}{self.telephone}"
             base = base.replace(',', '').replace(';', '').replace(' ', '').replace('-', '')
-            self.pk_client =slugify(base)[:250]
-        super().save(*args, **kwargs) 
-
-    # class Meta:
-    #       unique_together = ("nom","type_client","telephone") 
+            self.pk_client = slugify(base)[:250]
+        super().save(*args, **kwargs)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['nom', 'type_client', 'telephone'],
+                fields=['nom', 'type_client', 'telephone', 'entreprise'],
                 name='unique_client'
             )
         ]

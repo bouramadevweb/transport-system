@@ -18,13 +18,13 @@ from .choices import *
 class Cautions(models.Model):
     pk_caution = models.CharField(max_length=250, primary_key=True)
     conteneur = models.ForeignKey("Conteneur", on_delete=models.SET_NULL, blank=True, null=True)
-    contrat = models.ForeignKey("ContratTransport", on_delete=models.SET_NULL, blank=True, null=True)
+    contrat = models.ForeignKey("ContratTransport", on_delete=models.PROTECT, blank=True, null=True)
     transitaire = models.ForeignKey("Transitaire", on_delete=models.SET_NULL, blank=True, null=True)
     client = models.ForeignKey("Client", on_delete=models.SET_NULL, blank=True, null=True)
     chauffeur = models.ForeignKey("Chauffeur", on_delete=models.SET_NULL, blank=True, null=True)
     camion = models.ForeignKey("Camion", on_delete=models.SET_NULL, blank=True, null=True)
     montant = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=0,
         validators=[MinValueValidator(Decimal('0'))]
@@ -37,7 +37,7 @@ class Cautions(models.Model):
         help_text="Statut de la caution"
     )
     montant_rembourser = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=0,
         validators=[MinValueValidator(Decimal('0'))]
@@ -94,7 +94,7 @@ class PaiementMission(models.Model):
     prestation = models.ForeignKey("PrestationDeTransports", on_delete=models.CASCADE)
 
     montant_total = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))],
         help_text="Montant total incluant les frais de stationnement"
@@ -102,7 +102,7 @@ class PaiementMission(models.Model):
 
     # ✅ NOUVEAU: Frais de stationnement (demurrage)
     frais_stationnement = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=Decimal('0.00'),
         validators=[MinValueValidator(Decimal('0'))],
@@ -110,7 +110,7 @@ class PaiementMission(models.Model):
     )
 
     commission_transitaire = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         default=0,
         validators=[MinValueValidator(Decimal('0'))]

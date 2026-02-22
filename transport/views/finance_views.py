@@ -21,9 +21,15 @@ logger = logging.getLogger('transport')
 
 @login_required
 def cautions_list(request):
-    cautions = Cautions.objects.select_related(
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    qs = Cautions.objects.select_related(
         'conteneur', 'contrat', 'transitaire', 'client', 'chauffeur', 'camion'
     ).order_by('-pk_caution')
+    paginator = Paginator(qs, 20)
+    try:
+        cautions = paginator.page(request.GET.get('page', 1))
+    except (EmptyPage, PageNotAnInteger):
+        cautions = paginator.page(1)
     return render(request, "transport/cautions/cautions_list.html", {"cautions": cautions, "title": "Liste des cautions"})
 
 # Création
@@ -133,7 +139,8 @@ def create_paiement_mission(request):
     if request.method == 'POST':
         form = PaiementMissionForm(request.POST)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
             return redirect('paiement_mission_list')
     else:
         form = PaiementMissionForm()
@@ -147,7 +154,8 @@ def update_paiement_mission(request, pk):
     if request.method == 'POST':
         form = PaiementMissionForm(request.POST, instance=paiement)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
             return redirect('paiement_mission_list')
     else:
         form = PaiementMissionForm(instance=paiement)

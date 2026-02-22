@@ -134,7 +134,7 @@ class ContratTransport(models.Model):
                 try:
                     camion = Camion.objects.get(pk=self.camion_id)
                     errors['camion'] = f'Le camion {camion.immatriculation} est déjà affecté à une mission en cours'
-                except Camion.DoesNotExist:
+                except (Camion.DoesNotExist, Camion.MultipleObjectsReturned):
                     errors['camion'] = 'Le camion sélectionné est déjà affecté à une mission en cours'
 
             # Vérifier si le chauffeur est déjà affecté à une mission en cours

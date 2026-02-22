@@ -313,7 +313,8 @@ def ajax_contrat_create(request):
             with transaction.atomic():
                 contrat = form.save()
 
-                # Log
+            # Log hors transaction — une erreur d'audit ne doit pas annuler la sauvegarde
+            try:
                 AuditLog.objects.create(
                     utilisateur=request.user,
                     action='CREATE',
@@ -322,6 +323,8 @@ def ajax_contrat_create(request):
                     object_repr=str(contrat),
                     changes={}
                 )
+            except Exception as audit_err:
+                logger.warning(f"AuditLog non enregistré (contrat create): {audit_err}")
 
             logger.info(f"Contrat {contrat.numero_bl} créé par {request.user.email}")
             return JsonResponse({
@@ -820,7 +823,8 @@ def ajax_search_chauffeurs(request):
         return JsonResponse({'results': []})
 
     chauffeurs = Chauffeur.objects.filter(
-        Q(nom__icontains=query) | Q(prenom__icontains=query)
+        Q(nom__icontains=query) | Q(prenom__icontains=query),
+        entreprise=request.user.entreprise
     )[:10]
 
     results = [{'id': c.pk_chauffeur, 'text': f"{c.nom} {c.prenom}"} for c in chauffeurs]
@@ -957,6 +961,9 @@ def ajax_mission_create(request):
         if form.is_valid():
             with transaction.atomic():
                 mission = form.save()
+
+            # Log hors transaction — une erreur d'audit ne doit pas annuler la sauvegarde
+            try:
                 AuditLog.objects.create(
                     utilisateur=request.user,
                     action='CREATE',
@@ -965,6 +972,8 @@ def ajax_mission_create(request):
                     object_repr=str(mission),
                     changes={}
                 )
+            except Exception as audit_err:
+                logger.warning(f"AuditLog non enregistré (mission create): {audit_err}")
 
             # Redirection vers la page de modification du contrat
             redirect_url = reverse('update_contrat', kwargs={'pk': mission.contrat.pk_contrat})
@@ -1282,7 +1291,8 @@ def ajax_validate_paiement(request, pk):
             # Valider le paiement
             paiement.valider_paiement()
 
-            # Log
+        # Log hors transaction — une erreur d'audit ne doit pas annuler la validation
+        try:
             AuditLog.objects.create(
                 utilisateur=request.user,
                 action='VALIDER_PAIEMENT',
@@ -1291,6 +1301,8 @@ def ajax_validate_paiement(request, pk):
                 object_repr=str(paiement),
                 changes={'montant_total': str(paiement.montant_total)}
             )
+        except Exception as audit_err:
+            logger.warning(f"AuditLog non enregistré (valider paiement): {audit_err}")
 
         logger.info(f"Paiement {paiement.pk_paiement} validé par {request.user.email}")
         return JsonResponse({

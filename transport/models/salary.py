@@ -4,7 +4,7 @@ Salary.Py
 Modèles pour salary
 """
 
-from django.db import models
+from django.db import models, transaction
 from django.utils.timezone import now
 from django.utils.text import slugify
 from uuid import uuid4
@@ -42,14 +42,14 @@ class Salaire(models.Model):
     annee = models.IntegerField()
     
     # Salaire de base et heures supplémentaires
-    salaire_base = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    heures_supplementaires = models.DecimalField(max_digits=6, decimal_places=2, default=0)
-    taux_heure_supp = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+    salaire_base = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    heures_supplementaires = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    taux_heure_supp = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+
     # Totaux calculés
-    total_primes = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    total_deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    salaire_net = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_primes = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    total_deductions = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    salaire_net = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     
     # Paiement
     date_paiement = models.DateField(null=True, blank=True)
@@ -127,30 +127,41 @@ class Prime(models.Model):
     pk_prime = models.CharField(max_length=255, primary_key=True)
     salaire = models.ForeignKey("Salaire", on_delete=models.CASCADE, related_name='primes')
     type_prime = models.CharField(max_length=100)  # ex: Prime de performance, Prime d'ancienneté, etc.
-    montant = models.DecimalField(max_digits=10, decimal_places=2)
+    montant = models.DecimalField(max_digits=15, decimal_places=2)
     description = models.TextField(blank=True, default='')
     date_attribution = models.DateField(auto_now_add=True)
     
     class Meta:
         verbose_name = 'Prime'
         verbose_name_plural = 'Primes'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['salaire', 'type_prime'],
+                name='unique_prime_per_salaire'
+            )
+        ]
     
     def save(self, *args, **kwargs):
         if not self.pk_prime:
             self.pk_prime = f"PRIME-{uuid4().hex[:12].upper()}"
-        super().save(*args, **kwargs)
-        
-        # Mettre à jour le total des primes du salaire
-        self.salaire.total_primes = sum(p.montant for p in self.salaire.primes.all())
-        self.salaire.save()
-    
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            # Recalculer atomiquement le total des primes en verrouillant le salaire
+            salaire = Salaire.objects.select_for_update().get(pk_salaire=self.salaire_id)
+            salaire.total_primes = salaire.primes.aggregate(
+                total=models.Sum('montant')
+            )['total'] or Decimal('0')
+            salaire.save()
+
     def delete(self, *args, **kwargs):
-        salaire = self.salaire
-        super().delete(*args, **kwargs)
-        
-        # Mettre à jour le total des primes du salaire
-        salaire.total_primes = sum(p.montant for p in salaire.primes.all())
-        salaire.save()
+        salaire_id = self.salaire_id
+        with transaction.atomic():
+            super().delete(*args, **kwargs)
+            salaire = Salaire.objects.select_for_update().get(pk_salaire=salaire_id)
+            salaire.total_primes = salaire.primes.aggregate(
+                total=models.Sum('montant')
+            )['total'] or Decimal('0')
+            salaire.save()
     
     def __str__(self):
         return f"{self.type_prime} - {self.montant} FCFA"
@@ -162,30 +173,41 @@ class Deduction(models.Model):
     pk_deduction = models.CharField(max_length=255, primary_key=True)
     salaire = models.ForeignKey("Salaire", on_delete=models.CASCADE, related_name='deductions')
     type_deduction = models.CharField(max_length=100)  # ex: Avance, CSS, IPRES, etc.
-    montant = models.DecimalField(max_digits=10, decimal_places=2)
+    montant = models.DecimalField(max_digits=15, decimal_places=2)
     description = models.TextField(blank=True, default='')
     date_deduction = models.DateField(auto_now_add=True)
     
     class Meta:
         verbose_name = 'Déduction'
         verbose_name_plural = 'Déductions'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['salaire', 'type_deduction'],
+                name='unique_deduction_per_salaire'
+            )
+        ]
     
     def save(self, *args, **kwargs):
         if not self.pk_deduction:
             self.pk_deduction = f"DED-{uuid4().hex[:12].upper()}"
-        super().save(*args, **kwargs)
-        
-        # Mettre à jour le total des déductions du salaire
-        self.salaire.total_deductions = sum(d.montant for d in self.salaire.deductions.all())
-        self.salaire.save()
-    
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            # Recalculer atomiquement le total des déductions en verrouillant le salaire
+            salaire = Salaire.objects.select_for_update().get(pk_salaire=self.salaire_id)
+            salaire.total_deductions = salaire.deductions.aggregate(
+                total=models.Sum('montant')
+            )['total'] or Decimal('0')
+            salaire.save()
+
     def delete(self, *args, **kwargs):
-        salaire = self.salaire
-        super().delete(*args, **kwargs)
-        
-        # Mettre à jour le total des déductions du salaire
-        salaire.total_deductions = sum(d.montant for d in salaire.deductions.all())
-        salaire.save()
+        salaire_id = self.salaire_id
+        with transaction.atomic():
+            super().delete(*args, **kwargs)
+            salaire = Salaire.objects.select_for_update().get(pk_salaire=salaire_id)
+            salaire.total_deductions = salaire.deductions.aggregate(
+                total=models.Sum('montant')
+            )['total'] or Decimal('0')
+            salaire.save()
     
     def __str__(self):
         return f"{self.type_deduction} - {self.montant} FCFA"

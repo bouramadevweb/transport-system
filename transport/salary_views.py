@@ -206,9 +206,10 @@ def salaire_detail(request, pk):
         pk_salaire=pk
     )
 
-    # Calcul des montants
-    montant_heures_supp = salaire.heures_supplementaires * salaire.taux_heure_supp
-    salaire_brut = salaire.salaire_base + montant_heures_supp + salaire.total_primes
+    # Calcul des montants (guard None pour les anciens enregistrements sans valeur par défaut)
+    _zero = Decimal('0')
+    montant_heures_supp = (salaire.heures_supplementaires or _zero) * (salaire.taux_heure_supp or _zero)
+    salaire_brut = (salaire.salaire_base or _zero) + montant_heures_supp + (salaire.total_primes or _zero)
 
     context = {
         'salaire': salaire,

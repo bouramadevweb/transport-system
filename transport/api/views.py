@@ -145,21 +145,31 @@ LoginAPIView = login_api_view
 
 class EntrepriseViewSet(viewsets.ModelViewSet):
     """API endpoint pour les entreprises"""
-    queryset = Entreprise.objects.all()
     serializer_class = EntrepriseSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nom', 'email_contact']
     ordering_fields = ['nom', 'date_creation']
 
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'entreprise') and user.entreprise:
+            return Entreprise.objects.filter(pk_entreprise=user.entreprise.pk_entreprise)
+        return Entreprise.objects.none()
+
 
 class UtilisateurViewSet(viewsets.ModelViewSet):
     """API endpoint pour les utilisateurs"""
-    queryset = Utilisateur.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['email', 'nom_utilisateur']
     ordering_fields = ['nom_utilisateur', 'date_joined']
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'entreprise') and user.entreprise:
+            return Utilisateur.objects.filter(entreprise=user.entreprise)
+        return Utilisateur.objects.none()
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -179,7 +189,6 @@ class UtilisateurViewSet(viewsets.ModelViewSet):
 
 class ChauffeurViewSet(viewsets.ModelViewSet):
     """API endpoint pour les chauffeurs"""
-    queryset = Chauffeur.objects.select_related('entreprise').all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nom', 'prenom', 'telephone']
@@ -193,7 +202,10 @@ class ChauffeurViewSet(viewsets.ModelViewSet):
         return ChauffeurSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Chauffeur.objects.none()
+        queryset = Chauffeur.objects.filter(entreprise=user.entreprise).select_related('entreprise')
         # Filtrer par statut d'affectation
         est_affecter = self.request.query_params.get('est_affecter')
         if est_affecter is not None:
@@ -219,7 +231,6 @@ class ChauffeurViewSet(viewsets.ModelViewSet):
 
 class MecanicienViewSet(viewsets.ModelViewSet):
     """API endpoint pour les mécaniciens"""
-    queryset = Mecanicien.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['nom', 'telephone']
@@ -229,21 +240,30 @@ class MecanicienViewSet(viewsets.ModelViewSet):
             return MecanicienCreateSerializer
         return MecanicienSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Mecanicien.objects.none()
+        return Mecanicien.objects.filter(entreprise=user.entreprise)
+
 
 class AffectationViewSet(viewsets.ModelViewSet):
     """API endpoint pour les affectations chauffeur-camion"""
-    queryset = Affectation.objects.select_related('chauffeur', 'camion').all()
     serializer_class = AffectationSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['date_debut', 'date_fin']
+    ordering_fields = ['date_affectation', 'date_fin_affectation']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        # Filtrer les affectations actives
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Affectation.objects.none()
+        queryset = Affectation.objects.filter(
+            chauffeur__entreprise=user.entreprise
+        ).select_related('chauffeur', 'camion')
         actives = self.request.query_params.get('actives')
         if actives and actives.lower() == 'true':
-            queryset = queryset.filter(date_fin__isnull=True)
+            queryset = queryset.filter(date_fin_affectation__isnull=True)
         return queryset
 
     @action(detail=True, methods=['post'])
@@ -260,7 +280,6 @@ class AffectationViewSet(viewsets.ModelViewSet):
 
 class CamionViewSet(viewsets.ModelViewSet):
     """API endpoint pour les camions"""
-    queryset = Camion.objects.select_related('entreprise').all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['immatriculation', 'modele']
@@ -273,12 +292,11 @@ class CamionViewSet(viewsets.ModelViewSet):
             return CamionCreateSerializer
         return CamionSerializer
 
-    def partial_update(self, request, *args, **kwargs):
-        print(f"📥 PATCH data received: {request.data}")
-        return super().partial_update(request, *args, **kwargs)
-
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Camion.objects.none()
+        queryset = Camion.objects.filter(entreprise=user.entreprise).select_related('entreprise')
         est_affecter = self.request.query_params.get('est_affecter')
         if est_affecter is not None:
             queryset = queryset.filter(est_affecter=est_affecter.lower() == 'true')
@@ -319,7 +337,6 @@ class CompagnieConteneurViewSet(viewsets.ModelViewSet):
 
 class ConteneurViewSet(viewsets.ModelViewSet):
     """API endpoint pour les conteneurs"""
-    queryset = Conteneur.objects.select_related('compagnie', 'client').all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['numero_conteneur']
@@ -333,8 +350,13 @@ class ConteneurViewSet(viewsets.ModelViewSet):
         return ConteneurSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        # Filtrer les conteneurs disponibles (pas en mission active)
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Conteneur.objects.none()
+        # Conteneur n'a pas de FK entreprise directe — filtrer via ContratTransport
+        queryset = Conteneur.objects.filter(
+            contrattransport__entreprise=user.entreprise
+        ).select_related('compagnie', 'client').distinct()
         disponible = self.request.query_params.get('disponible')
         if disponible is not None and disponible.lower() == 'true':
             conteneurs_en_mission = Mission.objects.filter(
@@ -346,20 +368,32 @@ class ConteneurViewSet(viewsets.ModelViewSet):
 
 class ReparationViewSet(viewsets.ModelViewSet):
     """API endpoint pour les réparations"""
-    queryset = Reparation.objects.select_related('camion').all()
     serializer_class = ReparationSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['date_debut', 'date_fin']
+    ordering_fields = ['date_reparation']
+
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Reparation.objects.none()
+        return Reparation.objects.filter(
+            camion__entreprise=user.entreprise
+        ).select_related('camion')
 
 
 class FournisseurViewSet(viewsets.ModelViewSet):
     """API endpoint pour les fournisseurs"""
-    queryset = Fournisseur.objects.all()
     serializer_class = FournisseurSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['nom', 'telephone']
+
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Fournisseur.objects.none()
+        return Fournisseur.objects.filter(entreprise=user.entreprise)
 
 
 # =============================================================================
@@ -368,7 +402,6 @@ class FournisseurViewSet(viewsets.ModelViewSet):
 
 class TransitaireViewSet(viewsets.ModelViewSet):
     """API endpoint pour les transitaires"""
-    queryset = Transitaire.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nom', 'telephone', 'email']
@@ -381,10 +414,15 @@ class TransitaireViewSet(viewsets.ModelViewSet):
             return TransitaireCreateSerializer
         return TransitaireSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Transitaire.objects.none()
+        return Transitaire.objects.filter(entreprise=user.entreprise)
+
 
 class ClientViewSet(viewsets.ModelViewSet):
     """API endpoint pour les clients"""
-    queryset = Client.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nom', 'telephone']
@@ -397,6 +435,12 @@ class ClientViewSet(viewsets.ModelViewSet):
             return ClientCreateSerializer
         return ClientSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Client.objects.none()
+        return Client.objects.filter(entreprise=user.entreprise)
+
 
 # =============================================================================
 # VIEWSETS CONTRATS
@@ -404,16 +448,20 @@ class ClientViewSet(viewsets.ModelViewSet):
 
 class PrestationDeTransportsViewSet(viewsets.ModelViewSet):
     """API endpoint pour les prestations de transport"""
-    queryset = PrestationDeTransports.objects.select_related('contrat').all()
     serializer_class = PrestationDeTransportsSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return PrestationDeTransports.objects.none()
+        return PrestationDeTransports.objects.filter(
+            contrat_transport__entreprise=user.entreprise
+        ).select_related('contrat_transport')
 
 
 class ContratTransportViewSet(viewsets.ModelViewSet):
     """API endpoint pour les contrats de transport"""
-    queryset = ContratTransport.objects.select_related(
-        'client', 'transitaire', 'chauffeur', 'camion', 'entreprise'
-    ).all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['numero_bl', 'client__nom']
@@ -427,7 +475,12 @@ class ContratTransportViewSet(viewsets.ModelViewSet):
         return ContratTransportSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return ContratTransport.objects.none()
+        queryset = ContratTransport.objects.filter(entreprise=user.entreprise).select_related(
+            'client', 'transitaire', 'chauffeur', 'camion', 'entreprise'
+        )
         statut = self.request.query_params.get('statut')
         if statut:
             queryset = queryset.filter(statut=statut)
@@ -457,14 +510,15 @@ class ContratTransportViewSet(viewsets.ModelViewSet):
         story.append(Paragraph(f"{contrat.entreprise.nom}", styles["TitleCenter"]))
         story.append(Spacer(1, 10))
 
-        story.append(Paragraph(f"<b>DESTINATAIRE :</b> {contrat.destinataire}", styles["Normal"]))
-        story.append(Paragraph(f"<b>N° BL :</b> {contrat.numero_bl}", styles["Normal"]))
-        story.append(Paragraph(f"<b>N° CONTENEUR(S) :</b> {contrat.conteneur.numero_conteneur}", styles["Normal"]))
+        from django.utils.html import escape as _esc
+        story.append(Paragraph(f"<b>DESTINATAIRE :</b> {_esc(str(contrat.destinataire or ''))}", styles["Normal"]))
+        story.append(Paragraph(f"<b>N° BL :</b> {_esc(str(contrat.numero_bl or ''))}", styles["Normal"]))
+        story.append(Paragraph(f"<b>N° CONTENEUR(S) :</b> {_esc(contrat.conteneur.numero_conteneur)}", styles["Normal"]))
         story.append(Paragraph(
-            f"<b>NOM DU CHAUFFEUR :</b> {contrat.chauffeur.nom} {contrat.chauffeur.prenom} — Tel {contrat.chauffeur.telephone}",
+            f"<b>NOM DU CHAUFFEUR :</b> {_esc(contrat.chauffeur.nom)} {_esc(contrat.chauffeur.prenom)} — Tel {_esc(str(contrat.chauffeur.telephone or ''))}",
             styles["Normal"]
         ))
-        story.append(Paragraph(f"<b>NUMÉRO CAMION :</b> {contrat.camion.immatriculation}", styles["Normal"]))
+        story.append(Paragraph(f"<b>NUMÉRO CAMION :</b> {_esc(contrat.camion.immatriculation)}", styles["Normal"]))
         story.append(Spacer(1, 12))
 
         data = [
@@ -567,7 +621,12 @@ class MissionViewSet(viewsets.ModelViewSet):
         return MissionSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Mission.objects.none()
+        queryset = Mission.objects.filter(
+            contrat__entreprise=user.entreprise
+        ).select_related('prestation_transport', 'contrat', 'contrat__chauffeur', 'contrat__camion')
         statut = self.request.query_params.get('statut')
         if statut:
             queryset = queryset.filter(statut=statut)
@@ -580,7 +639,7 @@ class MissionViewSet(viewsets.ModelViewSet):
         mission.statut = 'terminee'
         mission.date_arrivee = timezone.now().date()
         mission.save()
-        return Response({'status': 'Mission terminée'})
+        return Response({'status': 'Mission terminée'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
     def annuler(self, request, pk=None):
@@ -588,7 +647,7 @@ class MissionViewSet(viewsets.ModelViewSet):
         mission = self.get_object()
         mission.statut = 'annulee'
         mission.save()
-        return Response({'status': 'Mission annulée'})
+        return Response({'status': 'Mission annulée'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'])
     def calculer_stationnement(self, request, pk=None):
@@ -612,10 +671,10 @@ class MissionViewSet(viewsets.ModelViewSet):
                 'status': 'Stationnement bloqué',
                 'statut_stationnement': mission.statut_stationnement,
                 'date_arrivee': str(mission.date_arrivee)
-            })
+            }, status=status.HTTP_200_OK)
         return Response({
             'error': f'Impossible de bloquer: statut actuel = {mission.statut_stationnement}'
-        }, status=400)
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['post'])
     def marquer_dechargement(self, request, pk=None):
@@ -643,16 +702,30 @@ class MissionViewSet(viewsets.ModelViewSet):
 
 class MissionConteneurViewSet(viewsets.ModelViewSet):
     """API endpoint pour les conteneurs de mission"""
-    queryset = MissionConteneur.objects.select_related('mission', 'conteneur').all()
     serializer_class = MissionConteneurSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return MissionConteneur.objects.none()
+        return MissionConteneur.objects.filter(
+            mission__contrat__entreprise=user.entreprise
+        ).select_related('mission', 'conteneur')
 
 
 class FraisTrajetViewSet(viewsets.ModelViewSet):
     """API endpoint pour les frais de trajet"""
-    queryset = FraisTrajet.objects.select_related('mission', 'contrat').all()
     serializer_class = FraisTrajetSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return FraisTrajet.objects.none()
+        return FraisTrajet.objects.filter(
+            contrat__entreprise=user.entreprise
+        ).select_related('mission', 'contrat')
 
 
 # =============================================================================
@@ -674,7 +747,12 @@ class CautionsViewSet(viewsets.ModelViewSet):
         return CautionsSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Cautions.objects.none()
+        queryset = Cautions.objects.filter(
+            contrat__entreprise=user.entreprise
+        ).select_related('conteneur', 'contrat', 'transitaire', 'client', 'chauffeur', 'camion')
         statut = self.request.query_params.get('statut')
         if statut:
             queryset = queryset.filter(statut=statut)
@@ -694,7 +772,12 @@ class PaiementMissionViewSet(viewsets.ModelViewSet):
         return PaiementMissionSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return PaiementMission.objects.none()
+        queryset = PaiementMission.objects.filter(
+            mission__contrat__entreprise=user.entreprise
+        ).select_related('mission', 'caution', 'prestation')
         est_valide = self.request.query_params.get('est_valide')
         if est_valide is not None:
             queryset = queryset.filter(est_valide=est_valide.lower() == 'true')
@@ -706,9 +789,9 @@ class PaiementMissionViewSet(viewsets.ModelViewSet):
         paiement = self.get_object()
         try:
             paiement.valider_paiement()
-            return Response({'status': 'Paiement validé'})
+            return Response({'status': 'Paiement validé'}, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'error': str(e)}, status=400)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # =============================================================================
@@ -728,7 +811,12 @@ class SalaireViewSet(viewsets.ModelViewSet):
         return SalaireSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Salaire.objects.none()
+        queryset = Salaire.objects.filter(
+            chauffeur__entreprise=user.entreprise
+        ).select_related('chauffeur')
         chauffeur = self.request.query_params.get('chauffeur')
         if chauffeur:
             queryset = queryset.filter(chauffeur__pk_chauffeur=chauffeur)
@@ -740,16 +828,30 @@ class SalaireViewSet(viewsets.ModelViewSet):
 
 class PrimeViewSet(viewsets.ModelViewSet):
     """API endpoint pour les primes"""
-    queryset = Prime.objects.select_related('salaire').all()
     serializer_class = PrimeSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Prime.objects.none()
+        return Prime.objects.filter(
+            salaire__chauffeur__entreprise=user.entreprise
+        ).select_related('salaire')
 
 
 class DeductionViewSet(viewsets.ModelViewSet):
     """API endpoint pour les déductions"""
-    queryset = Deduction.objects.select_related('salaire').all()
     serializer_class = DeductionSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Deduction.objects.none()
+        return Deduction.objects.filter(
+            salaire__chauffeur__entreprise=user.entreprise
+        ).select_related('salaire')
 
 
 # =============================================================================
@@ -799,13 +901,20 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """API endpoint pour les logs d'audit (lecture seule)"""
-    queryset = AuditLog.objects.select_related('utilisateur').all()
     serializer_class = AuditLogSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['action', 'model_name']
     ordering_fields = ['timestamp']
     ordering = ['-timestamp']
+
+    def get_queryset(self):
+        user = self.request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return AuditLog.objects.none()
+        return AuditLog.objects.filter(
+            utilisateur__entreprise=user.entreprise
+        ).select_related('utilisateur')
 
 
 # =============================================================================
@@ -817,30 +926,40 @@ class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        user = request.user
+        if not (hasattr(user, 'entreprise') and user.entreprise):
+            return Response({}, status=status.HTTP_403_FORBIDDEN)
+
+        entreprise = user.entreprise
+
         # Missions
-        total_missions = Mission.objects.count()
-        missions_en_cours = Mission.objects.filter(statut='en_cours').count()
-        missions_terminees = Mission.objects.filter(statut='terminee').count()
+        total_missions = Mission.objects.filter(contrat__entreprise=entreprise).count()
+        missions_en_cours = Mission.objects.filter(contrat__entreprise=entreprise, statut='en cours').count()
+        missions_terminees = Mission.objects.filter(contrat__entreprise=entreprise, statut='terminée').count()
 
         # Paiements
-        paiements = PaiementMission.objects.aggregate(
+        paiements = PaiementMission.objects.filter(
+            mission__contrat__entreprise=entreprise
+        ).aggregate(
             total=Sum('montant_total'),
             en_attente=Count('pk_paiement', filter=Q(est_valide=False))
         )
 
         # Cautions
-        cautions = Cautions.objects.aggregate(
+        cautions = Cautions.objects.filter(
+            contrat__entreprise=entreprise
+        ).aggregate(
             total=Sum('montant'),
             bloquees=Count('pk_caution', filter=Q(statut='bloquee'))
         )
 
         # Chauffeurs
-        total_chauffeurs = Chauffeur.objects.count()
-        chauffeurs_affectes = Chauffeur.objects.filter(est_affecter=True).count()
+        total_chauffeurs = Chauffeur.objects.filter(entreprise=entreprise).count()
+        chauffeurs_affectes = Chauffeur.objects.filter(entreprise=entreprise, est_affecter=True).count()
 
         # Camions
-        total_camions = Camion.objects.count()
-        camions_affectes = Camion.objects.filter(est_affecter=True).count()
+        total_camions = Camion.objects.filter(entreprise=entreprise).count()
+        camions_affectes = Camion.objects.filter(entreprise=entreprise, est_affecter=True).count()
 
         data = {
             'total_missions': total_missions,

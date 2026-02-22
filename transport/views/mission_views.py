@@ -7,6 +7,7 @@ Vues pour mission
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count, Sum, F
 from django.http import JsonResponse
 from ..models import (Mission, MissionConteneur, Chauffeur, Client, PaiementMission, Cautions, AuditLog)
@@ -19,8 +20,10 @@ from ..filters import MissionFilter
 def mission_list(request):
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-    # Récupérer toutes les missions avec relations
-    missions = Mission.objects.select_related('contrat', 'prestation_transport', 'contrat__chauffeur', 'contrat__client').order_by('-date_depart')
+    # Récupérer les missions de l'entreprise avec relations
+    missions = Mission.objects.filter(
+        contrat__entreprise=request.user.entreprise
+    ).select_related('contrat', 'prestation_transport', 'contrat__chauffeur', 'contrat__client').order_by('-date_depart')
 
     # Appliquer les filtres
     missions = MissionFilter.apply(missions, request)
@@ -63,7 +66,8 @@ def create_mission(request):
     if request.method == 'POST':
         form = MissionForm(request.POST)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
             return redirect('mission_list')
     else:
         form = MissionForm()

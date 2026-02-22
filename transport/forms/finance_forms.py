@@ -6,6 +6,7 @@ Formulaires pour finance
 
 from django import forms
 from django.core.exceptions import ValidationError
+from decimal import Decimal
 
 from ..models import (
     Cautions, PaiementMission
@@ -94,4 +95,23 @@ class PaiementMissionForm(forms.ModelForm):
             'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
             'observation': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        montant_total = cleaned_data.get('montant_total')
+        mission = cleaned_data.get('mission')
+        prestation = cleaned_data.get('prestation')
+
+        # Montant doit être positif
+        if montant_total is not None and montant_total <= Decimal('0'):
+            self.add_error('montant_total', 'Le montant total doit être supérieur à 0.')
+
+        # La prestation doit correspondre à la mission
+        if mission and prestation and mission.prestation_transport_id != prestation.pk:
+            self.add_error(
+                'prestation',
+                'La prestation sélectionnée ne correspond pas à cette mission.'
+            )
+
+        return cleaned_data
 

@@ -118,6 +118,12 @@ def create_contrat(request):
 @login_required
 def update_contrat(request, pk):
     contrat = get_object_or_404(ContratTransport, pk=pk)
+
+    # Bloquer la modification d'un contrat annulé
+    if contrat.statut == 'annule':
+        messages.error(request, "❌ Impossible de modifier un contrat annulé. Utilisez la vue détail pour consulter les informations.")
+        return redirect('contrat_list')
+
     if request.method == "POST":
         form = ContratTransportForm(request.POST, instance=contrat)
         if form.is_valid():
@@ -244,7 +250,8 @@ def create_presta_transport(request):
     if request.method == 'POST':
         form = PrestationDeTransportsForm(request.POST)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
             return redirect('presta_transport_list')
     else:
         form = PrestationDeTransportsForm()

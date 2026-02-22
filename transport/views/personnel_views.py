@@ -22,12 +22,13 @@ def create_chauffeur(request):
     if request.method == "POST":
         form = ChauffeurForm(request.POST)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
             messages.success(request, "✅ Chauffeur ajouté avec succès.")
             return redirect("chauffeur_list")
     else:
         form = ChauffeurForm()
-    
+
     return render(request, "transport/chauffeurs/chauffeur_form.html", {"form": form, "title": "Ajouter un chauffeur"})
 
 @login_required
@@ -42,7 +43,8 @@ def update_chauffeur(request, pk):
     if request.method == "POST":
         form = ChauffeurForm(request.POST, instance=chauffeur)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
             messages.success(request, "✅ Chauffeur mis à jour avec succès.")
             return redirect("chauffeur_list")
     else:

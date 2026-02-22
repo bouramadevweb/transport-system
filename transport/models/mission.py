@@ -322,21 +322,39 @@ class Mission(models.Model):
             date_arrivee: Date d'arrivée du camion (par défaut aujourd'hui)
         """
         from django.utils import timezone
+        from django.db import transaction as db_transaction
 
         if date_arrivee is None:
             date_arrivee = timezone.now().date()
 
-        self.date_arrivee = date_arrivee
+        with db_transaction.atomic():
+            # Verrouiller la mission pour éviter les doubles appels simultanés
+            mission = Mission.objects.select_for_update().get(pk_mission=self.pk_mission)
 
-        # Calculer les frais
-        frais_info = self.calculer_frais_stationnement()
+            # Re-vérifier l'état après verrouillage pour éviter les doublons
+            if mission.statut_stationnement != 'attente':
+                raise ValidationError(
+                    f'Impossible de bloquer: le stationnement est déjà en cours '
+                    f'(statut actuel: {mission.statut_stationnement})'
+                )
 
-        # Mettre à jour les champs
-        self.jours_stationnement_facturables = frais_info['jours_facturables']
-        self.montant_stationnement = frais_info['montant']
-        self.statut_stationnement = frais_info['statut']
+            mission.date_arrivee = date_arrivee
 
-        self.save()
+            # Calculer les frais sur l'instance verrouillée
+            frais_info = mission.calculer_frais_stationnement()
+
+            # Mettre à jour les champs
+            mission.jours_stationnement_facturables = frais_info['jours_facturables']
+            mission.montant_stationnement = frais_info['montant']
+            mission.statut_stationnement = frais_info['statut']
+
+            mission.save()
+
+            # Synchroniser l'instance courante
+            self.date_arrivee = mission.date_arrivee
+            self.jours_stationnement_facturables = mission.jours_stationnement_facturables
+            self.montant_stationnement = mission.montant_stationnement
+            self.statut_stationnement = mission.statut_stationnement
 
         return frais_info
 
@@ -407,7 +425,7 @@ class Mission(models.Model):
         # Vérifier si la date dépasse la limite du contrat
         if date_retour > self.contrat.date_limite_retour:
             jours_retard = (date_retour - self.contrat.date_limite_retour).days
-            penalite = jours_retard * 25000  # 25 000 FCFA par jour
+            penalite = Decimal(jours_retard) * Decimal('25000')  # 25 000 FCFA par jour
 
             info_penalite = {
                 'en_retard': True,

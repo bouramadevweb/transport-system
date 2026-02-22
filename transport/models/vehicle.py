@@ -237,8 +237,9 @@ class PieceReparee(models.Model):
 
 class Fournisseur(models.Model):
     pk_fournisseur = models.CharField(max_length=250, primary_key=True)
+    entreprise = models.ForeignKey("Entreprise", on_delete=models.CASCADE, null=True, blank=True)
     nom = models.CharField(max_length=100)
-    telephone = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     adresse = models.TextField(blank=True, null=True)
     fiabilite = models.CharField(max_length=10, choices=FIABILITE_CHOICES, default='bon')
@@ -252,6 +253,14 @@ class Fournisseur(models.Model):
             slug = slugify(base)[:240]
             self.pk_fournisseur = f"{slug}-{uuid4().hex[:8]}"
         super().save(*args, **kwargs)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nom', 'telephone', 'entreprise'],
+                name='unique_fournisseur'
+            )
+        ]
 
     def __str__(self):
         return f"{self.nom} - {self.telephone or 'N/A'}"

@@ -38,6 +38,14 @@
 
 {% block extra_js %}
 {% load static %}
+{# URLs injectées depuis Django pour éviter les URLs hardcodées en JS #}
+<script>
+    window.CONTRAT_FORM_URLS = {
+        conteneurInfo: "{% url 'get_conteneur_info' conteneur_id='__ID__' %}".replace('__ID__', ''),
+        camionChauffeur: "{% url 'get_chauffeur_from_camion' pk_camion='__ID__' %}".replace('__ID__', ''),
+        chauffeurCamion: "{% url 'get_camion_from_chauffeur' pk_chauffeur='__ID__' %}".replace('__ID__', '')
+    };
+</script>
 <script src="{% static 'js/contrat-form.js' %}?t={{ timestamp|default:'20251228172300' }}"></script>
 <script>
 // Initialiser les calculs automatiques et tous les event listeners

@@ -83,9 +83,11 @@ class AffectationForm(forms.ModelForm):
         # Filtrer les chauffeurs pour n'afficher que ceux disponibles
         if self.instance and self.instance.pk:
             # Mode édition : inclure le chauffeur actuellement affecté
-            chauffeurs_disponibles = Chauffeur.objects.filter(
-                models.Q(est_affecter=False) | models.Q(pk=self.instance.chauffeur.pk_chauffeur)
-            )
+            # Utiliser chauffeur_id (FK id) pour éviter AttributeError si chauffeur est None
+            chauffeur_filter = models.Q(est_affecter=False)
+            if self.instance.chauffeur_id:
+                chauffeur_filter |= models.Q(pk=self.instance.chauffeur_id)
+            chauffeurs_disponibles = Chauffeur.objects.filter(chauffeur_filter)
         else:
             # Mode création : seulement les chauffeurs non affectés
             chauffeurs_disponibles = Chauffeur.objects.filter(est_affecter=False)
@@ -100,9 +102,11 @@ class AffectationForm(forms.ModelForm):
         # Filtrer les camions pour n'afficher que ceux disponibles
         if self.instance and self.instance.pk:
             # Mode édition : inclure le camion actuellement affecté
-            camions_disponibles = Camion.objects.filter(
-                models.Q(est_affecter=False) | models.Q(pk=self.instance.camion.pk_camion)
-            )
+            # Utiliser camion_id (FK id) pour éviter AttributeError si camion est None
+            camion_filter = models.Q(est_affecter=False)
+            if self.instance.camion_id:
+                camion_filter |= models.Q(pk=self.instance.camion_id)
+            camions_disponibles = Camion.objects.filter(camion_filter)
         else:
             # Mode création : seulement les camions non affectés
             camions_disponibles = Camion.objects.filter(est_affecter=False)
