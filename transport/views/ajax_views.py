@@ -104,7 +104,7 @@ def get_chauffeur_from_camion(request, pk_camion):
     Retourne le chauffeur actuellement affecté au camion spécifié
     """
     try:
-        camion = Camion.objects.get(pk_camion=pk_camion)
+        camion = Camion.objects.get(pk_camion=pk_camion, entreprise=request.user.entreprise)
 
         # Chercher l'affectation active (sans date_fin_affectation)
         affectation = Affectation.objects.filter(
@@ -136,7 +136,7 @@ def get_camion_from_chauffeur(request, pk_chauffeur):
     Retourne le camion actuellement affecté au chauffeur spécifié
     """
     try:
-        chauffeur = Chauffeur.objects.get(pk_chauffeur=pk_chauffeur)
+        chauffeur = Chauffeur.objects.get(pk_chauffeur=pk_chauffeur, entreprise=request.user.entreprise)
 
         # Chercher l'affectation active (sans date_fin_affectation)
         affectation = Affectation.objects.filter(
@@ -227,7 +227,10 @@ def ajax_conteneur_update(request, pk):
     from ..forms.vehicle_forms import ConteneurForm
 
     try:
-        conteneur = get_object_or_404(Conteneur, pk_conteneur=pk)
+        conteneur = get_object_or_404(
+            Conteneur.objects.filter(client__entreprise=request.user.entreprise),
+            pk_conteneur=pk
+        )
 
         if request.method == 'GET':
             form = ConteneurForm(instance=conteneur)
@@ -296,7 +299,7 @@ def ajax_contrat_create(request):
     from ..forms.contrat_forms import ContratTransportForm
 
     if request.method == 'GET':
-        form = ContratTransportForm()
+        form = ContratTransportForm(user=request.user)
         html = render_to_string(
             'transport/contrat/partials/contrat_form_modal.html',
             {'form': form, 'mode': 'create'},
@@ -307,7 +310,7 @@ def ajax_contrat_create(request):
     # POST
     try:
         data = get_request_data(request)
-        form = ContratTransportForm(data)
+        form = ContratTransportForm(data, user=request.user)
 
         if form.is_valid():
             with transaction.atomic():
@@ -358,10 +361,10 @@ def ajax_contrat_update(request, pk):
     from ..forms.contrat_forms import ContratTransportForm
 
     try:
-        contrat = get_object_or_404(ContratTransport, pk_contrat=pk)
+        contrat = get_object_or_404(ContratTransport, pk_contrat=pk, entreprise=request.user.entreprise)
 
         if request.method == 'GET':
-            form = ContratTransportForm(instance=contrat)
+            form = ContratTransportForm(instance=contrat, user=request.user)
             html = render_to_string(
                 'transport/contrat/partials/contrat_form_modal.html',
                 {
@@ -374,7 +377,7 @@ def ajax_contrat_update(request, pk):
             return JsonResponse({'success': True, 'html': html})
 
         # POST
-        form = ContratTransportForm(get_request_data(request), instance=contrat)
+        form = ContratTransportForm(get_request_data(request), instance=contrat, user=request.user)
         if form.is_valid():
             contrat = form.save()
 
@@ -621,7 +624,7 @@ def ajax_client_update(request, pk):
     from ..forms.commercial_forms import ClientForm
 
     try:
-        client = get_object_or_404(Client, pk_client=pk)
+        client = get_object_or_404(Client, pk_client=pk, entreprise=request.user.entreprise)
 
         if request.method == 'GET':
             form = ClientForm(instance=client)
@@ -687,7 +690,8 @@ def ajax_search_clients(request):
         return JsonResponse({'results': []})
 
     clients = Client.objects.filter(
-        Q(nom__icontains=query) | Q(telephone__icontains=query)
+        Q(nom__icontains=query) | Q(telephone__icontains=query),
+        entreprise=request.user.entreprise
     )[:10]
 
     results = [{'id': c.pk_client, 'text': f"{c.nom} - {c.telephone}"} for c in clients]
@@ -757,7 +761,7 @@ def ajax_chauffeur_update(request, pk):
     from ..forms.personnel_forms import ChauffeurForm
 
     try:
-        chauffeur = get_object_or_404(Chauffeur, pk_chauffeur=pk)
+        chauffeur = get_object_or_404(Chauffeur, pk_chauffeur=pk, entreprise=request.user.entreprise)
 
         if request.method == 'GET':
             form = ChauffeurForm(instance=chauffeur)
@@ -887,7 +891,7 @@ def ajax_camion_update(request, pk):
     from ..forms.vehicle_forms import CamionForm
 
     try:
-        camion = get_object_or_404(Camion, pk_camion=pk)
+        camion = get_object_or_404(Camion, pk_camion=pk, entreprise=request.user.entreprise)
 
         if request.method == 'GET':
             form = CamionForm(instance=camion)
@@ -1008,7 +1012,7 @@ def ajax_mission_update(request, pk):
     from ..forms.mission_forms import MissionForm
 
     try:
-        mission = get_object_or_404(Mission, pk_mission=pk)
+        mission = get_object_or_404(Mission, pk_mission=pk, contrat__entreprise=request.user.entreprise)
 
         if request.method == 'GET':
             form = MissionForm(instance=mission)
@@ -1071,7 +1075,7 @@ def ajax_terminer_mission_modal_content(request, pk):
     """Contenu du modal pour terminer une mission via AJAX"""
     from django.utils import timezone
     try:
-        mission = get_object_or_404(Mission, pk_mission=pk)
+        mission = get_object_or_404(Mission, pk_mission=pk, contrat__entreprise=request.user.entreprise)
 
         # Date de retour par défaut = aujourd'hui
         date_retour = timezone.now().date()
@@ -1120,7 +1124,7 @@ def ajax_terminer_mission(request, pk):
     from datetime import datetime
 
     try:
-        mission = get_object_or_404(Mission, pk_mission=pk)
+        mission = get_object_or_404(Mission, pk_mission=pk, contrat__entreprise=request.user.entreprise)
 
         # Vérifier que la mission n'est pas déjà terminée ou annulée
         if mission.statut == 'terminée':
@@ -1190,7 +1194,7 @@ def ajax_filter_paiements(request):
         paiements = PaiementMission.objects.select_related(
             'mission', 'caution', 'prestation',
             'mission__contrat__chauffeur', 'mission__contrat__client'
-        ).order_by('-date_paiement')
+        ).filter(mission__contrat__entreprise=request.user.entreprise).order_by('-date_paiement')
 
         # Appliquer les filtres
         paiements = PaiementMissionFilter.apply(paiements, request)
@@ -1227,7 +1231,10 @@ def ajax_filter_paiements(request):
 def ajax_validation_modal_content(request, pk):
     """Contenu du modal de validation de paiement via AJAX"""
     try:
-        paiement = get_object_or_404(PaiementMission, pk_paiement=pk)
+        paiement = get_object_or_404(
+            PaiementMission.objects.filter(mission__contrat__entreprise=request.user.entreprise),
+            pk_paiement=pk
+        )
 
         # Vérifier le statut de la mission
         mission_terminee = paiement.mission.statut == 'terminée'
@@ -1263,7 +1270,10 @@ def ajax_validation_modal_content(request, pk):
 def ajax_validate_paiement(request, pk):
     """Valider un paiement via AJAX"""
     try:
-        paiement = get_object_or_404(PaiementMission, pk_paiement=pk)
+        paiement = get_object_or_404(
+            PaiementMission.objects.filter(mission__contrat__entreprise=request.user.entreprise),
+            pk_paiement=pk
+        )
 
         # Vérifier que le paiement n'est pas déjà validé
         if paiement.est_valide:
@@ -1343,19 +1353,20 @@ def ajax_dashboard_filter(request):
                 pass
 
         # Application des filtres
-        missions_qs = Mission.objects.all()
+        entreprise = request.user.entreprise
+        missions_qs = Mission.objects.filter(contrat__entreprise=entreprise)
         if date_debut:
             missions_qs = missions_qs.filter(date_depart__gte=date_debut)
         if date_fin:
             missions_qs = missions_qs.filter(date_depart__lte=date_fin)
 
-        paiements_qs = PaiementMission.objects.all()
+        paiements_qs = PaiementMission.objects.filter(mission__contrat__entreprise=entreprise)
         if date_debut:
             paiements_qs = paiements_qs.filter(date_paiement__gte=date_debut)
         if date_fin:
             paiements_qs = paiements_qs.filter(date_paiement__lte=date_fin)
 
-        reparations_qs = Reparation.objects.all()
+        reparations_qs = Reparation.objects.filter(camion__entreprise=entreprise)
         if date_debut:
             reparations_qs = reparations_qs.filter(date_reparation__gte=date_debut)
         if date_fin:
@@ -1363,15 +1374,15 @@ def ajax_dashboard_filter(request):
 
         # Statistiques
         stats = {
-            "chauffeurs": Chauffeur.objects.count(),
-            "camions": Camion.objects.count(),
+            "chauffeurs": Chauffeur.objects.filter(entreprise=entreprise).count(),
+            "camions": Camion.objects.filter(entreprise=entreprise).count(),
             "missions": missions_qs.count(),
             "missions_en_cours": missions_qs.filter(statut="en cours").count(),
             "missions_terminees": missions_qs.filter(statut="terminée").count(),
             "reparations": reparations_qs.count(),
             "paiements": paiements_qs.aggregate(total=Sum("montant_total"))["total"] or 0,
-            "clients": Client.objects.count(),
-            "affectations": Affectation.objects.count(),
+            "clients": Client.objects.filter(entreprise=entreprise).count(),
+            "affectations": Affectation.objects.filter(chauffeur__entreprise=entreprise).count(),
         }
 
         # Missions par statut
@@ -1393,6 +1404,7 @@ def ajax_dashboard_filter(request):
             current_month = timezone.now().month
             current_year = timezone.now().year
             revenus_mois_actuel = PaiementMission.objects.filter(
+                mission__contrat__entreprise=entreprise,
                 date_paiement__month=current_month,
                 date_paiement__year=current_year
             ).aggregate(total=Sum("montant_total"))["total"] or 0
@@ -1579,7 +1591,7 @@ def ajax_affectation_update(request, pk):
     from ..forms.personnel_forms import AffectationForm
 
     try:
-        affectation = get_object_or_404(Affectation, pk_affectation=pk)
+        affectation = get_object_or_404(Affectation, pk_affectation=pk, chauffeur__entreprise=request.user.entreprise)
 
         if request.method == 'GET':
             form = AffectationForm(instance=affectation)
@@ -1803,7 +1815,7 @@ def ajax_transitaire_update(request, pk):
     """Modifier un transitaire via AJAX"""
     from ..forms.commercial_forms import TransitaireForm
     try:
-        transitaire = get_object_or_404(Transitaire, pk_transitaire=pk)
+        transitaire = get_object_or_404(Transitaire, pk_transitaire=pk, entreprise=request.user.entreprise)
         
         if request.method == 'GET':
             form = TransitaireForm(instance=transitaire)
@@ -2011,7 +2023,7 @@ def ajax_fournisseur_update(request, pk):
     """Modifier un fournisseur via AJAX"""
     from ..forms.commercial_forms import FournisseurForm
     try:
-        fournisseur = get_object_or_404(Fournisseur, pk_fournisseur=pk)
+        fournisseur = get_object_or_404(Fournisseur, pk_fournisseur=pk, entreprise=request.user.entreprise)
         
         if request.method == 'GET':
             form = FournisseurForm(instance=fournisseur)

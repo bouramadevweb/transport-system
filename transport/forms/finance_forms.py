@@ -9,7 +9,8 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 
 from ..models import (
-    Cautions, PaiementMission
+    Cautions, PaiementMission,
+    Conteneur, ContratTransport, Transitaire, Client, Chauffeur, Camion, Mission
 )
 
 class CautionsForm(forms.ModelForm):
@@ -41,6 +42,20 @@ class CautionsForm(forms.ModelForm):
                 'min': '0'
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        entreprise = getattr(self.user, 'entreprise', None)
+        if entreprise:
+            self.fields['contrat'].queryset = ContratTransport.objects.filter(entreprise=entreprise)
+            self.fields['transitaire'].queryset = Transitaire.objects.filter(entreprise=entreprise)
+            self.fields['client'].queryset = Client.objects.filter(entreprise=entreprise)
+            self.fields['chauffeur'].queryset = Chauffeur.objects.filter(entreprise=entreprise)
+            self.fields['camion'].queryset = Camion.objects.filter(entreprise=entreprise)
+            self.fields['conteneur'].queryset = Conteneur.objects.filter(
+                contrattransport__entreprise=entreprise
+            ).distinct()
 
     def clean(self):
         """Validation globale du formulaire"""
@@ -95,6 +110,18 @@ class PaiementMissionForm(forms.ModelForm):
             'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
             'observation': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        entreprise = getattr(self.user, 'entreprise', None)
+        if entreprise:
+            self.fields['mission'].queryset = Mission.objects.filter(
+                contrat__entreprise=entreprise
+            )
+            self.fields['caution'].queryset = Cautions.objects.filter(
+                contrat__entreprise=entreprise
+            )
 
     def clean(self):
         cleaned_data = super().clean()

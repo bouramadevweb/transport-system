@@ -182,9 +182,13 @@ def user_settings(request):
             # Mise à jour de l'email
             new_email = request.POST.get('email')
             if new_email and new_email != request.user.email:
-                request.user.email = new_email
-                request.user.save()
-                messages.success(request, '✅ Votre email a été mis à jour avec succès!')
+                from ..models import Utilisateur
+                if Utilisateur.objects.filter(email=new_email).exclude(pk=request.user.pk).exists():
+                    messages.error(request, '❌ Cet email est déjà utilisé par un autre compte.')
+                else:
+                    request.user.email = new_email
+                    request.user.save()
+                    messages.success(request, '✅ Votre email a été mis à jour avec succès!')
                 return redirect('user_settings')
 
     # Créer le formulaire de changement de mot de passe si pas déjà créé

@@ -119,10 +119,18 @@ class ChauffeurSerializer(serializers.ModelSerializer):
 class ChauffeurListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
     entreprise_nom = serializers.CharField(source='entreprise.nom', read_only=True, default=None)
+    est_affecter = serializers.SerializerMethodField()
 
     class Meta:
         model = Chauffeur
         fields = ['pk_chauffeur', 'nom', 'prenom', 'telephone', 'email', 'est_affecter', 'entreprise_nom']
+
+    def get_est_affecter(self, obj):
+        # True si le chauffeur a une mission 'en cours' (annotation SQL Exists)
+        # Fallback sur le champ DB si l'annotation absente
+        if hasattr(obj, 'en_mission_active'):
+            return obj.en_mission_active
+        return obj.est_affecter
 
 
 class ChauffeurCreateSerializer(serializers.ModelSerializer):
@@ -177,9 +185,17 @@ class CamionSerializer(serializers.ModelSerializer):
 
 class CamionListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
+    est_affecter = serializers.SerializerMethodField()
+
     class Meta:
         model = Camion
         fields = ['pk_camion', 'immatriculation', 'modele', 'capacite_tonnes', 'est_affecter']
+
+    def get_est_affecter(self, obj):
+        # True si le camion a une mission 'en cours' (annotation SQL Exists)
+        if hasattr(obj, 'en_mission_active'):
+            return obj.en_mission_active
+        return obj.est_affecter
 
 
 class CamionCreateSerializer(serializers.ModelSerializer):
@@ -435,14 +451,24 @@ class MissionConteneurSerializer(serializers.ModelSerializer):
 class MissionSerializer(serializers.ModelSerializer):
     prestation_info = PrestationDeTransportsSerializer(source='prestation_transport', read_only=True)
     conteneurs = MissionConteneurSerializer(many=True, read_only=True, source='missionconteneur_set')
-    frais = FraisTrajetSerializer(many=True, read_only=True, source='fraistrajet_set')
+    frais = FraisTrajetSerializer(many=True, read_only=True, source='frais_trajets')
     chauffeur_nom = serializers.SerializerMethodField()
     camion_immat = serializers.SerializerMethodField()
     contrat_numero_bl = serializers.SerializerMethodField()
+    statut = serializers.SerializerMethodField()
 
     class Meta:
         model = Mission
         fields = '__all__'
+
+    _STATUT_MAP = {
+        'en cours': 'en_cours',
+        'terminée': 'terminee',
+        'annulée': 'annulee',
+    }
+
+    def get_statut(self, obj):
+        return self._STATUT_MAP.get(obj.statut, obj.statut)
 
     def get_chauffeur_nom(self, obj):
         try:
@@ -473,6 +499,7 @@ class MissionListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
     chauffeur_nom = serializers.SerializerMethodField()
     camion_immat = serializers.SerializerMethodField()
+    statut = serializers.SerializerMethodField()
     statut_display = serializers.CharField(source='get_statut_display', read_only=True)
     origine = serializers.CharField(read_only=True)
     destination = serializers.CharField(read_only=True)
@@ -486,6 +513,15 @@ class MissionListSerializer(serializers.ModelSerializer):
             'origine', 'destination', 'statut_stationnement',
             'jours_stationnement_facturables', 'montant_stationnement'
         ]
+
+    _STATUT_MAP = {
+        'en cours': 'en_cours',
+        'terminée': 'terminee',
+        'annulée': 'annulee',
+    }
+
+    def get_statut(self, obj):
+        return self._STATUT_MAP.get(obj.statut, obj.statut)
 
     def get_chauffeur_nom(self, obj):
         try:
@@ -508,7 +544,7 @@ class MissionCreateSerializer(serializers.ModelSerializer):
     """Serializer pour création de mission"""
     class Meta:
         model = Mission
-        fields = ['prestation', 'date_depart', 'date_retour']
+        fields = ['prestation_transport', 'date_depart', 'date_retour']
 
 
 # =============================================================================
@@ -538,10 +574,16 @@ class CautionsListSerializer(serializers.ModelSerializer):
 class PaiementMissionSerializer(serializers.ModelSerializer):
     mission_info = MissionListSerializer(source='mission', read_only=True)
     caution_info = CautionsListSerializer(source='caution', read_only=True)
+    statut_paiement = serializers.SerializerMethodField()
 
     class Meta:
         model = PaiementMission
         fields = '__all__'
+
+    def get_statut_paiement(self, obj):
+        if obj.statut_paiement == 'valide':
+            return 'paye'
+        return obj.statut_paiement
 
 
 class PaiementMissionListSerializer(serializers.ModelSerializer):
@@ -550,6 +592,7 @@ class PaiementMissionListSerializer(serializers.ModelSerializer):
     mission_origine = serializers.CharField(source='mission.origine', read_only=True, default=None)
     mission_destination = serializers.CharField(source='mission.destination', read_only=True, default=None)
     chauffeur_nom = serializers.SerializerMethodField()
+    statut_paiement = serializers.SerializerMethodField()
 
     class Meta:
         model = PaiementMission
@@ -558,6 +601,11 @@ class PaiementMissionListSerializer(serializers.ModelSerializer):
             'chauffeur_nom', 'montant_total', 'frais_stationnement',
             'commission_transitaire', 'est_valide', 'statut_paiement', 'date_paiement'
         ]
+
+    def get_statut_paiement(self, obj):
+        if obj.statut_paiement == 'valide':
+            return 'paye'
+        return obj.statut_paiement
 
     def get_chauffeur_nom(self, obj):
         try:
@@ -587,8 +635,8 @@ class DeductionSerializer(serializers.ModelSerializer):
 
 class SalaireSerializer(serializers.ModelSerializer):
     chauffeur_nom = serializers.CharField(source='chauffeur.__str__', read_only=True)
-    primes = PrimeSerializer(many=True, read_only=True, source='prime_set')
-    deductions = DeductionSerializer(many=True, read_only=True, source='deduction_set')
+    primes = PrimeSerializer(many=True, read_only=True, source='primes')
+    deductions = DeductionSerializer(many=True, read_only=True, source='deductions')
 
     class Meta:
         model = Salaire
@@ -621,7 +669,7 @@ class NotificationListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
     class Meta:
         model = Notification
-        fields = ['id', 'message', 'type_notification', 'is_read', 'icon', 'color', 'created_at']
+        fields = ['pk_notification', 'message', 'type_notification', 'is_read', 'icon', 'color', 'created_at']
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
@@ -630,7 +678,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
         fields = [
-            'id', 'utilisateur', 'utilisateur_nom',
+            'pk_audit', 'utilisateur', 'utilisateur_nom',
             'action', 'model_name', 'object_id',
             'timestamp', 'ip_address',
         ]
@@ -646,11 +694,23 @@ class DashboardStatsSerializer(serializers.Serializer):
     total_missions = serializers.IntegerField()
     missions_en_cours = serializers.IntegerField()
     missions_terminees = serializers.IntegerField()
+    missions_ce_mois = serializers.IntegerField()
     total_paiements = serializers.DecimalField(max_digits=15, decimal_places=2)
     paiements_en_attente = serializers.IntegerField()
+    paiements_valides = serializers.IntegerField()
+    revenus_ce_mois = serializers.DecimalField(max_digits=15, decimal_places=2)
+    chiffre_affaires = serializers.DecimalField(max_digits=15, decimal_places=2)
     total_cautions = serializers.DecimalField(max_digits=15, decimal_places=2)
     cautions_bloquees = serializers.IntegerField()
     total_chauffeurs = serializers.IntegerField()
     chauffeurs_affectes = serializers.IntegerField()
+    chauffeurs_disponibles = serializers.IntegerField()
     total_camions = serializers.IntegerField()
     camions_affectes = serializers.IntegerField()
+    camions_disponibles = serializers.IntegerField()
+    reparations_en_cours = serializers.IntegerField()
+    total_reparations = serializers.IntegerField()
+    total_contrats = serializers.IntegerField()
+    contrats_actifs = serializers.IntegerField()
+    total_clients = serializers.IntegerField()
+    salaires_en_attente = serializers.IntegerField()

@@ -167,7 +167,7 @@
         <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-warning shadow-sm h-100">
                 <div class="card-body text-center py-3">
-                    <h3 class="text-warning mb-2">{{ missions_en_cours.count }}</h3>
+                    <h3 class="text-warning mb-2">{{ count_en_cours }}</h3>
                     <p class="text-muted mb-0 small"><i class="fas fa-spinner me-1"></i>En cours</p>
                 </div>
             </div>
@@ -175,7 +175,7 @@
         <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-success shadow-sm h-100">
                 <div class="card-body text-center py-3">
-                    <h3 class="text-success mb-2">{{ missions_terminees.count }}</h3>
+                    <h3 class="text-success mb-2">{{ count_terminees }}</h3>
                     <p class="text-muted mb-0 small"><i class="fas fa-check-circle me-1"></i>Terminées</p>
                 </div>
             </div>
@@ -183,7 +183,7 @@
         <div class="col-12 col-sm-6 col-md-3">
             <div class="card border-danger shadow-sm h-100">
                 <div class="card-body text-center py-3">
-                    <h3 class="text-danger mb-2">{{ missions_annulees.count }}</h3>
+                    <h3 class="text-danger mb-2">{{ count_annulees }}</h3>
                     <p class="text-muted mb-0 small"><i class="fas fa-times-circle me-1"></i>Annulées</p>
                 </div>
             </div>
@@ -246,17 +246,17 @@
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="encours-tab" data-bs-toggle="tab" data-bs-target="#encours" type="button" role="tab">
-                <i class="fas fa-spinner me-1"></i>En cours ({{ missions_en_cours.count }})
+                <i class="fas fa-spinner me-1"></i>En cours ({{ count_en_cours }})
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="terminees-tab" data-bs-toggle="tab" data-bs-target="#terminees" type="button" role="tab">
-                <i class="fas fa-check-circle me-1"></i>Terminées ({{ missions_terminees.count }})
+                <i class="fas fa-check-circle me-1"></i>Terminées ({{ count_terminees }})
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link" id="annulees-tab" data-bs-toggle="tab" data-bs-target="#annulees" type="button" role="tab">
-                <i class="fas fa-times-circle me-1"></i>Annulées ({{ missions_annulees.count }})
+                <i class="fas fa-times-circle me-1"></i>Annulées ({{ count_annulees }})
             </button>
         </li>
     </ul>

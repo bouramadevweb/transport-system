@@ -28,7 +28,8 @@ def notifications_processor(request):
             ).count()
         else:
             missions_en_cours_count = Mission.objects.filter(
-                statut='en cours'
+                statut='en cours',
+                contrat__entreprise=request.user.entreprise
             ).count()
 
         return {

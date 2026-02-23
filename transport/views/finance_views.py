@@ -22,9 +22,11 @@ logger = logging.getLogger('transport')
 @login_required
 def cautions_list(request):
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-    qs = Cautions.objects.select_related(
+    entreprise = getattr(request.user, 'entreprise', None)
+    base_qs = Cautions.objects.select_related(
         'conteneur', 'contrat', 'transitaire', 'client', 'chauffeur', 'camion'
-    ).order_by('-pk_caution')
+    )
+    qs = base_qs.filter(contrat__entreprise=entreprise).order_by('-pk_caution') if entreprise else base_qs.order_by('-pk_caution')
     paginator = Paginator(qs, 20)
     try:
         cautions = paginator.page(request.GET.get('page', 1))
@@ -37,7 +39,7 @@ def cautions_list(request):
 @login_required
 def create_caution(request):
     if request.method == "POST":
-        form = CautionsForm(request.POST)
+        form = CautionsForm(request.POST, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 caution = form.save()
@@ -53,15 +55,18 @@ def create_caution(request):
             messages.success(request, f"Caution de {caution.montant} FCFA créée avec succès!")
             return redirect('cautions_list')
     else:
-        form = CautionsForm()
+        form = CautionsForm(user=request.user)
     return render(request, "transport/cautions/caution_form.html", {"form": form, "title": "Ajouter une caution"})
 
 
 @login_required
 def update_caution(request, pk):
-    caution = get_object_or_404(Cautions, pk=pk)
+    caution = get_object_or_404(
+        Cautions.objects.filter(contrat__entreprise=request.user.entreprise),
+        pk=pk
+    )
     if request.method == "POST":
-        form = CautionsForm(request.POST, instance=caution)
+        form = CautionsForm(request.POST, instance=caution, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 caution = form.save()
@@ -77,7 +82,7 @@ def update_caution(request, pk):
             messages.success(request, "Caution mise à jour avec succès!")
             return redirect('cautions_list')
     else:
-        form = CautionsForm(instance=caution)
+        form = CautionsForm(instance=caution, user=request.user)
     return render(request, "transport/cautions/caution_form.html", {"form": form, "title": "Modifier une caution"})
 
 
@@ -85,7 +90,10 @@ def update_caution(request, pk):
 
 @can_delete_data
 def delete_caution(request, pk):
-    caution = get_object_or_404(Cautions, pk=pk)
+    caution = get_object_or_404(
+        Cautions.objects.filter(contrat__entreprise=request.user.entreprise),
+        pk=pk
+    )
     if request.method == "POST":
         caution.delete()
         return redirect('cautions_list')
@@ -96,10 +104,12 @@ def paiement_mission_list(request):
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
     # Récupérer tous les paiements avec relations
-    paiements = PaiementMission.objects.select_related(
+    entreprise = getattr(request.user, 'entreprise', None)
+    base_qs = PaiementMission.objects.select_related(
         'mission', 'caution', 'prestation',
         'mission__contrat__chauffeur', 'mission__contrat__client'
-    ).order_by('-date_paiement')
+    )
+    paiements = base_qs.filter(mission__contrat__entreprise=entreprise).order_by('-date_paiement') if entreprise else base_qs.order_by('-date_paiement')
 
     # Appliquer les filtres
     paiements = PaiementMissionFilter.apply(paiements, request)
@@ -137,35 +147,41 @@ def paiement_mission_list(request):
 @login_required
 def create_paiement_mission(request):
     if request.method == 'POST':
-        form = PaiementMissionForm(request.POST)
+        form = PaiementMissionForm(request.POST, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
             return redirect('paiement_mission_list')
     else:
-        form = PaiementMissionForm()
+        form = PaiementMissionForm(user=request.user)
     return render(request, 'transport/paiements-mission/paiement_mission_form.html', {'form': form, 'title': 'Créer un paiement'})
 
 # Mise à jour
 
 @login_required
 def update_paiement_mission(request, pk):
-    paiement = get_object_or_404(PaiementMission, pk=pk)
+    paiement = get_object_or_404(
+        PaiementMission.objects.filter(mission__contrat__entreprise=request.user.entreprise),
+        pk=pk
+    )
     if request.method == 'POST':
-        form = PaiementMissionForm(request.POST, instance=paiement)
+        form = PaiementMissionForm(request.POST, instance=paiement, user=request.user)
         if form.is_valid():
             with transaction.atomic():
                 form.save()
             return redirect('paiement_mission_list')
     else:
-        form = PaiementMissionForm(instance=paiement)
+        form = PaiementMissionForm(instance=paiement, user=request.user)
     return render(request, 'transport/paiements-mission/paiement_mission_form.html', {'form': form, 'title': 'Modifier un paiement'})
 
 # Suppression
 
 @can_delete_data
 def delete_paiement_mission(request, pk):
-    paiement = get_object_or_404(PaiementMission, pk=pk)
+    paiement = get_object_or_404(
+        PaiementMission.objects.filter(mission__contrat__entreprise=request.user.entreprise),
+        pk=pk
+    )
     if request.method == 'POST':
         paiement.delete()
         return redirect('paiement_mission_list')
@@ -175,7 +191,10 @@ def delete_paiement_mission(request, pk):
 
 @can_validate_payment
 def valider_paiement_mission(request, pk):
-    paiement = get_object_or_404(PaiementMission, pk=pk)
+    paiement = get_object_or_404(
+        PaiementMission.objects.filter(mission__contrat__entreprise=request.user.entreprise),
+        pk=pk
+    )
 
     # Vérifier que le paiement n'est pas déjà validé
     if paiement.est_valide:

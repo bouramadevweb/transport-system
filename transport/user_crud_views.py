@@ -223,9 +223,9 @@ def utilisateur_delete(request, pk):
     """
     utilisateur = get_object_or_404(Utilisateur, pk_utilisateur=pk)
 
-    # Empêcher la suppression du superuser principal
-    if utilisateur.is_superuser and utilisateur.email == 'bcoul2002@yahoo.fr':
-        messages.error(request, "❌ Impossible de supprimer le super administrateur principal!")
+    # Empêcher la suppression d'un superadmin
+    if utilisateur.is_superuser:
+        messages.error(request, "❌ Impossible de supprimer un super administrateur!")
         return redirect('utilisateur_list')
 
     # Empêcher l'auto-suppression

@@ -126,8 +126,21 @@ class FraisTrajetForm(forms.ModelForm):
         # Récupérer les valeurs initiales pour origine et destination
         origine = kwargs.pop('origine', None)
         destination = kwargs.pop('destination', None)
+        self.user = kwargs.pop('user', None)
 
         super().__init__(*args, **kwargs)
+
+        entreprise = getattr(self.user, 'entreprise', None)
+
+        # Filtrer les querysets mission et contrat par entreprise
+        if entreprise:
+            from ..models import ContratTransport
+            self.fields['mission'].queryset = Mission.objects.filter(
+                contrat__entreprise=entreprise
+            )
+            self.fields['contrat'].queryset = ContratTransport.objects.filter(
+                entreprise=entreprise
+            )
 
         # Pré-remplir les champs si fournis
         if origine and not self.instance.pk:
@@ -144,25 +157,25 @@ class FraisTrajetForm(forms.ModelForm):
 
         # Filtrer les missions ET contrats disponibles selon le type de trajet pour éviter les doublons
         if not self.instance.pk:  # Seulement en mode création
-            from ..models import Mission
+            # Récupérer les missions/contrats de l'entreprise qui ont déjà un frais aller
+            if entreprise:
+                base_qs = FraisTrajet.objects.filter(mission__contrat__entreprise=entreprise)
+            else:
+                base_qs = FraisTrajet.objects.none()
 
-            # Récupérer toutes les missions qui ont déjà un frais aller
-            missions_avec_aller = FraisTrajet.objects.filter(
+            missions_avec_aller = base_qs.filter(
                 type_trajet='aller'
             ).values_list('mission_id', flat=True)
 
-            # Récupérer toutes les missions qui ont déjà un frais retour
-            missions_avec_retour = FraisTrajet.objects.filter(
+            missions_avec_retour = base_qs.filter(
                 type_trajet='retour'
             ).values_list('mission_id', flat=True)
 
-            # 🆕 Récupérer tous les contrats qui ont déjà un frais aller
-            contrats_avec_aller = FraisTrajet.objects.filter(
+            contrats_avec_aller = base_qs.filter(
                 type_trajet='aller'
             ).values_list('contrat_id', flat=True)
 
-            # 🆕 Récupérer tous les contrats qui ont déjà un frais retour
-            contrats_avec_retour = FraisTrajet.objects.filter(
+            contrats_avec_retour = base_qs.filter(
                 type_trajet='retour'
             ).values_list('contrat_id', flat=True)
 
@@ -171,12 +184,9 @@ class FraisTrajetForm(forms.ModelForm):
             self.fields['contrat'].help_text = "Seuls les contrats sans frais du type sélectionné sont affichés"
             self.fields['type_trajet'].help_text = "Changez le type pour voir les missions/contrats disponibles pour ce type"
 
-            # Note: Le filtrage dynamique sera fait en JavaScript car le type peut changer
-            # On stocke les missions déjà utilisées dans des attributs data
+            # Stocker les IDs déjà utilisés dans des attributs data
             self.fields['mission'].widget.attrs['data-missions-avec-aller'] = ','.join(map(str, missions_avec_aller))
             self.fields['mission'].widget.attrs['data-missions-avec-retour'] = ','.join(map(str, missions_avec_retour))
-
-            # 🆕 Stocker les contrats déjà utilisés dans des attributs data
             self.fields['contrat'].widget.attrs['data-contrats-avec-aller'] = ','.join(map(str, contrats_avec_aller))
             self.fields['contrat'].widget.attrs['data-contrats-avec-retour'] = ','.join(map(str, contrats_avec_retour))
 

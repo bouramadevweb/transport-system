@@ -21,7 +21,7 @@ from io import BytesIO
 from django.http import HttpResponse
 @login_required
 def pdf_contrat(request, pk):
-    contrat = get_object_or_404(ContratTransport, pk_contrat=pk)
+    contrat = get_object_or_404(ContratTransport, pk_contrat=pk, entreprise=request.user.entreprise)
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(

@@ -113,6 +113,23 @@ class ContratTransport(models.Model):
         if not self.transitaire_id:
             errors['transitaire'] = 'Le transitaire est obligatoire'
 
+        # Vérifier que le camion et le chauffeur appartiennent bien à l'entreprise du contrat
+        if self.entreprise_id and self.camion_id:
+            try:
+                camion_obj = Camion.objects.get(pk=self.camion_id)
+                if camion_obj.entreprise_id != self.entreprise_id:
+                    errors['camion'] = 'Ce camion n\'appartient pas à l\'entreprise du contrat'
+            except Camion.DoesNotExist:
+                pass
+
+        if self.entreprise_id and self.chauffeur_id:
+            try:
+                chauffeur_obj = Chauffeur.objects.get(pk=self.chauffeur_id)
+                if chauffeur_obj.entreprise_id != self.entreprise_id:
+                    errors['chauffeur'] = 'Ce chauffeur n\'appartient pas à l\'entreprise du contrat'
+            except Chauffeur.DoesNotExist:
+                pass
+
         # Vérifier la disponibilité du camion et du chauffeur
         # select_for_update() verrouille les lignes pour éviter la race condition
         # (deux contrats créés simultanément avec le même camion/chauffeur)

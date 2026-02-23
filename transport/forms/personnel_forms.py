@@ -78,19 +78,26 @@ class AffectationForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        # Filtrer les chauffeurs pour n'afficher que ceux disponibles
+        entreprise = getattr(self.user, 'entreprise', None)
+
+        # Filtrer les chauffeurs pour n'afficher que ceux disponibles dans l'entreprise
         if self.instance and self.instance.pk:
             # Mode édition : inclure le chauffeur actuellement affecté
-            # Utiliser chauffeur_id (FK id) pour éviter AttributeError si chauffeur est None
             chauffeur_filter = models.Q(est_affecter=False)
+            if entreprise:
+                chauffeur_filter &= models.Q(entreprise=entreprise)
             if self.instance.chauffeur_id:
                 chauffeur_filter |= models.Q(pk=self.instance.chauffeur_id)
             chauffeurs_disponibles = Chauffeur.objects.filter(chauffeur_filter)
         else:
-            # Mode création : seulement les chauffeurs non affectés
-            chauffeurs_disponibles = Chauffeur.objects.filter(est_affecter=False)
+            # Mode création : seulement les chauffeurs non affectés de l'entreprise
+            chauffeur_filter = models.Q(est_affecter=False)
+            if entreprise:
+                chauffeur_filter &= models.Q(entreprise=entreprise)
+            chauffeurs_disponibles = Chauffeur.objects.filter(chauffeur_filter)
 
         self.fields['chauffeur'].queryset = chauffeurs_disponibles
 
@@ -99,17 +106,21 @@ class AffectationForm(forms.ModelForm):
             self.fields['chauffeur'].help_text = '⚠️ Aucun chauffeur disponible. Tous les chauffeurs sont déjà affectés.'
             self.fields['chauffeur'].widget.attrs['disabled'] = True
 
-        # Filtrer les camions pour n'afficher que ceux disponibles
+        # Filtrer les camions pour n'afficher que ceux disponibles dans l'entreprise
         if self.instance and self.instance.pk:
             # Mode édition : inclure le camion actuellement affecté
-            # Utiliser camion_id (FK id) pour éviter AttributeError si camion est None
             camion_filter = models.Q(est_affecter=False)
+            if entreprise:
+                camion_filter &= models.Q(entreprise=entreprise)
             if self.instance.camion_id:
                 camion_filter |= models.Q(pk=self.instance.camion_id)
             camions_disponibles = Camion.objects.filter(camion_filter)
         else:
-            # Mode création : seulement les camions non affectés
-            camions_disponibles = Camion.objects.filter(est_affecter=False)
+            # Mode création : seulement les camions non affectés de l'entreprise
+            camion_filter = models.Q(est_affecter=False)
+            if entreprise:
+                camion_filter &= models.Q(entreprise=entreprise)
+            camions_disponibles = Camion.objects.filter(camion_filter)
 
         self.fields['camion'].queryset = camions_disponibles
 

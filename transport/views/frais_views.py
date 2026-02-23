@@ -16,7 +16,7 @@ from ..decorators import (can_delete_data)
 
 @login_required
 def frais_list(request):
-    frais = FraisTrajet.objects.all()
+    frais = FraisTrajet.objects.filter(mission__contrat__entreprise=request.user.entreprise)
     return render(request, 'transport/frais/frais_list.html', {'frais': frais, 'title': 'Liste des frais de trajet'})
 
 @login_required
@@ -26,7 +26,7 @@ def create_frais(request):
     destination = request.GET.get('destination', None)
 
     if request.method == 'POST':
-        form = FraisTrajetForm(request.POST, origine=origine, destination=destination)
+        form = FraisTrajetForm(request.POST, origine=origine, destination=destination, user=request.user)
         if form.is_valid():
             frais = form.save()
             messages.success(request, f'Frais de trajet "{frais}" créé avec succès!')
@@ -35,7 +35,7 @@ def create_frais(request):
             next_url = request.GET.get('next', 'frais_list')
             return redirect(next_url)
     else:
-        form = FraisTrajetForm(origine=origine, destination=destination)
+        form = FraisTrajetForm(origine=origine, destination=destination, user=request.user)
 
     context = {
         'form': form,
@@ -47,22 +47,22 @@ def create_frais(request):
 
 @login_required
 def update_frais(request, pk):
-    frais = get_object_or_404(FraisTrajet, pk=pk)
+    frais = get_object_or_404(FraisTrajet, pk=pk, mission__contrat__entreprise=request.user.entreprise)
 
     if request.method == 'POST':
-        form = FraisTrajetForm(request.POST, instance=frais)
+        form = FraisTrajetForm(request.POST, instance=frais, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, f'Frais de trajet "{frais}" modifié avec succès!')
             return redirect('frais_list')
     else:
-        form = FraisTrajetForm(instance=frais)
+        form = FraisTrajetForm(instance=frais, user=request.user)
 
     return render(request, 'transport/frais/frais_form.html', {'form': form, 'title': 'Modifier le frais de trajet'})
 
 @can_delete_data
 def delete_frais(request, pk):
-    frais = get_object_or_404(FraisTrajet, pk=pk)
+    frais = get_object_or_404(FraisTrajet, pk=pk, mission__contrat__entreprise=request.user.entreprise)
     if request.method == 'POST':
         frais.delete()
         return redirect('frais_list')
@@ -72,7 +72,7 @@ def delete_frais(request, pk):
 @login_required
 def missions_data_api(request):
     """API pour récupérer les données des missions (pour auto-complétion du formulaire frais)"""
-    missions = Mission.objects.select_related('contrat').all()
+    missions = Mission.objects.select_related('contrat').filter(contrat__entreprise=request.user.entreprise)
 
     data = {
         'missions': [

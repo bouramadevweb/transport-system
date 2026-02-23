@@ -24,9 +24,15 @@ logger = logging.getLogger('transport')
 
 @login_required
 def contrat_list(request):
-    contrats = ContratTransport.objects.select_related(
-        'conteneur', 'client', 'transitaire', 'entreprise', 'camion', 'chauffeur'
-    ).order_by('-date_debut')
+    entreprise = getattr(request.user, 'entreprise', None)
+    if entreprise:
+        contrats = ContratTransport.objects.select_related(
+            'conteneur', 'client', 'transitaire', 'entreprise', 'camion', 'chauffeur'
+        ).filter(entreprise=entreprise).order_by('-date_debut')
+    else:
+        contrats = ContratTransport.objects.select_related(
+            'conteneur', 'client', 'transitaire', 'entreprise', 'camion', 'chauffeur'
+        ).order_by('-date_debut')
     return render(request, "transport/contrat/contrat_list.html", {"contrats": contrats, "title": "Liste des contrats"})
 
 # Création d'un contrat
@@ -34,7 +40,7 @@ def contrat_list(request):
 @login_required
 def create_contrat(request):
     if request.method == "POST":
-        form = ContratTransportForm(request.POST)
+        form = ContratTransportForm(request.POST, user=request.user)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -104,7 +110,7 @@ def create_contrat(request):
                     messages.error(request, f"{error}")
 
     else:
-        form = ContratTransportForm()
+        form = ContratTransportForm(user=request.user)
 
     return render(
         request,
@@ -117,7 +123,7 @@ def create_contrat(request):
 
 @login_required
 def update_contrat(request, pk):
-    contrat = get_object_or_404(ContratTransport, pk=pk)
+    contrat = get_object_or_404(ContratTransport, pk=pk, entreprise=request.user.entreprise)
 
     # Bloquer la modification d'un contrat annulé
     if contrat.statut == 'annule':
@@ -125,7 +131,7 @@ def update_contrat(request, pk):
         return redirect('contrat_list')
 
     if request.method == "POST":
-        form = ContratTransportForm(request.POST, instance=contrat)
+        form = ContratTransportForm(request.POST, instance=contrat, user=request.user)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -178,7 +184,7 @@ def update_contrat(request, pk):
                 for error in errors:
                     messages.error(request, f"{error}")
     else:
-        form = ContratTransportForm(instance=contrat)
+        form = ContratTransportForm(instance=contrat, user=request.user)
     return render(request, "transport/contrat/contrat_form.html", {"form": form, "title": "Modifier le contrat"})
 
 # Suppression d'un contrat

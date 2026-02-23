@@ -23,7 +23,7 @@ def export_missions_excel(request):
     # Récupérer les missions filtrées
     missions = Mission.objects.select_related(
         'contrat', 'contrat__chauffeur', 'contrat__client', 'contrat__camion', 'contrat__conteneur'
-    ).order_by('-date_depart')
+    ).filter(contrat__entreprise=request.user.entreprise).order_by('-date_depart')
 
     # Appliquer les mêmes filtres que la liste
     missions = MissionFilter.apply(missions, request)
@@ -95,7 +95,7 @@ def export_missions_csv(request):
     # Récupérer les missions filtrées
     missions = Mission.objects.select_related(
         'contrat', 'contrat__chauffeur', 'contrat__client', 'contrat__camion', 'contrat__conteneur'
-    ).order_by('-date_depart')
+    ).filter(contrat__entreprise=request.user.entreprise).order_by('-date_depart')
 
     # Appliquer les mêmes filtres que la liste
     missions = MissionFilter.apply(missions, request)
@@ -148,7 +148,7 @@ def export_paiements_excel(request):
     # Récupérer les paiements filtrés
     paiements = PaiementMission.objects.select_related(
         'mission', 'mission__contrat__chauffeur', 'caution'
-    ).order_by('-date_paiement')
+    ).filter(mission__contrat__entreprise=request.user.entreprise).order_by('-date_paiement')
 
     # Appliquer les mêmes filtres que la liste
     paiements = PaiementMissionFilter.apply(paiements, request)
@@ -221,7 +221,7 @@ def export_paiements_csv(request):
     # Récupérer les paiements filtrés
     paiements = PaiementMission.objects.select_related(
         'mission', 'mission__contrat__chauffeur', 'caution'
-    ).order_by('-date_paiement')
+    ).filter(mission__contrat__entreprise=request.user.entreprise).order_by('-date_paiement')
 
     # Appliquer les mêmes filtres que la liste
     paiements = PaiementMissionFilter.apply(paiements, request)
@@ -281,7 +281,7 @@ def export_utilisateurs_excel(request):
         pk_utilisateur=''
     ).exclude(
         pk_utilisateur__isnull=True
-    ).prefetch_related('groups').order_by('nom_utilisateur', 'email')
+    ).filter(entreprise=request.user.entreprise).prefetch_related('groups').order_by('nom_utilisateur', 'email')
 
     # Créer un nouveau workbook
     wb = openpyxl.Workbook()

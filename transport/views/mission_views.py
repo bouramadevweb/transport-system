@@ -8,7 +8,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Count, Sum, F
+from decimal import Decimal
+from django.db.models import Count, Sum, F, Q
 from django.http import JsonResponse
 from ..models import (Mission, MissionConteneur, Chauffeur, Client, PaiementMission, Cautions, AuditLog)
 from ..forms import (MissionForm, MissionConteneurForm)
@@ -32,6 +33,18 @@ def mission_list(request):
     missions_en_cours = missions.filter(statut='en cours')
     missions_terminees = missions.filter(statut='terminée')
     missions_annulees = missions.filter(statut='annulée')
+    count_en_cours = missions_en_cours.count()
+    count_terminees = missions_terminees.count()
+    count_annulees = missions_annulees.count()
+
+    # Compter par type de transport (aller-retour, aller simple, sans trajet)
+    missions_avec_type = missions.annotate(
+        nb_aller=Count('frais_trajets', filter=Q(frais_trajets__type_trajet='aller')),
+        nb_retour=Count('frais_trajets', filter=Q(frais_trajets__type_trajet='retour'))
+    )
+    count_aller_retour = missions_avec_type.filter(nb_aller__gt=0, nb_retour__gt=0).count()
+    count_aller_simple = missions_avec_type.filter(nb_aller__gt=0, nb_retour=0).count()
+    count_sans_trajet = missions_avec_type.filter(nb_aller=0).count()
 
     # Pagination - 20 missions par page
     paginator = Paginator(missions, 20)
@@ -46,13 +59,19 @@ def mission_list(request):
 
     # Récupérer les données pour les filtres
     chauffeurs = Chauffeur.objects.filter(entreprise=request.user.entreprise).order_by('nom')
-    clients = Client.objects.all().order_by('nom')  # Client n'a pas de FK entreprise
+    clients = Client.objects.filter(entreprise=request.user.entreprise).order_by('nom')
 
     return render(request, 'transport/missions/mission_list.html', {
         'missions': missions_page,
         'missions_en_cours': missions_en_cours,
         'missions_terminees': missions_terminees,
         'missions_annulees': missions_annulees,
+        'count_en_cours': count_en_cours,
+        'count_terminees': count_terminees,
+        'count_annulees': count_annulees,
+        'missions_aller_retour': count_aller_retour,
+        'missions_aller_simple': count_aller_simple,
+        'missions_sans_trajet': count_sans_trajet,
         'chauffeurs': chauffeurs,
         'clients': clients,
         'title': 'Liste des missions',
@@ -77,7 +96,7 @@ def create_mission(request):
 
 @login_required
 def update_mission(request, pk):
-    mission = get_object_or_404(Mission, pk_mission=pk)
+    mission = get_object_or_404(Mission, pk_mission=pk, contrat__entreprise=request.user.entreprise)
     if request.method == 'POST':
         form = MissionForm(request.POST, instance=mission)
         if form.is_valid():
@@ -91,7 +110,7 @@ def update_mission(request, pk):
 
 @can_delete_data
 def delete_mission(request, pk):
-    mission = get_object_or_404(Mission, pk_mission=pk)
+    mission = get_object_or_404(Mission, pk_mission=pk, contrat__entreprise=request.user.entreprise)
     if request.method == 'POST':
         mission.delete()
         return redirect('mission_list')
@@ -101,7 +120,7 @@ def delete_mission(request, pk):
 
 @login_required
 def terminer_mission(request, pk):
-    mission = get_object_or_404(Mission, pk_mission=pk)
+    mission = get_object_or_404(Mission, pk_mission=pk, contrat__entreprise=request.user.entreprise)
 
     # Vérifier que la mission n'est pas déjà terminée ou annulée
     if mission.statut == 'terminée':
@@ -145,7 +164,7 @@ def terminer_mission(request, pk):
 
     if en_retard:
         jours_retard = (date_retour - date_limite).days
-        penalite = jours_retard * 25000
+        penalite = Decimal(jours_retard) * Decimal('25000')
         info_penalite = {
             'jours_retard': jours_retard,
             'penalite': penalite,
@@ -311,7 +330,9 @@ def annuler_mission(request, pk):
 
 @login_required
 def mission_conteneur_list(request):
-    mission_conteneurs = MissionConteneur.objects.all()
+    mission_conteneurs = MissionConteneur.objects.filter(
+        mission__contrat__entreprise=request.user.entreprise
+    )
     return render(request, 'transport/missions/mission_conteneur_list.html', {
         'title': 'Liste des Missions - Conteneurs',
         'mission_conteneurs': mission_conteneurs
@@ -374,7 +395,7 @@ def bloquer_stationnement(request, pk):
     Bloque une mission pour stationnement (demurrage)
     Le camion est arrivé et commence la période de stationnement
     """
-    mission = get_object_or_404(Mission, pk_mission=pk)
+    mission = get_object_or_404(Mission, pk_mission=pk, contrat__entreprise=request.user.entreprise)
 
     # ✅ VÉRIFICATION: Empêcher le double blocage
     if mission.date_arrivee:
@@ -469,7 +490,7 @@ def marquer_dechargement(request, pk):
     """
     Marque le déchargement effectif et calcule les frais finaux
     """
-    mission = get_object_or_404(Mission, pk_mission=pk)
+    mission = get_object_or_404(Mission, pk_mission=pk, contrat__entreprise=request.user.entreprise)
 
     # ✅ VÉRIFICATION: La mission doit d'abord être bloquée
     if not mission.date_arrivee:

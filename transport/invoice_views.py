@@ -19,7 +19,7 @@ def generate_invoice(request, paiement_id):
     """
     Génère une facture PDF pour un paiement
     """
-    paiement = get_object_or_404(PaiementMission, pk_paiement=paiement_id)
+    paiement = get_object_or_404(PaiementMission, pk_paiement=paiement_id, mission__contrat__entreprise=request.user.entreprise)
 
     # Vérifier que le paiement est validé
     if not paiement.est_valide:
@@ -51,7 +51,7 @@ def preview_invoice(request, paiement_id):
     """
     Prévisualise une facture PDF dans le navigateur
     """
-    paiement = get_object_or_404(PaiementMission, pk_paiement=paiement_id)
+    paiement = get_object_or_404(PaiementMission, pk_paiement=paiement_id, mission__contrat__entreprise=request.user.entreprise)
 
     try:
         # Générer la facture
@@ -72,7 +72,7 @@ def send_invoice_email(request, paiement_id):
     """
     Envoie la facture par email au client et au chauffeur
     """
-    paiement = get_object_or_404(PaiementMission, pk_paiement=paiement_id)
+    paiement = get_object_or_404(PaiementMission, pk_paiement=paiement_id, mission__contrat__entreprise=request.user.entreprise)
 
     # Vérifier que le paiement est validé
     if not paiement.est_valide:
@@ -159,7 +159,8 @@ def invoices_list(request):
     """
     # Paiements validés uniquement
     paiements = PaiementMission.objects.filter(
-        est_valide=True
+        est_valide=True,
+        mission__contrat__entreprise=request.user.entreprise
     ).select_related(
         'mission',
         'mission__contrat',
@@ -193,7 +194,7 @@ def bulk_send_invoices(request):
 
         for paiement_id in paiement_ids:
             try:
-                paiement = PaiementMission.objects.get(pk_paiement=paiement_id)
+                paiement = get_object_or_404(PaiementMission, pk_paiement=paiement_id, mission__contrat__entreprise=request.user.entreprise)
 
                 # Générer et envoyer la facture
                 generator = InvoiceGenerator(paiement)

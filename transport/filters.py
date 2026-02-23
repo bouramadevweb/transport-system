@@ -7,6 +7,7 @@ dans les différentes vues de liste de l'application.
 """
 
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 
 
@@ -95,15 +96,15 @@ class PaiementMissionFilter:
         montant_min = request.GET.get('montant_min')
         if montant_min:
             try:
-                queryset = queryset.filter(montant_total__gte=float(montant_min))
-            except ValueError:
+                queryset = queryset.filter(montant_total__gte=Decimal(montant_min))
+            except (ValueError, InvalidOperation):
                 pass
 
         montant_max = request.GET.get('montant_max')
         if montant_max:
             try:
-                queryset = queryset.filter(montant_total__lte=float(montant_max))
-            except ValueError:
+                queryset = queryset.filter(montant_total__lte=Decimal(montant_max))
+            except (ValueError, InvalidOperation):
                 pass
 
         # Filtre par date de validation

@@ -20,10 +20,11 @@ class Command(BaseCommand):
         today = timezone.now().date()
 
         # Trouver toutes les missions en cours dont la date de retour est dépassée
+        # Inclure l'entreprise dans le select_related pour filtrer les notifications par entreprise
         missions_en_retard = Mission.objects.filter(
             statut='en cours',
             date_retour__lt=today
-        ).select_related('contrat__chauffeur', 'contrat__chauffeur__utilisateur')
+        ).select_related('contrat__entreprise', 'contrat__chauffeur', 'contrat__chauffeur__utilisateur')
 
         if not missions_en_retard.exists():
             self.stdout.write(self.style.SUCCESS('✅ Aucune mission en retard trouvée'))
@@ -47,12 +48,17 @@ class Command(BaseCommand):
             if recent_notification:
                 continue  # Notification déjà créée aujourd'hui pour cette mission
 
-            # Trouver les utilisateurs à notifier
+            # Trouver les utilisateurs à notifier (uniquement de l'entreprise concernée)
             users_to_notify = []
+            mission_entreprise = mission.contrat.entreprise if mission.contrat else None
 
-            # 1. Admins et managers
-            admins_managers = Utilisateur.objects.filter(role__in=['admin', 'manager'])
-            users_to_notify.extend(list(admins_managers))
+            # 1. Admins et managers de l'entreprise de la mission uniquement
+            if mission_entreprise:
+                admins_managers = Utilisateur.objects.filter(
+                    role__in=['admin', 'manager'],
+                    entreprise=mission_entreprise
+                )
+                users_to_notify.extend(list(admins_managers))
 
             # 2. Chauffeur de la mission
             if mission.contrat and mission.contrat.chauffeur:

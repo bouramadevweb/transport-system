@@ -35,71 +35,95 @@ def financial_reports(request):
         days = int(period)
         start_date = now - timedelta(days=days)
 
-    # Filtrer les paiements
-    paiements = PaiementMission.objects.filter(est_valide=True)
+    # Tous les paiements de l'entreprise (validés + en attente)
+    paiements_base = PaiementMission.objects.filter(
+        mission__contrat__entreprise=request.user.entreprise
+    )
     if start_date:
-        paiements = paiements.filter(date_validation__gte=start_date)
+        paiements_base = paiements_base.filter(date_paiement__gte=start_date)
+
+    paiements_valides = paiements_base.filter(est_valide=True)
+    paiements_attente = paiements_base.filter(est_valide=False)
 
     # === STATISTIQUES GLOBALES ===
-    stats = {
-        'total_ca': paiements.aggregate(Sum('montant_total'))['montant_total__sum'] or 0,
-        'total_commissions': paiements.aggregate(Sum('commission_transitaire'))['commission_transitaire__sum'] or 0,
-        'nombre_paiements': paiements.count(),
-        'montant_moyen': paiements.aggregate(Avg('montant_total'))['montant_total__avg'] or 0,
-    }
-    stats['ca_net'] = stats['total_ca'] - stats['total_commissions']
+    ca_valide   = paiements_valides.aggregate(Sum('montant_total'))['montant_total__sum'] or 0
+    ca_attente  = paiements_attente.aggregate(Sum('montant_total'))['montant_total__sum'] or 0
+    commissions = paiements_valides.aggregate(Sum('commission_transitaire'))['commission_transitaire__sum'] or 0
+    nb_valides  = paiements_valides.count()
+    nb_attente  = paiements_attente.count()
+    nb_total    = paiements_base.count()
+    montant_moyen = paiements_valides.aggregate(Avg('montant_total'))['montant_total__avg'] or 0
 
-    # === CA PAR CLIENT ===
-    ca_par_client = paiements.values(
+    stats = {
+        'total_ca'        : ca_valide + ca_attente,
+        'ca_valide'       : ca_valide,
+        'ca_en_attente'   : ca_attente,
+        'total_commissions': commissions,
+        'ca_net'          : ca_valide - commissions,
+        'nombre_paiements': nb_total,
+        'nb_valides'      : nb_valides,
+        'nb_attente'      : nb_attente,
+        'montant_moyen'   : montant_moyen,
+    }
+
+    # === CA PAR CLIENT (tous paiements) ===
+    ca_par_client = paiements_base.values(
         'mission__contrat__client__nom',
         'mission__contrat__client__type_client'
     ).annotate(
         total=Sum('montant_total'),
+        total_valide=Sum('montant_total', filter=Q(est_valide=True)),
         count=Count('pk_paiement')
     ).order_by('-total')[:10]
 
-    # === CA PAR CHAUFFEUR ===
-    ca_par_chauffeur = paiements.values(
+    # === CA PAR CHAUFFEUR (tous paiements) ===
+    ca_par_chauffeur = paiements_base.values(
         'mission__contrat__chauffeur__nom',
         'mission__contrat__chauffeur__prenom'
     ).annotate(
         total=Sum('montant_total'),
+        total_valide=Sum('montant_total', filter=Q(est_valide=True)),
         count=Count('pk_paiement')
     ).order_by('-total')[:10]
 
     # === RÉPARTITION PAR MODE DE PAIEMENT ===
-    mode_paiement = paiements.values('mode_paiement').annotate(
+    mode_paiement = paiements_base.values('mode_paiement').annotate(
         total=Sum('montant_total'),
         count=Count('pk_paiement')
     ).order_by('-total')
 
-    # === ÉVOLUTION MENSUELLE (6 derniers mois) ===
+    # === ÉVOLUTION MENSUELLE (6 derniers mois, tous paiements) ===
     monthly_data = []
     for i in range(5, -1, -1):
         month_start = now - timedelta(days=30 * i)
-        month_end = now - timedelta(days=30 * (i - 1)) if i > 0 else now
+        month_end   = now - timedelta(days=30 * (i - 1)) if i > 0 else now
 
-        month_paiements = PaiementMission.objects.filter(
-            est_valide=True,
-            date_validation__gte=month_start,
-            date_validation__lt=month_end
+        month_qs = PaiementMission.objects.filter(
+            mission__contrat__entreprise=request.user.entreprise,
+            date_paiement__gte=month_start,
+            date_paiement__lt=month_end
         )
-
+        ca_m        = month_qs.aggregate(Sum('montant_total'))['montant_total__sum'] or 0
+        ca_valide_m = month_qs.filter(est_valide=True).aggregate(Sum('montant_total'))['montant_total__sum'] or 0
         monthly_data.append({
-            'label': month_start.strftime('%b %Y'),
-            'ca': month_paiements.aggregate(Sum('montant_total'))['montant_total__sum'] or 0,
-            'count': month_paiements.count()
+            'label'     : month_start.strftime('%b %Y'),
+            'ca'        : ca_m,
+            'ca_valide' : ca_valide_m,
+            'ca_attente': ca_m - ca_valide_m,
+            'count'     : month_qs.count()
         })
 
     # === MISSIONS EN ATTENTE DE PAIEMENT ===
     missions_en_attente = Mission.objects.filter(
-        statut='terminee',
-        paiementmission__isnull=True
-    ).select_related('contrat__client', 'contrat__affectation__chauffeur').count()
+        statut='terminée',
+        paiementmission__isnull=True,
+        contrat__entreprise=request.user.entreprise
+    ).select_related('contrat__client', 'contrat__chauffeur').count()
 
     # === CAUTIONS EN COURS ===
     cautions_en_cours = Cautions.objects.filter(
-        statut='retenue'
+        contrat__entreprise=request.user.entreprise,
+        statut='en_attente'
     ).aggregate(total=Sum('montant'))['total'] or 0
 
     context = {
@@ -136,7 +160,10 @@ def export_financial_report_excel(request):
         period_label = f"{days} derniers jours"
 
     # Filtrer les paiements
-    paiements = PaiementMission.objects.filter(est_valide=True).select_related(
+    paiements = PaiementMission.objects.filter(
+        est_valide=True,
+        mission__contrat__entreprise=request.user.entreprise
+    ).select_related(
         'mission__contrat__client',
         'mission__contrat__chauffeur',
         'mission'
@@ -295,8 +322,8 @@ def client_report(request, client_id):
     # Statistiques
     stats = {
         'total_missions': missions.count(),
-        'missions_terminee': missions.filter(statut='terminee').count(),
-        'missions_en_cours': missions.filter(statut='en_cours').count(),
+        'missions_terminee': missions.filter(statut='terminée').count(),
+        'missions_en_cours': missions.filter(statut='en cours').count(),
         'total_ca': paiements.aggregate(Sum('montant_total'))['montant_total__sum'] or 0,
         'ca_moyen': paiements.aggregate(Avg('montant_total'))['montant_total__avg'] or 0,
     }

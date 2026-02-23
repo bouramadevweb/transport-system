@@ -20,7 +20,7 @@ def annuler_contrat_view(request, pk):
     Cette vue affiche un formulaire de confirmation avant d'annuler le contrat.
     L'annulation est en cascade: contrat → missions → cautions → paiements
     """
-    contrat = get_object_or_404(ContratTransport, pk=pk)
+    contrat = get_object_or_404(ContratTransport, pk=pk, entreprise=request.user.entreprise)
 
     # Vérifier que le contrat n'est pas déjà annulé
     if contrat.statut == 'annule':
@@ -84,7 +84,7 @@ def annuler_mission_view(request, pk):
     Cette vue affiche un formulaire de confirmation avant d'annuler la mission.
     L'annulation affecte: mission → cautions → paiements
     """
-    mission = get_object_or_404(Mission, pk=pk)
+    mission = get_object_or_404(Mission, pk=pk, contrat__entreprise=request.user.entreprise)
 
     # Vérifier que la mission n'est pas déjà annulée
     if mission.statut == 'annulée':
@@ -142,7 +142,7 @@ def contrats_annules_list(request):
     """Liste tous les contrats annulés pour consultation et audit"""
     from django.db.models import Count
 
-    contrats = ContratTransport.objects.filter(statut='annule').annotate(
+    contrats = ContratTransport.objects.filter(statut='annule', entreprise=request.user.entreprise).annotate(
         nb_missions=Count('mission')
     ).order_by('-date_debut')
 
@@ -156,7 +156,7 @@ def contrats_annules_list(request):
 @manager_or_admin_required
 def missions_annulees_list(request):
     """Liste toutes les missions annulées pour consultation et audit"""
-    missions = Mission.objects.filter(statut='annulée').select_related(
+    missions = Mission.objects.filter(statut='annulée', contrat__entreprise=request.user.entreprise).select_related(
         'contrat', 'prestation_transport'
     ).order_by('-date_depart')
 

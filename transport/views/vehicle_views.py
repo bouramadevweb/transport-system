@@ -18,7 +18,11 @@ logger = logging.getLogger('transport')
 
 @login_required
 def camion_list(request):
-    camions = Camion.objects.filter(entreprise=request.user.entreprise).select_related('entreprise').order_by('-pk_camion')
+    entreprise = getattr(request.user, 'entreprise', None)
+    if entreprise:
+        camions = Camion.objects.filter(entreprise=entreprise).select_related('entreprise').order_by('-pk_camion')
+    else:
+        camions = Camion.objects.select_related('entreprise').order_by('-pk_camion')
     return render(request, "transport/camions/camion_list.html", {"camions": camions, "title": "Liste des camions"})
 
 # Ajouter un camion
@@ -76,10 +80,14 @@ def delete_camion(request, pk):
 
 @login_required
 def conteneur_list(request):
-    # Filtrer les conteneurs via les contrats de l'entreprise (Conteneur n'a pas de FK entreprise directe)
-    conteneurs = Conteneur.objects.filter(
-        contrattransport__entreprise=request.user.entreprise
-    ).select_related('compagnie').order_by('numero_conteneur').distinct()
+    entreprise = getattr(request.user, 'entreprise', None)
+    if entreprise:
+        # Filtrer les conteneurs via les contrats de l'entreprise (Conteneur n'a pas de FK entreprise directe)
+        conteneurs = Conteneur.objects.filter(
+            contrattransport__entreprise=entreprise
+        ).select_related('compagnie').order_by('numero_conteneur').distinct()
+    else:
+        conteneurs = Conteneur.objects.select_related('compagnie').order_by('numero_conteneur').distinct()
     return render(request, "transport/conteneurs/conteneur_list.html", {"conteneurs": conteneurs, "title": "Liste des conteneurs"})
 
 # Création d'un conteneur
@@ -110,21 +118,27 @@ def create_conteneur(request):
 
 @login_required
 def update_conteneur(request, pk):
-    conteneur = get_object_or_404(Conteneur, pk=pk)
+    conteneur = get_object_or_404(
+        Conteneur.objects.filter(client__entreprise=request.user.entreprise),
+        pk=pk
+    )
     if request.method == "POST":
-        form = ConteneurForm(request.POST, instance=conteneur)
+        form = ConteneurForm(request.POST, instance=conteneur, user=request.user)
         if form.is_valid():
             form.save()
             return redirect('conteneur_list')
     else:
-        form = ConteneurForm(instance=conteneur)
+        form = ConteneurForm(instance=conteneur, user=request.user)
     return render(request, "transport/conteneurs/conteneur_form.html", {"form": form, "title": "Modifier le conteneur"})
 
 # Suppression d'un conteneur
 
 @can_delete_data
 def delete_conteneur(request, pk):
-    conteneur = get_object_or_404(Conteneur, pk=pk)
+    conteneur = get_object_or_404(
+        Conteneur.objects.filter(client__entreprise=request.user.entreprise),
+        pk=pk
+    )
     if request.method == "POST":
         conteneur.delete()
         return redirect('conteneur_list')
@@ -157,7 +171,9 @@ def reparation_list(request):
 
     # ========== APPLICATION DES FILTRES ==========
     from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-    qs = Reparation.objects.filter(camion__entreprise=request.user.entreprise).select_related('camion', 'chauffeur').order_by('-date_reparation')
+    entreprise = getattr(request.user, 'entreprise', None)
+    base_qs = Reparation.objects.select_related('camion', 'chauffeur').order_by('-date_reparation')
+    qs = base_qs.filter(camion__entreprise=entreprise) if entreprise else base_qs
 
     # Apply date filters if provided
     if date_debut:
@@ -183,7 +199,7 @@ def reparation_list(request):
 @login_required
 def create_reparation(request):
     if request.method == 'POST':
-        form = ReparationForm(request.POST)
+        form = ReparationForm(request.POST, user=request.user)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -209,16 +225,16 @@ def create_reparation(request):
                 for error in errors:
                     messages.error(request, f"{error}")
     else:
-        form = ReparationForm()
+        form = ReparationForm(user=request.user)
     return render(request, 'transport/reparations/reparation_form.html', {'form': form, 'title': 'Ajouter une réparation'})
 
 # Modification
 
 @login_required
 def update_reparation(request, pk):
-    reparation = get_object_or_404(Reparation, pk=pk)
+    reparation = get_object_or_404(Reparation, pk=pk, camion__entreprise=request.user.entreprise)
     if request.method == 'POST':
-        form = ReparationForm(request.POST, instance=reparation)
+        form = ReparationForm(request.POST, instance=reparation, user=request.user)
         if form.is_valid():
             reparation = form.save()
             nb_mecaniciens = reparation.get_mecaniciens().count()
@@ -229,14 +245,14 @@ def update_reparation(request, pk):
                 for error in errors:
                     messages.error(request, f"❌ {error}")
     else:
-        form = ReparationForm(instance=reparation)
+        form = ReparationForm(instance=reparation, user=request.user)
     return render(request, 'transport/reparations/reparation_form.html', {'form': form, 'title': 'Modifier une réparation'})
 
 # Suppression
 
 @can_delete_data
 def delete_reparation(request, pk):
-    reparation = get_object_or_404(Reparation, pk=pk)
+    reparation = get_object_or_404(Reparation, pk=pk, camion__entreprise=request.user.entreprise)
     if request.method == 'POST':
         reparation.delete()
         return redirect('reparation_list')
@@ -275,7 +291,7 @@ def create_reparation_mecanicien(request):
 
 @login_required
 def update_reparation_mecanicien(request, pk):
-    relation = get_object_or_404(ReparationMecanicien, pk=pk)
+    relation = get_object_or_404(ReparationMecanicien, pk=pk, reparation__camion__entreprise=request.user.entreprise)
     if request.method == 'POST':
         form = ReparationMecanicienForm(request.POST, instance=relation)
         if form.is_valid():
@@ -292,7 +308,7 @@ def update_reparation_mecanicien(request, pk):
 
 @can_delete_data
 def delete_reparation_mecanicien(request, pk):
-    relation = get_object_or_404(ReparationMecanicien, pk=pk)
+    relation = get_object_or_404(ReparationMecanicien, pk=pk, reparation__camion__entreprise=request.user.entreprise)
     if request.method == 'POST':
         relation.delete()
         return redirect('reparation_mecanicien_list')
@@ -318,7 +334,7 @@ def create_piece_reparee(request, reparation_id=None):
     # Récupérer la réparation si un ID est fourni
     reparation_preselected = None
     if reparation_id:
-        reparation_preselected = get_object_or_404(Reparation, pk_reparation=reparation_id)
+        reparation_preselected = get_object_or_404(Reparation, pk_reparation=reparation_id, camion__entreprise=request.user.entreprise)
 
     if request.method == 'POST':
         form = PieceRepareeForm(request.POST, reparation_id=reparation_id)
@@ -345,7 +361,7 @@ def create_piece_reparee(request, reparation_id=None):
 
 @login_required
 def update_piece_reparee(request, pk):
-    piece = get_object_or_404(PieceReparee, pk=pk)
+    piece = get_object_or_404(PieceReparee, pk=pk, reparation__camion__entreprise=request.user.entreprise)
     if request.method == 'POST':
         form = PieceRepareeForm(request.POST, instance=piece)
         if form.is_valid():
@@ -362,7 +378,7 @@ def update_piece_reparee(request, pk):
 
 @can_delete_data
 def delete_piece_reparee(request, pk):
-    piece = get_object_or_404(PieceReparee, pk=pk)
+    piece = get_object_or_404(PieceReparee, pk=pk, reparation__camion__entreprise=request.user.entreprise)
     if request.method == 'POST':
         piece.delete()
         return redirect('piece_reparee_list')

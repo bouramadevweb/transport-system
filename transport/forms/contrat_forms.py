@@ -96,44 +96,68 @@ class ContratTransportForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
         # Définir le format d'entrée pour les champs de date
         self.fields['date_debut'].input_formats = ['%Y-%m-%d']
         self.fields['date_limite_retour'].input_formats = ['%Y-%m-%d']
 
+        entreprise = getattr(self.user, 'entreprise', None)
+
         # IDs des camions actuellement en mission (statut='en cours')
-        camions_en_mission_ids = Mission.objects.filter(
-            statut='en cours'
-        ).values_list('contrat__camion_id', flat=True).distinct()
+        camions_qs = Mission.objects.filter(statut='en cours')
+        if entreprise:
+            camions_qs = camions_qs.filter(contrat__entreprise=entreprise)
+        camions_en_mission_ids = camions_qs.values_list('contrat__camion_id', flat=True).distinct()
+
+        # Base queryset camions filtrée par entreprise
+        camions_base = Camion.objects.filter(entreprise=entreprise) if entreprise else Camion.objects.none()
 
         # En mode édition, inclure le camion du contrat même s'il est en mission
         if self.instance and self.instance.pk and self.instance.camion_id:
-            camions_disponibles = Camion.objects.filter(
+            camions_disponibles = camions_base.filter(
                 Q(pk_camion=self.instance.camion_id) |
                 ~Q(pk_camion__in=camions_en_mission_ids)
             ).distinct()
         else:
-            camions_disponibles = Camion.objects.exclude(pk_camion__in=camions_en_mission_ids)
+            camions_disponibles = camions_base.exclude(pk_camion__in=camions_en_mission_ids)
 
         self.fields['camion'].queryset = camions_disponibles
 
+        # Base queryset chauffeurs filtrée par entreprise
+        chauffeurs_base = Chauffeur.objects.filter(entreprise=entreprise) if entreprise else Chauffeur.objects.none()
+
         # Queryset chauffeur
         if self.instance and self.instance.pk:
-            # Mode édition : afficher tous les chauffeurs sans restriction,
-            # pour garantir que le chauffeur du contrat est toujours disponible dans la liste
-            self.fields['chauffeur'].queryset = Chauffeur.objects.all()
+            # Mode édition : chauffeurs de l'entreprise (le chauffeur du contrat est toujours inclus)
+            self.fields['chauffeur'].queryset = chauffeurs_base
             # Forcer la valeur initiale explicitement
             if self.instance.chauffeur_id:
                 self.initial['chauffeur'] = self.instance.chauffeur_id
         else:
             # Mode création : uniquement les chauffeurs non en mission
-            chauffeurs_en_mission_ids = Mission.objects.filter(
-                statut='en cours'
-            ).values_list('contrat__chauffeur_id', flat=True).distinct()
-            self.fields['chauffeur'].queryset = Chauffeur.objects.exclude(
+            chauffeurs_en_mission_qs = Mission.objects.filter(statut='en cours')
+            if entreprise:
+                chauffeurs_en_mission_qs = chauffeurs_en_mission_qs.filter(contrat__entreprise=entreprise)
+            chauffeurs_en_mission_ids = chauffeurs_en_mission_qs.values_list('contrat__chauffeur_id', flat=True).distinct()
+            self.fields['chauffeur'].queryset = chauffeurs_base.exclude(
                 pk_chauffeur__in=chauffeurs_en_mission_ids
             )
+
+        # Filtrer conteneur, client, transitaire, entreprise par entreprise
+        if entreprise:
+            from ..models import Conteneur, Client, Transitaire, Entreprise
+            self.fields['conteneur'].queryset = Conteneur.objects.filter(client__entreprise=entreprise)
+            self.fields['client'].queryset = Client.objects.filter(entreprise=entreprise)
+            self.fields['transitaire'].queryset = Transitaire.objects.filter(entreprise=entreprise)
+            self.fields['entreprise'].queryset = Entreprise.objects.filter(pk=entreprise.pk)
+        else:
+            from ..models import Conteneur, Client, Transitaire, Entreprise
+            self.fields['conteneur'].queryset = Conteneur.objects.none()
+            self.fields['client'].queryset = Client.objects.none()
+            self.fields['transitaire'].queryset = Transitaire.objects.none()
+            self.fields['entreprise'].queryset = Entreprise.objects.none()
 
         # Ajouter les attributs pour la sélection automatique bidirectionnelle
         self.fields['camion'].widget.attrs.update({

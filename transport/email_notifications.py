@@ -71,6 +71,19 @@ class EmailNotifier:
                 raise
             return False
 
+    def _get_entreprise_admin_emails(self, entreprise):
+        """
+        Retourne les emails des admins/managers de l'entreprise concernée.
+        Évite d'envoyer des notifications à des admins d'autres entreprises.
+        """
+        from transport.models import Utilisateur
+        admins = Utilisateur.objects.filter(
+            entreprise=entreprise,
+            role__in=['admin', 'manager'],
+            actif=True
+        ).exclude(email='').values_list('email', flat=True)
+        return list(admins)
+
     def send_mission_retard(self, mission, jours_retard, penalite=0):
         """
         Notification de mission en retard
@@ -80,19 +93,24 @@ class EmailNotifier:
             jours_retard: Nombre de jours de retard
             penalite: Montant de la pénalité (optionnel)
         """
+        # Vérifier que la mission a une entreprise associée
+        if not mission.contrat or not mission.contrat.entreprise:
+            logger.warning(f"Mission {mission.pk_mission} sans entreprise — email non envoyé")
+            return False
+
         # Destinataires
         recipients = []
 
         # Email du chauffeur
-        if mission.contrat and mission.contrat.chauffeur and mission.contrat.chauffeur.email:
+        if mission.contrat.chauffeur and mission.contrat.chauffeur.email:
             recipients.append(mission.contrat.chauffeur.email)
 
         # Email du client
-        if mission.contrat and mission.contrat.client and mission.contrat.client.email:
+        if mission.contrat.client and mission.contrat.client.email:
             recipients.append(mission.contrat.client.email)
 
-        # Toujours notifier l'admin
-        recipients.append(self.admin_email)
+        # Admins de l'entreprise concernée (pas le global admin_email)
+        recipients.extend(self._get_entreprise_admin_emails(mission.contrat.entreprise))
 
         # Si pas de destinataires, abandonner
         if not recipients:
@@ -125,23 +143,25 @@ class EmailNotifier:
         Args:
             paiement: Instance PaiementMission
         """
+        # Vérifier que le paiement a une entreprise associée
+        contrat = paiement.mission.contrat if paiement.mission else None
+        if not contrat or not contrat.entreprise:
+            logger.warning(f"Paiement {paiement.pk_paiement} sans entreprise — email non envoyé")
+            return False
+
         # Destinataires
         recipients = []
 
         # Email du chauffeur
-        if paiement.mission and paiement.mission.contrat and paiement.mission.contrat.chauffeur:
-            chauffeur = paiement.mission.contrat.chauffeur
-            if chauffeur.email:
-                recipients.append(chauffeur.email)
+        if contrat.chauffeur and contrat.chauffeur.email:
+            recipients.append(contrat.chauffeur.email)
 
         # Email du client
-        if paiement.mission and paiement.mission.contrat and paiement.mission.contrat.client:
-            client = paiement.mission.contrat.client
-            if client.email:
-                recipients.append(client.email)
+        if contrat.client and contrat.client.email:
+            recipients.append(contrat.client.email)
 
-        # Admin
-        recipients.append(self.admin_email)
+        # Admins de l'entreprise concernée
+        recipients.extend(self._get_entreprise_admin_emails(contrat.entreprise))
 
         if not recipients:
             logger.warning(f"⚠️ Aucun email pour paiement validé: {paiement.pk_paiement}")
@@ -151,7 +171,7 @@ class EmailNotifier:
         context = {
             'paiement': paiement,
             'mission': paiement.mission,
-            'chauffeur': paiement.mission.contrat.chauffeur if paiement.mission and paiement.mission.contrat else None,
+            'chauffeur': contrat.chauffeur,
             'montant_total': paiement.montant_total,
             'commission': paiement.commission_transitaire,
             'date_validation': paiement.date_validation,
@@ -173,6 +193,11 @@ class EmailNotifier:
         Args:
             caution: Instance Cautions
         """
+        # Vérifier que la caution a une entreprise associée
+        if not caution.contrat or not caution.contrat.entreprise:
+            logger.warning(f"Caution {caution.pk_caution} sans entreprise — email non envoyé")
+            return False
+
         # Destinataires
         recipients = []
 
@@ -184,8 +209,8 @@ class EmailNotifier:
         if caution.client and caution.client.email:
             recipients.append(caution.client.email)
 
-        # Admin
-        recipients.append(self.admin_email)
+        # Admins de l'entreprise concernée
+        recipients.extend(self._get_entreprise_admin_emails(caution.contrat.entreprise))
 
         if not recipients:
             logger.warning(f"⚠️ Aucun email pour caution débloquée: {caution.pk_caution}")
@@ -241,14 +266,19 @@ class EmailNotifier:
         Args:
             mission: Instance Mission
         """
+        # Vérifier que la mission a une entreprise associée
+        if not mission.contrat or not mission.contrat.entreprise:
+            logger.warning(f"Mission {mission.pk_mission} sans entreprise — email non envoyé")
+            return False
+
         recipients = []
 
         # Email du chauffeur
-        if mission.contrat and mission.contrat.chauffeur and mission.contrat.chauffeur.email:
+        if mission.contrat.chauffeur and mission.contrat.chauffeur.email:
             recipients.append(mission.contrat.chauffeur.email)
 
-        # Admin
-        recipients.append(self.admin_email)
+        # Admins de l'entreprise concernée
+        recipients.extend(self._get_entreprise_admin_emails(mission.contrat.entreprise))
 
         if not recipients:
             return False

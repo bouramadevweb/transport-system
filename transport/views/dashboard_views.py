@@ -48,21 +48,22 @@ def dashboard(request):
 
     # ========== APPLICATION DES FILTRES ==========
     # Missions queryset with filters
-    missions_qs = Mission.objects.all()
+    entreprise = request.user.entreprise
+    missions_qs = Mission.objects.filter(contrat__entreprise=entreprise)
     if date_debut:
         missions_qs = missions_qs.filter(date_depart__gte=date_debut)
     if date_fin:
         missions_qs = missions_qs.filter(date_depart__lte=date_fin)
 
     # Paiements queryset with filters
-    paiements_qs = PaiementMission.objects.all()
+    paiements_qs = PaiementMission.objects.filter(mission__contrat__entreprise=entreprise)
     if date_debut:
         paiements_qs = paiements_qs.filter(date_paiement__gte=date_debut)
     if date_fin:
         paiements_qs = paiements_qs.filter(date_paiement__lte=date_fin)
 
     # Réparations queryset with filters
-    reparations_qs = Reparation.objects.all()
+    reparations_qs = Reparation.objects.filter(camion__entreprise=entreprise)
     if date_debut:
         reparations_qs = reparations_qs.filter(date_reparation__gte=date_debut)
     if date_fin:
@@ -70,15 +71,15 @@ def dashboard(request):
 
     # Statistiques générales
     stats = {
-        "chauffeurs": Chauffeur.objects.count(),
-        "camions": Camion.objects.count(),
+        "chauffeurs": Chauffeur.objects.filter(entreprise=entreprise).count(),
+        "camions": Camion.objects.filter(entreprise=entreprise).count(),
         "missions": missions_qs.count(),
         "missions_en_cours": missions_qs.filter(statut="en cours").count(),
         "missions_terminees": missions_qs.filter(statut="terminée").count(),
         "reparations": reparations_qs.count(),
         "paiements": paiements_qs.aggregate(total=Sum("montant_total"))["total"] or 0,
-        "clients": Client.objects.count(),
-        "affectations": Affectation.objects.count(),
+        "clients": Client.objects.filter(contrattransport__entreprise=entreprise).distinct().count(),
+        "affectations": Affectation.objects.filter(chauffeur__entreprise=entreprise).count(),
     }
 
     # Missions par statut pour le graphique
@@ -123,14 +124,14 @@ def dashboard(request):
         'camion'
     ).order_by('-date_reparation')[:5]
 
-    # Statistiques par entreprise
+    # Statistiques par entreprise (limité à l'entreprise de l'utilisateur courant)
     entreprises_stats = []
-    entreprises = Entreprise.objects.all()
-    for entreprise in entreprises:
+    user_entreprise = getattr(request.user, 'entreprise', None)
+    if user_entreprise:
         entreprises_stats.append({
-            'nom': entreprise.nom,
-            'chauffeurs': Chauffeur.objects.filter(entreprise=entreprise).count(),
-            'camions': Camion.objects.filter(entreprise=entreprise).count(),
+            'nom': user_entreprise.nom,
+            'chauffeurs': Chauffeur.objects.filter(entreprise=user_entreprise).count(),
+            'camions': Camion.objects.filter(entreprise=user_entreprise).count(),
         })
 
     # Calcul des revenus du mois en cours (ou période filtrée)
@@ -140,6 +141,7 @@ def dashboard(request):
         current_month = timezone.now().month
         current_year = timezone.now().year
         revenus_mois_actuel = PaiementMission.objects.filter(
+            mission__contrat__entreprise=entreprise,
             date_paiement__month=current_month,
             date_paiement__year=current_year
         ).aggregate(total=Sum("montant_total"))["total"] or 0
@@ -271,37 +273,38 @@ def tableau_bord_statistiques(request):
             pass
 
     # ========== STATISTIQUES GLOBALES ==========
+    entreprise = request.user.entreprise
     # Apply date filters to missions
-    missions_qs = Mission.objects.all()
+    missions_qs = Mission.objects.filter(contrat__entreprise=entreprise)
     if date_debut:
         missions_qs = missions_qs.filter(date_depart__gte=date_debut)
     if date_fin:
         missions_qs = missions_qs.filter(date_depart__lte=date_fin)
 
     # Apply date filters to contracts
-    contrats_qs = ContratTransport.objects.all()
+    contrats_qs = ContratTransport.objects.filter(entreprise=entreprise)
     if date_debut:
         contrats_qs = contrats_qs.filter(date_debut__gte=date_debut)
     if date_fin:
         contrats_qs = contrats_qs.filter(date_debut__lte=date_fin)
 
     # Apply date filters to reparations
-    reparations_qs = Reparation.objects.all()
+    reparations_qs = Reparation.objects.filter(camion__entreprise=entreprise)
     if date_debut:
         reparations_qs = reparations_qs.filter(date_reparation__gte=date_debut)
     if date_fin:
         reparations_qs = reparations_qs.filter(date_reparation__lte=date_fin)
 
     # Apply date filters to pieces
-    pieces_qs = PieceReparee.objects.all()
+    pieces_qs = PieceReparee.objects.filter(reparation__camion__entreprise=entreprise)
     if date_debut:
         pieces_qs = pieces_qs.filter(reparation__date_reparation__gte=date_debut)
     if date_fin:
         pieces_qs = pieces_qs.filter(reparation__date_reparation__lte=date_fin)
 
     total_missions = missions_qs.count()
-    total_camions = Camion.objects.count()
-    total_chauffeurs = Chauffeur.objects.count()
+    total_camions = Camion.objects.filter(entreprise=entreprise).count()
+    total_chauffeurs = Chauffeur.objects.filter(entreprise=entreprise).count()
     total_reparations = reparations_qs.count()
     total_pieces = pieces_qs.count()
     ca_total = contrats_qs.aggregate(total=Sum('montant_total'))['total'] or 0
@@ -518,8 +521,10 @@ def audit_log_list(request):
     """
     from django.db.models import Count
 
-    # Récupérer tous les logs
-    all_logs = AuditLog.objects.select_related('utilisateur').order_by('-timestamp')
+    # Récupérer les logs filtrés par entreprise de l'utilisateur courant
+    all_logs = AuditLog.objects.select_related('utilisateur').filter(
+        utilisateur__entreprise=request.user.entreprise
+    ).order_by('-timestamp')
     logs = all_logs
 
     # Filtrage
@@ -571,7 +576,7 @@ def audit_log_list(request):
     ).order_by('-count')[:5]
 
     # Récupérer les utilisateurs pour le filtre
-    utilisateurs = Utilisateur.objects.all().order_by('email')
+    utilisateurs = Utilisateur.objects.filter(entreprise=request.user.entreprise).order_by('email')
 
     # Types d'actions disponibles
     action_choices = AuditLog.ACTION_CHOICES

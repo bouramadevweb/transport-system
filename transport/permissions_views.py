@@ -13,12 +13,13 @@ from transport.permissions import ROLES, role_required, assign_role_to_user, get
 @role_required('ADMIN')
 def permissions_dashboard(request):
     """
-    Dashboard de gestion des permissions
+    Dashboard de gestion des permissions (filtré par entreprise)
     """
-    users = Utilisateur.objects.all().prefetch_related('groups')
+    entreprise = request.user.entreprise
+    users = Utilisateur.objects.filter(entreprise=entreprise).prefetch_related('groups')
     groups = Group.objects.all().prefetch_related('permissions')
 
-    # Statistiques
+    # Statistiques (uniquement pour l'entreprise de l'admin connecté)
     total_users_count = users.count()
     valid_users = users.exclude(pk_utilisateur='').exclude(pk_utilisateur__isnull=True)
 
@@ -30,10 +31,10 @@ def permissions_dashboard(request):
         'invalid_users': total_users_count - valid_users.count(),
     }
 
-    # Utilisateurs par rôle
+    # Utilisateurs par rôle (uniquement ceux de l'entreprise)
     users_by_role = {}
     for group in groups:
-        users_by_role[group.name] = group.user_set.count()
+        users_by_role[group.name] = group.user_set.filter(entreprise=entreprise).count()
 
     context = {
         'stats': stats,
@@ -49,10 +50,12 @@ def permissions_dashboard(request):
 @role_required('ADMIN')
 def user_permissions_list(request):
     """
-    Liste des utilisateurs avec leurs rôles
+    Liste des utilisateurs avec leurs rôles (filtrée par entreprise)
     """
-    # Exclure les utilisateurs sans pk_utilisateur (données corrompues)
-    users = Utilisateur.objects.exclude(pk_utilisateur='').exclude(pk_utilisateur__isnull=True).prefetch_related('groups').order_by('nom_utilisateur')
+    # Filtrer par entreprise de l'admin connecté, exclure les données corrompues
+    users = Utilisateur.objects.filter(
+        entreprise=request.user.entreprise
+    ).exclude(pk_utilisateur='').exclude(pk_utilisateur__isnull=True).prefetch_related('groups').order_by('nom_utilisateur')
 
     # Ajouter le rôle principal à chaque utilisateur
     for user in users:

@@ -67,8 +67,10 @@ def mission_list_optimized(request):
     - Pagination (20 par page)
     - Filtres avancés
     """
+    entreprise = request.user.entreprise
+
     # Requête optimisée avec select_related pour éviter les requêtes N+1
-    missions = Mission.objects.select_related(
+    missions = Mission.objects.filter(contrat__entreprise=entreprise).select_related(
         'contrat',
         'contrat__chauffeur',
         'contrat__client',
@@ -88,10 +90,10 @@ def mission_list_optimized(request):
     missions_paginated = get_paginated_queryset(missions, request, per_page=20)
 
     # Compter les missions par statut pour les filtres
-    total_missions = Mission.objects.count()
-    missions_en_cours = Mission.objects.filter(statut='en cours').count()
-    missions_terminees = Mission.objects.filter(statut='terminée').count()
-    missions_annulees = Mission.objects.filter(statut='annulée').count()
+    total_missions = Mission.objects.filter(contrat__entreprise=entreprise).count()
+    missions_en_cours = Mission.objects.filter(statut='en cours', contrat__entreprise=entreprise).count()
+    missions_terminees = Mission.objects.filter(statut='terminée', contrat__entreprise=entreprise).count()
+    missions_annulees = Mission.objects.filter(statut='annulée', contrat__entreprise=entreprise).count()
 
     # 🆕 Compter les missions par type de transport
     from django.db.models import Q, Exists, OuterRef
@@ -99,19 +101,25 @@ def mission_list_optimized(request):
 
     # Missions avec aller ET retour
     missions_aller_retour = Mission.objects.filter(
+        contrat__entreprise=entreprise
+    ).filter(
         Exists(FraisTrajet.objects.filter(mission=OuterRef('pk'), type_trajet='aller')),
         Exists(FraisTrajet.objects.filter(mission=OuterRef('pk'), type_trajet='retour'))
     ).count()
 
     # Missions avec aller seulement
     missions_aller_simple = Mission.objects.filter(
+        contrat__entreprise=entreprise
+    ).filter(
         Exists(FraisTrajet.objects.filter(mission=OuterRef('pk'), type_trajet='aller'))
     ).exclude(
         Exists(FraisTrajet.objects.filter(mission=OuterRef('pk'), type_trajet='retour'))
     ).count()
 
     # Missions sans trajets
-    missions_sans_trajet = Mission.objects.exclude(
+    missions_sans_trajet = Mission.objects.filter(
+        contrat__entreprise=entreprise
+    ).exclude(
         Exists(FraisTrajet.objects.filter(mission=OuterRef('pk')))
     ).count()
 
@@ -135,8 +143,8 @@ def mission_list_optimized(request):
         'filter_search': request.GET.get('search', ''),
 
         # Listes pour les filtres
-        'chauffeurs': Chauffeur.objects.all().order_by('nom'),
-        'clients': Client.objects.all().order_by('nom'),
+        'chauffeurs': Chauffeur.objects.filter(entreprise=entreprise).order_by('nom'),
+        'clients': Client.objects.filter(entreprise=entreprise).order_by('nom'),
     }
 
     return render(request, 'transport/missions/mission_list.html', context)
@@ -147,7 +155,11 @@ def paiement_mission_list_optimized(request):
     """
     Liste des paiements avec pagination et requêtes optimisées
     """
-    paiements = PaiementMission.objects.select_related(
+    entreprise = request.user.entreprise
+
+    paiements = PaiementMission.objects.filter(
+        mission__contrat__entreprise=entreprise
+    ).select_related(
         'mission',
         'mission__contrat',
         'mission__contrat__chauffeur',
@@ -164,8 +176,8 @@ def paiement_mission_list_optimized(request):
     paiements_paginated = get_paginated_queryset(paiements, request, per_page=20)
 
     # Statistiques
-    total_paiements = PaiementMission.objects.count()
-    paiements_valides = PaiementMission.objects.filter(est_valide=True).count()
+    total_paiements = PaiementMission.objects.filter(mission__contrat__entreprise=entreprise).count()
+    paiements_valides = PaiementMission.objects.filter(est_valide=True, mission__contrat__entreprise=entreprise).count()
     paiements_en_attente = total_paiements - paiements_valides
 
     context = {
@@ -179,7 +191,7 @@ def paiement_mission_list_optimized(request):
         'filter_est_valide': request.GET.get('est_valide', ''),
         'filter_search': request.GET.get('search', ''),
 
-        'chauffeurs': Chauffeur.objects.all().order_by('nom'),
+        'chauffeurs': Chauffeur.objects.filter(entreprise=entreprise).order_by('nom'),
     }
 
     return render(request, 'transport/paiements-mission/paiement_mission_list.html', context)
@@ -238,7 +250,9 @@ def contrat_list_optimized(request):
     """
     Liste des contrats avec pagination et requêtes optimisées
     """
-    contrats = ContratTransport.objects.select_related(
+    contrats = ContratTransport.objects.filter(
+        entreprise=request.user.entreprise
+    ).select_related(
         'conteneur',
         'conteneur__compagnie',
         'client',
@@ -262,9 +276,9 @@ def contrat_list_optimized(request):
         'filter_statut_caution': request.GET.get('statut_caution', ''),
         'filter_search': request.GET.get('search', ''),
 
-        'chauffeurs': Chauffeur.objects.all().order_by('nom'),
-        'clients': Client.objects.all().order_by('nom'),
-        'transitaires': Transitaire.objects.all().order_by('nom'),
+        'chauffeurs': Chauffeur.objects.filter(entreprise=request.user.entreprise).order_by('nom'),
+        'clients': Client.objects.filter(entreprise=request.user.entreprise).order_by('nom'),
+        'transitaires': Transitaire.objects.filter(entreprise=request.user.entreprise).order_by('nom'),
     }
 
     return render(request, 'transport/contrat/contrat_list.html', context)
@@ -275,7 +289,7 @@ def chauffeur_list_optimized(request):
     """
     Liste des chauffeurs avec informations sur leurs affectations
     """
-    chauffeurs = Chauffeur.objects.select_related('entreprise').prefetch_related(
+    chauffeurs = Chauffeur.objects.filter(entreprise=request.user.entreprise).select_related('entreprise').prefetch_related(
         Prefetch(
             'affectation_set',
             queryset=Affectation.objects.filter(date_fin_affectation__isnull=True).select_related('camion'),
@@ -303,8 +317,8 @@ def chauffeur_list_optimized(request):
     chauffeurs_paginated = get_paginated_queryset(chauffeurs, request, per_page=25)
 
     # Statistiques
-    total_chauffeurs = Chauffeur.objects.count()
-    chauffeurs_disponibles = Chauffeur.objects.filter(est_affecter=False).count()
+    total_chauffeurs = Chauffeur.objects.filter(entreprise=request.user.entreprise).count()
+    chauffeurs_disponibles = Chauffeur.objects.filter(entreprise=request.user.entreprise, est_affecter=False).count()
     chauffeurs_affectes = total_chauffeurs - chauffeurs_disponibles
 
     context = {
@@ -326,7 +340,7 @@ def camion_list_optimized(request):
     """
     Liste des camions avec informations sur leurs affectations
     """
-    camions = Camion.objects.select_related('entreprise').prefetch_related(
+    camions = Camion.objects.filter(entreprise=request.user.entreprise).select_related('entreprise').prefetch_related(
         Prefetch(
             'affectation_set',
             queryset=Affectation.objects.filter(date_fin_affectation__isnull=True).select_related('chauffeur'),
@@ -352,8 +366,8 @@ def camion_list_optimized(request):
     camions_paginated = get_paginated_queryset(camions, request, per_page=25)
 
     # Statistiques
-    total_camions = Camion.objects.count()
-    camions_disponibles = Camion.objects.filter(est_affecter=False).count()
+    total_camions = Camion.objects.filter(entreprise=request.user.entreprise).count()
+    camions_disponibles = Camion.objects.filter(entreprise=request.user.entreprise, est_affecter=False).count()
     camions_affectes = total_camions - camions_disponibles
 
     context = {
@@ -375,7 +389,9 @@ def reparation_list_optimized(request):
     """
     Liste des réparations avec pagination et requêtes optimisées
     """
-    reparations = Reparation.objects.select_related(
+    reparations = Reparation.objects.filter(
+        camion__entreprise=request.user.entreprise
+    ).select_related(
         'camion',
         'camion__entreprise',
         'chauffeur'
@@ -402,7 +418,7 @@ def reparation_list_optimized(request):
         'title': 'Liste des réparations',
 
         'filter_search': request.GET.get('search', ''),
-        'camions': Camion.objects.all().order_by('immatriculation'),
+        'camions': Camion.objects.filter(entreprise=request.user.entreprise).order_by('immatriculation'),
     }
 
     return render(request, 'transport/reparations/reparation_list.html', context)
@@ -413,7 +429,9 @@ def caution_list_optimized(request):
     """
     Liste des cautions avec pagination et requêtes optimisées
     """
-    cautions = Cautions.objects.select_related(
+    cautions = Cautions.objects.filter(
+        contrat__entreprise=request.user.entreprise
+    ).select_related(
         'conteneur',
         'contrat',
         'transitaire',
@@ -430,10 +448,11 @@ def caution_list_optimized(request):
 
     # Statistiques
     from django.db.models import Sum
-    total_cautions = Cautions.objects.count()
-    cautions_en_attente = Cautions.objects.filter(statut='en_attente').count()
-    cautions_remboursees = Cautions.objects.filter(statut='remboursee').count()
-    montant_bloque = Cautions.objects.filter(statut='en_attente').aggregate(
+    cautions_qs_stats = Cautions.objects.filter(contrat__entreprise=request.user.entreprise)
+    total_cautions = cautions_qs_stats.count()
+    cautions_en_attente = cautions_qs_stats.filter(statut='en_attente').count()
+    cautions_remboursees = cautions_qs_stats.filter(statut='remboursee').count()
+    montant_bloque = cautions_qs_stats.filter(statut='en_attente').aggregate(
         total=Sum('montant')
     )['total'] or 0
 
@@ -448,8 +467,8 @@ def caution_list_optimized(request):
         'filter_statut': request.GET.get('statut', ''),
         'filter_search': request.GET.get('search', ''),
 
-        'chauffeurs': Chauffeur.objects.all().order_by('nom'),
-        'clients': Client.objects.all().order_by('nom'),
+        'chauffeurs': Chauffeur.objects.filter(entreprise=request.user.entreprise).order_by('nom'),
+        'clients': Client.objects.filter(entreprise=request.user.entreprise).order_by('nom'),
     }
 
     return render(request, 'transport/cautions/cautions_list.html', context)

@@ -257,7 +257,7 @@ def can_modify_mission(user, mission):
         try:
             if hasattr(user, 'chauffeur_profile'):
                 return mission.contrat.chauffeur == user.chauffeur_profile
-        except:
+        except AttributeError:
             pass
         return False
 

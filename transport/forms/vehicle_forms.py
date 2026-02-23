@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 
 from ..models import (
     Camion, Conteneur, Reparation, ReparationMecanicien, PieceReparee,
-    Mecanicien, Fournisseur
+    Mecanicien, Fournisseur, Chauffeur
 )
 
 class CamionForm(forms.ModelForm):
@@ -38,6 +38,18 @@ class ConteneurForm(forms.ModelForm):
             'transitaire': forms.Select(attrs={'class': 'form-select'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        from ..models import Client, Transitaire
+        entreprise = getattr(self.user, 'entreprise', None)
+        if entreprise:
+            self.fields['client'].queryset = Client.objects.filter(entreprise=entreprise)
+            self.fields['transitaire'].queryset = Transitaire.objects.filter(entreprise=entreprise)
+        else:
+            self.fields['client'].queryset = Client.objects.none()
+            self.fields['transitaire'].queryset = Transitaire.objects.none()
+
 class ReparationForm(forms.ModelForm):
     # Champ pour sélectionner les mécaniciens directement dans le formulaire
     mecaniciens = forms.ModelMultipleChoiceField(
@@ -60,7 +72,14 @@ class ReparationForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
+        entreprise = getattr(self.user, 'entreprise', None)
+        if entreprise:
+            self.fields['camion'].queryset = Camion.objects.filter(entreprise=entreprise)
+            self.fields['chauffeur'].queryset = Chauffeur.objects.filter(entreprise=entreprise)
+            self.fields['mecaniciens'].queryset = Mecanicien.objects.filter(entreprise=entreprise)
 
         # Ajouter les attributs pour la sélection automatique bidirectionnelle
         self.fields['camion'].widget.attrs.update({

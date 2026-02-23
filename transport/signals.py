@@ -134,8 +134,11 @@ def notifier_reparation_urgente(sender, instance, created, **kwargs):
     if created and instance.cout and instance.cout >= SEUIL_URGENCE:
         from .models import Notification, Utilisateur
 
-        # Notifier tous les admins et managers
-        admins_managers = Utilisateur.objects.filter(role__in=['admin', 'manager'])
+        # Notifier les admins et managers de la même entreprise que le camion
+        admins_managers = Utilisateur.objects.filter(
+            role__in=['admin', 'manager'],
+            entreprise=instance.camion.entreprise
+        )
 
         for user in admins_managers:
             Notification.objects.create(
@@ -171,8 +174,12 @@ def notifier_caution_bloquee(sender, instance, created, **kwargs):
             # Notifier les admins, managers et le chauffeur concerné
             users_to_notify = []
 
-            # Admins et managers
-            admins_managers = Utilisateur.objects.filter(role__in=['admin', 'manager'])
+            # Admins et managers de la même entreprise que la caution
+            entreprise_caution = instance.contrat.entreprise if instance.contrat else None
+            admins_managers = Utilisateur.objects.filter(
+                role__in=['admin', 'manager'],
+                entreprise=entreprise_caution
+            ) if entreprise_caution else Utilisateur.objects.none()
             users_to_notify.extend(list(admins_managers))
 
             # Chauffeur concerné

@@ -19,7 +19,11 @@ logger = logging.getLogger('transport')
 
 @login_required
 def transitaire_list(request):
-    transitaires = Transitaire.objects.all().order_by('nom')
+    entreprise = getattr(request.user, 'entreprise', None)
+    if entreprise:
+        transitaires = Transitaire.objects.filter(entreprise=entreprise).order_by('nom')
+    else:
+        transitaires = Transitaire.objects.order_by('nom')
     return render(request, "transport/transitaires/transitaire_list.html", {"transitaires": transitaires, "title": "Liste des transitaires"})
 
 @login_required
@@ -28,7 +32,9 @@ def create_transitaire(request):
         form = TransitaireForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
-                transitaire = form.save()
+                transitaire = form.save(commit=False)
+                transitaire.entreprise = getattr(request.user, 'entreprise', None)
+                transitaire.save()
                 AuditLog.objects.create(
                     utilisateur=request.user,
                     action='CREATE',
@@ -49,7 +55,7 @@ def create_transitaire(request):
 
 @login_required
 def update_transitaire(request, pk):
-    transitaire = get_object_or_404(Transitaire, pk=pk)
+    transitaire = get_object_or_404(Transitaire, pk=pk, entreprise=request.user.entreprise)
     if request.method == "POST":
         form = TransitaireForm(request.POST, instance=transitaire)
         if form.is_valid():
@@ -74,7 +80,7 @@ def update_transitaire(request, pk):
 
 @can_delete_data
 def delete_transitaire(request, pk):
-    transitaire = get_object_or_404(Transitaire, pk=pk)
+    transitaire = get_object_or_404(Transitaire, pk=pk, entreprise=request.user.entreprise)
     if request.method == "POST":
         nom = transitaire.nom
         transitaire.delete()
@@ -88,7 +94,16 @@ def delete_transitaire(request, pk):
 
 @login_required
 def client_list(request):
-    clients = Client.objects.all().order_by('nom')
+    entreprise = getattr(request.user, 'entreprise', None)
+    if entreprise:
+        clients = Client.objects.filter(
+            entreprise=entreprise
+        ).order_by('nom') | Client.objects.filter(
+            contrattransport__entreprise=entreprise
+        ).order_by('nom')
+        clients = clients.distinct().order_by('nom')
+    else:
+        clients = Client.objects.order_by('nom')
     return render(request, "transport/clients/client_list.html", {"clients": clients, "title": "Liste des clients"})
 
 # Création d'un client
@@ -99,7 +114,9 @@ def create_client(request):
         form = ClientForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
-                client = form.save()
+                client = form.save(commit=False)
+                client.entreprise = getattr(request.user, 'entreprise', None)
+                client.save()
                 AuditLog.objects.create(
                     utilisateur=request.user,
                     action='CREATE',
@@ -119,7 +136,7 @@ def create_client(request):
 
 @login_required
 def update_client(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, entreprise=request.user.entreprise)
     if request.method == "POST":
         form = ClientForm(request.POST, instance=client)
         if form.is_valid():
@@ -144,7 +161,7 @@ def update_client(request, pk):
 
 @can_delete_data
 def delete_client(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, entreprise=request.user.entreprise)
     if request.method == "POST":
         nom = client.nom
         client.delete()
@@ -222,11 +239,15 @@ def delete_compagnie(request, pk):
         return redirect('compagnie_list')
     return render(request, "transport/compagnies/compagnie_confirm_delete.html", {"compagnie": compagnie, "title": "Supprimer la compagnie"})
 
-# Liste des conteneurs
+# Liste des fournisseurs
 
 @login_required
 def fournisseur_list(request):
-    fournisseurs = Fournisseur.objects.all().order_by('-created_at')
+    entreprise = getattr(request.user, 'entreprise', None)
+    if entreprise:
+        fournisseurs = Fournisseur.objects.filter(entreprise=entreprise).order_by('-created_at')
+    else:
+        fournisseurs = Fournisseur.objects.order_by('-created_at')
     return render(request, 'transport/fournisseurs/fournisseur_list.html', {
         'fournisseurs': fournisseurs,
         'title': 'Liste des fournisseurs'
@@ -240,7 +261,9 @@ def create_fournisseur(request):
         form = FournisseurForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
-                fournisseur = form.save()
+                fournisseur = form.save(commit=False)
+                fournisseur.entreprise = getattr(request.user, 'entreprise', None)
+                fournisseur.save()
                 AuditLog.objects.create(
                     utilisateur=request.user,
                     action='CREATE',
@@ -260,7 +283,7 @@ def create_fournisseur(request):
 
 @login_required
 def update_fournisseur(request, pk):
-    fournisseur = get_object_or_404(Fournisseur, pk=pk)
+    fournisseur = get_object_or_404(Fournisseur, pk=pk, entreprise=request.user.entreprise)
     if request.method == 'POST':
         form = FournisseurForm(request.POST, instance=fournisseur)
         if form.is_valid():
@@ -285,7 +308,7 @@ def update_fournisseur(request, pk):
 
 @can_delete_data
 def delete_fournisseur(request, pk):
-    fournisseur = get_object_or_404(Fournisseur, pk=pk)
+    fournisseur = get_object_or_404(Fournisseur, pk=pk, entreprise=request.user.entreprise)
     if request.method == 'POST':
         nom = fournisseur.nom
         fournisseur.delete()

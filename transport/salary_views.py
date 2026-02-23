@@ -23,7 +23,10 @@ def salaire_list(request):
     statut_filter = request.GET.get('statut')
     employe_filter = request.GET.get('employe')
 
-    salaires = Salaire.objects.all().select_related(
+    entreprise = request.user.entreprise
+    salaires = Salaire.objects.filter(
+        Q(chauffeur__entreprise=entreprise) | Q(utilisateur__entreprise=entreprise)
+    ).select_related(
         'chauffeur', 'utilisateur', 'cree_par'
     ).prefetch_related('primes', 'deductions')
 
@@ -51,7 +54,9 @@ def salaire_list(request):
     }
 
     # Années disponibles pour le filtre
-    annees_disponibles = Salaire.objects.values_list('annee', flat=True).distinct().order_by('-annee')
+    annees_disponibles = Salaire.objects.filter(
+        Q(chauffeur__entreprise=entreprise) | Q(utilisateur__entreprise=entreprise)
+    ).values_list('annee', flat=True).distinct().order_by('-annee')
 
     context = {
         'salaires': salaires,
@@ -105,8 +110,8 @@ def salaire_create(request):
             for error in errors:
                 messages.error(request, error)
             context = {
-                'chauffeurs': Chauffeur.objects.all().order_by('nom'),
-                'utilisateurs': Utilisateur.objects.filter(is_active=True).exclude(pk_utilisateur='').order_by('nom_utilisateur'),
+                'chauffeurs': Chauffeur.objects.filter(entreprise=request.user.entreprise).order_by('nom'),
+                'utilisateurs': Utilisateur.objects.filter(is_active=True, entreprise=request.user.entreprise).exclude(pk_utilisateur='').order_by('nom_utilisateur'),
                 'mois_choices': Salaire._meta.get_field('mois').choices,
                 'mode_paiement_choices': Salaire._meta.get_field('mode_paiement').choices,
                 'form_data': request.POST,
@@ -183,8 +188,8 @@ def salaire_create(request):
             messages.error(request, f"❌ Erreur: {str(e)}")
 
     context = {
-        'chauffeurs': Chauffeur.objects.all().order_by('nom'),
-        'utilisateurs': Utilisateur.objects.filter(is_active=True).exclude(pk_utilisateur='').order_by('nom_utilisateur'),
+        'chauffeurs': Chauffeur.objects.filter(entreprise=request.user.entreprise).order_by('nom'),
+        'utilisateurs': Utilisateur.objects.filter(is_active=True, entreprise=request.user.entreprise).exclude(pk_utilisateur='').order_by('nom_utilisateur'),
         'mois_choices': Salaire._meta.get_field('mois').choices,
         'mode_paiement_choices': Salaire._meta.get_field('mode_paiement').choices,
         'annee_actuelle': datetime.now().year,

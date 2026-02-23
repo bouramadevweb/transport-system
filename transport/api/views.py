@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Exists, OuterRef
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -205,19 +205,26 @@ class ChauffeurViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not (hasattr(user, 'entreprise') and user.entreprise):
             return Chauffeur.objects.none()
-        queryset = Chauffeur.objects.filter(entreprise=user.entreprise).select_related('entreprise')
-        # Filtrer par statut d'affectation
+        # Annotation : en_mission_active = True si le chauffeur a une mission 'en cours'
+        en_mission = Mission.objects.filter(
+            statut='en cours',
+            contrat__chauffeur=OuterRef('pk'),
+        )
+        queryset = Chauffeur.objects.filter(
+            entreprise=user.entreprise
+        ).select_related('entreprise').annotate(
+            en_mission_active=Exists(en_mission)
+        )
         est_affecter = self.request.query_params.get('est_affecter')
         if est_affecter is not None:
-            queryset = queryset.filter(est_affecter=est_affecter.lower() == 'true')
-        # Filtrer les chauffeurs disponibles (pas en mission active)
+            queryset = queryset.filter(en_mission_active=est_affecter.lower() == 'true')
         disponible = self.request.query_params.get('disponible')
         if disponible is not None and disponible.lower() == 'true':
-            chauffeurs_en_mission = Mission.objects.filter(
-                statut='en cours'
-            ).values_list('contrat__chauffeur_id', flat=True)
-            queryset = queryset.exclude(pk_chauffeur__in=chauffeurs_en_mission)
+            queryset = queryset.filter(en_mission_active=False)
         return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(entreprise=self.request.user.entreprise)
 
     @action(detail=True, methods=['get'])
     def camion_actuel(self, request, pk=None):
@@ -296,18 +303,26 @@ class CamionViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not (hasattr(user, 'entreprise') and user.entreprise):
             return Camion.objects.none()
-        queryset = Camion.objects.filter(entreprise=user.entreprise).select_related('entreprise')
+        # Annotation : en_mission_active = True si le camion a une mission 'en cours'
+        en_mission = Mission.objects.filter(
+            statut='en cours',
+            contrat__camion=OuterRef('pk'),
+        )
+        queryset = Camion.objects.filter(
+            entreprise=user.entreprise
+        ).select_related('entreprise').annotate(
+            en_mission_active=Exists(en_mission)
+        )
         est_affecter = self.request.query_params.get('est_affecter')
         if est_affecter is not None:
-            queryset = queryset.filter(est_affecter=est_affecter.lower() == 'true')
-        # Filtrer les camions disponibles (pas en mission active)
+            queryset = queryset.filter(en_mission_active=est_affecter.lower() == 'true')
         disponible = self.request.query_params.get('disponible')
         if disponible is not None and disponible.lower() == 'true':
-            camions_en_mission = Mission.objects.filter(
-                statut='en cours'
-            ).values_list('contrat__camion_id', flat=True)
-            queryset = queryset.exclude(pk_camion__in=camions_en_mission)
+            queryset = queryset.filter(en_mission_active=False)
         return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(entreprise=self.request.user.entreprise)
 
     @action(detail=True, methods=['get'])
     def chauffeur_actuel(self, request, pk=None):
@@ -328,6 +343,9 @@ class CompagnieConteneurViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['nom']
+
+    def get_queryset(self):
+        return CompagnieConteneur.objects.all()
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -420,6 +438,9 @@ class TransitaireViewSet(viewsets.ModelViewSet):
             return Transitaire.objects.none()
         return Transitaire.objects.filter(entreprise=user.entreprise)
 
+    def perform_create(self, serializer):
+        serializer.save(entreprise=self.request.user.entreprise)
+
 
 class ClientViewSet(viewsets.ModelViewSet):
     """API endpoint pour les clients"""
@@ -440,6 +461,9 @@ class ClientViewSet(viewsets.ModelViewSet):
         if not (hasattr(user, 'entreprise') and user.entreprise):
             return Client.objects.none()
         return Client.objects.filter(entreprise=user.entreprise)
+
+    def perform_create(self, serializer):
+        serializer.save(entreprise=self.request.user.entreprise)
 
 
 # =============================================================================
@@ -601,12 +625,7 @@ class ContratTransportViewSet(viewsets.ModelViewSet):
 
 class MissionViewSet(viewsets.ModelViewSet):
     """API endpoint pour les missions"""
-    queryset = Mission.objects.select_related(
-        'prestation_transport',
-        'contrat',
-        'contrat__chauffeur',
-        'contrat__camion'
-    ).all()
+    queryset = Mission.objects.none()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['pk_mission']
@@ -634,20 +653,38 @@ class MissionViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def terminer(self, request, pk=None):
-        """Termine une mission"""
+        """Termine une mission via la méthode du modèle (cascade + retour conteneur)"""
         mission = self.get_object()
-        mission.statut = 'terminee'
-        mission.date_arrivee = timezone.now().date()
-        mission.save()
-        return Response({'status': 'Mission terminée'}, status=status.HTTP_200_OK)
+        if mission.statut == 'terminée':
+            return Response({'error': 'Cette mission est déjà terminée.'}, status=status.HTTP_400_BAD_REQUEST)
+        if mission.statut == 'annulée':
+            return Response({'error': 'Impossible de terminer une mission annulée.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            date_retour_str = request.data.get('date_retour')
+            date_retour = None
+            if date_retour_str:
+                from datetime import datetime
+                date_retour = datetime.strptime(date_retour_str, '%Y-%m-%d').date()
+            force = request.data.get('force', False)
+            result = mission.terminer_mission(date_retour=date_retour, force=bool(force))
+            return Response({'status': 'Mission terminée', 'details': result}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['post'])
     def annuler(self, request, pk=None):
-        """Annule une mission"""
+        """Annule une mission via la méthode du modèle (cascade cautions + paiements)"""
         mission = self.get_object()
-        mission.statut = 'annulee'
-        mission.save()
-        return Response({'status': 'Mission annulée'}, status=status.HTTP_200_OK)
+        if mission.statut == 'annulée':
+            return Response({'error': 'Cette mission est déjà annulée.'}, status=status.HTTP_400_BAD_REQUEST)
+        if mission.statut == 'terminée':
+            return Response({'error': 'Impossible d\'annuler une mission déjà terminée.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            raison = request.data.get('raison', '')
+            mission.annuler_mission(raison=raison)
+            return Response({'status': 'Mission annulée'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'])
     def calculer_stationnement(self, request, pk=None):
@@ -734,12 +771,10 @@ class FraisTrajetViewSet(viewsets.ModelViewSet):
 
 class CautionsViewSet(viewsets.ModelViewSet):
     """API endpoint pour les cautions"""
-    queryset = Cautions.objects.select_related(
-        'conteneur', 'contrat', 'transitaire', 'client', 'chauffeur', 'camion'
-    ).all()
+    queryset = Cautions.objects.none()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['date_creation', 'montant']
+    ordering_fields = ['montant']
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -761,7 +796,7 @@ class CautionsViewSet(viewsets.ModelViewSet):
 
 class PaiementMissionViewSet(viewsets.ModelViewSet):
     """API endpoint pour les paiements de mission"""
-    queryset = PaiementMission.objects.select_related('mission', 'caution', 'prestation').all()
+    queryset = PaiementMission.objects.none()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['date_paiement', 'montant_total']
@@ -800,7 +835,7 @@ class PaiementMissionViewSet(viewsets.ModelViewSet):
 
 class SalaireViewSet(viewsets.ModelViewSet):
     """API endpoint pour les salaires"""
-    queryset = Salaire.objects.select_related('chauffeur').all()
+    queryset = Salaire.objects.none()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['annee', 'mois', 'salaire_net']
@@ -953,26 +988,93 @@ class DashboardAPIView(APIView):
             bloquees=Count('pk_caution', filter=Q(statut='bloquee'))
         )
 
-        # Chauffeurs
-        total_chauffeurs = Chauffeur.objects.filter(entreprise=entreprise).count()
-        chauffeurs_affectes = Chauffeur.objects.filter(entreprise=entreprise, est_affecter=True).count()
+        today = timezone.now().date()
 
-        # Camions
+        # Missions ce mois
+        this_month_start = today.replace(day=1)
+        missions_ce_mois = Mission.objects.filter(
+            contrat__entreprise=entreprise,
+            date_depart__gte=this_month_start,
+        ).count()
+
+        # Revenus ce mois (paiements validés)
+        revenus_ce_mois = PaiementMission.objects.filter(
+            mission__contrat__entreprise=entreprise,
+            date_paiement__gte=this_month_start,
+            est_valide=True,
+        ).aggregate(total=Sum('montant_total'))['total'] or 0
+
+        # Chauffeurs — affectés = ont une mission 'en cours'
+        total_chauffeurs = Chauffeur.objects.filter(entreprise=entreprise).count()
+        chauffeurs_affectes = Chauffeur.objects.filter(
+            entreprise=entreprise,
+            contrattransport__mission__statut='en cours',
+        ).distinct().count()
+        chauffeurs_disponibles = total_chauffeurs - chauffeurs_affectes
+
+        # Camions — affectés = ont une mission 'en cours'
         total_camions = Camion.objects.filter(entreprise=entreprise).count()
-        camions_affectes = Camion.objects.filter(entreprise=entreprise, est_affecter=True).count()
+        camions_affectes = Camion.objects.filter(
+            entreprise=entreprise,
+            contrattransport__mission__statut='en cours',
+        ).distinct().count()
+        camions_disponibles = total_camions - camions_affectes
+
+        # Réparations
+        total_reparations = Reparation.objects.filter(camion__entreprise=entreprise).count()
+        reparations_en_cours = Reparation.objects.filter(
+            camion__entreprise=entreprise,
+            date_reparation__gte=this_month_start,
+        ).count()
+
+        # Contrats
+        total_contrats = ContratTransport.objects.filter(entreprise=entreprise).count()
+        contrats_actifs = ContratTransport.objects.filter(entreprise=entreprise, statut='actif').count()
+
+        # Clients
+        total_clients = Client.objects.filter(entreprise=entreprise).count()
+
+        # Paiements validés
+        paiements_valides = PaiementMission.objects.filter(
+            mission__contrat__entreprise=entreprise,
+            est_valide=True,
+        ).count()
+
+        # Chiffre d'affaires = somme de tous les montants contractuels
+        chiffre_affaires = ContratTransport.objects.filter(
+            entreprise=entreprise,
+        ).aggregate(total=Sum('montant_total'))['total'] or 0
+
+        # Salaires en attente (statut brouillon)
+        salaires_en_attente = Salaire.objects.filter(
+            chauffeur__entreprise=entreprise,
+            statut='brouillon',
+        ).count()
 
         data = {
             'total_missions': total_missions,
             'missions_en_cours': missions_en_cours,
             'missions_terminees': missions_terminees,
+            'missions_ce_mois': missions_ce_mois,
             'total_paiements': paiements['total'] or 0,
             'paiements_en_attente': paiements['en_attente'] or 0,
+            'paiements_valides': paiements_valides,
+            'revenus_ce_mois': revenus_ce_mois,
+            'chiffre_affaires': chiffre_affaires,
             'total_cautions': cautions['total'] or 0,
             'cautions_bloquees': cautions['bloquees'] or 0,
             'total_chauffeurs': total_chauffeurs,
             'chauffeurs_affectes': chauffeurs_affectes,
+            'chauffeurs_disponibles': chauffeurs_disponibles,
             'total_camions': total_camions,
             'camions_affectes': camions_affectes,
+            'camions_disponibles': camions_disponibles,
+            'reparations_en_cours': reparations_en_cours,
+            'total_reparations': total_reparations,
+            'total_contrats': total_contrats,
+            'contrats_actifs': contrats_actifs,
+            'total_clients': total_clients,
+            'salaires_en_attente': salaires_en_attente,
         }
 
         serializer = DashboardStatsSerializer(data)
