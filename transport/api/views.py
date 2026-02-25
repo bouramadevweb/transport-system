@@ -1051,6 +1051,23 @@ class DashboardAPIView(APIView):
             statut='brouillon',
         ).count()
 
+        # Missions en retard (en cours mais date_retour dépassée)
+        missions_en_retard = Mission.objects.filter(
+            contrat__entreprise=entreprise,
+            statut='en cours',
+            date_retour__lt=today,
+        ).count()
+
+        # Missions en stationnement actif
+        stationnement_qs = Mission.objects.filter(
+            contrat__entreprise=entreprise,
+            statut_stationnement='en_stationnement',
+        )
+        conteneurs_frais_stationnement = stationnement_qs.count()
+        total_frais_stationnement = stationnement_qs.aggregate(
+            total=Sum('montant_stationnement')
+        )['total'] or 0
+
         data = {
             'total_missions': total_missions,
             'missions_en_cours': missions_en_cours,
@@ -1075,6 +1092,9 @@ class DashboardAPIView(APIView):
             'contrats_actifs': contrats_actifs,
             'total_clients': total_clients,
             'salaires_en_attente': salaires_en_attente,
+            'missions_en_retard': missions_en_retard,
+            'conteneurs_frais_stationnement': conteneurs_frais_stationnement,
+            'total_frais_stationnement': total_frais_stationnement,
         }
 
         serializer = DashboardStatsSerializer(data)

@@ -42,6 +42,9 @@
   <!-- CSRF Token for AJAX requests -->
   <div id="csrf-token-container" style="display:none">{% csrf_token %}</div>
 
+  <!-- Overlay mobile pour fermer le sidebar -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <div class="app-container">
     <!-- SIDEBAR -->
     <nav class="sidebar" id="sidebar">
@@ -389,20 +392,41 @@
     const sidebar = document.getElementById("sidebar");
     const toggleBtn = document.getElementById("toggleSidebar");
 
+    const overlay = document.getElementById("sidebarOverlay");
+
+    function openSidebarMobile() {
+      sidebar.classList.add("active");
+      overlay.classList.add("active");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeSidebarMobile() {
+      sidebar.classList.remove("active");
+      overlay.classList.remove("active");
+      document.body.style.overflow = "";
+    }
+
     toggleBtn.addEventListener("click", () => {
       if (window.innerWidth <= 992) {
-        sidebar.classList.toggle("active");
+        if (sidebar.classList.contains("active")) {
+          closeSidebarMobile();
+        } else {
+          openSidebarMobile();
+        }
       } else {
         sidebar.classList.toggle("collapsed");
       }
     });
 
+    overlay.addEventListener("click", closeSidebarMobile);
+
     // Close sidebar on outside click (mobile)
     document.addEventListener("click", (e) => {
       if (window.innerWidth <= 992 &&
           !sidebar.contains(e.target) &&
-          !toggleBtn.contains(e.target)) {
-        sidebar.classList.remove("active");
+          !toggleBtn.contains(e.target) &&
+          !overlay.contains(e.target)) {
+        closeSidebarMobile();
       }
     });
 
@@ -1271,6 +1295,7 @@
     .content {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 0 30px 30px;
     }
 
@@ -1437,6 +1462,22 @@
     .text-danger { color: var(--danger) !important; }
     .text-muted { color: var(--text-muted) !important; }
 
+    /* ========= OVERLAY SIDEBAR MOBILE ========= */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
+
+    .sidebar-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
     /* ========= RESPONSIVE ========= */
     @media (max-width: 992px) {
       .sidebar {
@@ -1593,6 +1634,18 @@
       .user-dropdown-header .text-muted {
         font-size: 0.7rem;
       }
+
+      /* Contenu général sur mobile */
+      .d-flex.justify-content-between {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      h2.mb-0 { font-size: 1.2rem !important; }
+
+      .card-body { padding: 0.75rem !important; }
+
+      .btn-group .btn { padding: 0.3rem 0.5rem; font-size: 0.8rem; }
     }
   </style>
 

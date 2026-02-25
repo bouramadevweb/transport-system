@@ -26,7 +26,7 @@
     }
 
     .kpi-card h3 {
-        font-size: 2.5em;
+        font-size: clamp(1.2rem, 4vw, 2.5em);
         margin: 10px 0;
         font-weight: bold;
     }
@@ -67,8 +67,8 @@
 
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+        gap: 15px;
         margin-bottom: 30px;
     }
 
@@ -89,18 +89,28 @@
         color: white;
         font-weight: bold;
     }
+
+    @media (max-width: 576px) {
+        .dashboard-card { padding: 12px; }
+        .kpi-card { padding: 12px 8px; }
+        .chart-container { height: 220px; }
+        h1 { font-size: 1.25rem !important; }
+        h4 { font-size: 1rem !important; }
+        .filter-bar { padding: 8px 12px; }
+        .stats-grid { gap: 10px; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="fas fa-chart-line"></i> {{ title }}</h1>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <h1 class="fs-4 fs-md-2 mb-0"><i class="fas fa-chart-line"></i> {{ title }}</h1>
 
         <!-- Filtres de période -->
-        <div class="filter-bar">
+        <div class="filter-bar mb-0 py-2">
             <form method="get" class="d-flex align-items-center gap-2">
-                <label class="mb-0">Période:</label>
+                <label class="mb-0 text-nowrap">Période:</label>
                 <select name="period" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto;">
                     <option value="7" {% if filter_period == '7' %}selected{% endif %}>7 jours</option>
                     <option value="30" {% if filter_period == '30' %}selected{% endif %}>30 jours</option>
@@ -232,6 +242,7 @@
         <div class="col-md-6">
             <div class="dashboard-card">
                 <h4>Top 5 Clients</h4>
+                <div class="table-responsive">
                 <table class="table table-sm">
                     <thead>
                         <tr>
@@ -250,6 +261,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
 
@@ -257,6 +269,7 @@
         <div class="col-md-6">
             <div class="dashboard-card">
                 <h4>Statistiques financières</h4>
+                <div class="table-responsive">
                 <table class="table table-sm">
                     <tr>
                         <td>CA Total</td>
@@ -283,6 +296,7 @@
                         <td class="text-end text-danger">{{ cout_reparations|floatformat:0 }} FCFA</td>
                     </tr>
                 </table>
+                </div>
             </div>
         </div>
     </div>

@@ -165,10 +165,14 @@ class MecanicienCreateSerializer(serializers.ModelSerializer):
 class AffectationSerializer(serializers.ModelSerializer):
     chauffeur_nom = serializers.CharField(source='chauffeur.__str__', read_only=True)
     camion_immat = serializers.CharField(source='camion.immatriculation', read_only=True)
+    est_active = serializers.SerializerMethodField()
 
     class Meta:
         model = Affectation
         fields = '__all__'
+
+    def get_est_active(self, obj):
+        return obj.date_fin_affectation is None
 
 
 # =============================================================================
@@ -186,10 +190,11 @@ class CamionSerializer(serializers.ModelSerializer):
 class CamionListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
     est_affecter = serializers.SerializerMethodField()
+    entreprise_nom = serializers.CharField(source='entreprise.nom', read_only=True, default=None)
 
     class Meta:
         model = Camion
-        fields = ['pk_camion', 'immatriculation', 'modele', 'capacite_tonnes', 'est_affecter']
+        fields = ['pk_camion', 'immatriculation', 'modele', 'capacite_tonnes', 'est_affecter', 'entreprise_nom']
 
     def get_est_affecter(self, obj):
         # True si le camion a une mission 'en cours' (annotation SQL Exists)
@@ -298,9 +303,11 @@ class TransitaireSerializer(serializers.ModelSerializer):
 
 class TransitaireListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
+    commission_taux = serializers.DecimalField(source='commission_percentage', max_digits=5, decimal_places=2, read_only=True)
+
     class Meta:
         model = Transitaire
-        fields = ['pk_transitaire', 'nom', 'telephone', 'email']
+        fields = ['pk_transitaire', 'nom', 'telephone', 'email', 'score_fidelite', 'etat_paiement', 'commission_taux']
 
 
 class TransitaireCreateSerializer(serializers.ModelSerializer):
@@ -343,7 +350,7 @@ class ClientListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
     class Meta:
         model = Client
-        fields = ['pk_client', 'nom', 'type_client', 'telephone']
+        fields = ['pk_client', 'nom', 'type_client', 'telephone', 'email', 'score_fidelite', 'etat_paiement']
 
 
 # =============================================================================
@@ -351,6 +358,12 @@ class ClientListSerializer(serializers.ModelSerializer):
 # =============================================================================
 
 class PrestationDeTransportsSerializer(serializers.ModelSerializer):
+    # Aliases pour compatibilité mobile
+    pk_prestation = serializers.CharField(source='pk_presta_transport', read_only=True)
+    contrat = serializers.CharField(source='contrat_transport_id', read_only=True, default=None)
+    contrat_ref = serializers.CharField(source='contrat_transport.numero_bl', read_only=True, default=None)
+    montant = serializers.DecimalField(source='prix_transport', max_digits=10, decimal_places=2, read_only=True)
+
     class Meta:
         model = PrestationDeTransports
         fields = '__all__'
@@ -392,13 +405,14 @@ class ContratTransportListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
     client_nom = serializers.CharField(source='client.nom', read_only=True)
     transitaire_nom = serializers.CharField(source='transitaire.nom', read_only=True, default=None)
+    conteneur_numero = serializers.CharField(source='conteneur.numero_conteneur', read_only=True, default=None)
 
     class Meta:
         model = ContratTransport
         fields = [
             'pk_contrat', 'numero_bl', 'date_debut', 'date_limite_retour',
             'montant_total', 'statut', 'statut_caution', 'client_nom', 'transitaire_nom',
-            'lieu_chargement', 'destinataire',
+            'lieu_chargement', 'destinataire', 'conteneur_numero',
         ]
 
 
@@ -499,6 +513,7 @@ class MissionListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
     chauffeur_nom = serializers.SerializerMethodField()
     camion_immat = serializers.SerializerMethodField()
+    contrat_ref = serializers.SerializerMethodField()
     statut = serializers.SerializerMethodField()
     statut_display = serializers.CharField(source='get_statut_display', read_only=True)
     origine = serializers.CharField(read_only=True)
@@ -511,7 +526,8 @@ class MissionListSerializer(serializers.ModelSerializer):
             'pk_mission', 'date_depart', 'date_retour', 'date_arrivee',
             'statut', 'statut_display', 'chauffeur_nom', 'camion_immat',
             'origine', 'destination', 'statut_stationnement',
-            'jours_stationnement_facturables', 'montant_stationnement'
+            'jours_stationnement_facturables', 'montant_stationnement',
+            'contrat_ref',
         ]
 
     _STATUT_MAP = {
@@ -535,6 +551,14 @@ class MissionListSerializer(serializers.ModelSerializer):
         try:
             if obj.contrat and obj.contrat.camion:
                 return obj.contrat.camion.immatriculation
+        except Exception:
+            pass
+        return None
+
+    def get_contrat_ref(self, obj):
+        try:
+            if obj.contrat:
+                return obj.contrat.numero_bl
         except Exception:
             pass
         return None
@@ -563,12 +587,26 @@ class CautionsSerializer(serializers.ModelSerializer):
 
 class CautionsListSerializer(serializers.ModelSerializer):
     """Serializer allégé pour les listes"""
-    client_nom = serializers.CharField(source='client.nom', read_only=True)
-    conteneur_numero = serializers.CharField(source='conteneur.numero_conteneur', read_only=True)
+    client_nom = serializers.CharField(source='client.nom', read_only=True, default=None)
+    conteneur_numero = serializers.CharField(source='conteneur.numero_conteneur', read_only=True, default=None)
+    chauffeur_nom = serializers.SerializerMethodField()
+    camion_immat = serializers.CharField(source='camion.immatriculation', read_only=True, default=None)
+    transitaire_nom = serializers.CharField(source='transitaire.nom', read_only=True, default=None)
 
     class Meta:
         model = Cautions
-        fields = ['pk_caution', 'montant', 'statut', 'montant_rembourser', 'client_nom', 'conteneur_numero']
+        fields = [
+            'pk_caution', 'montant', 'statut', 'montant_rembourser',
+            'client_nom', 'conteneur_numero', 'chauffeur_nom', 'camion_immat', 'transitaire_nom',
+        ]
+
+    def get_chauffeur_nom(self, obj):
+        try:
+            if obj.chauffeur:
+                return str(obj.chauffeur)
+        except Exception:
+            pass
+        return None
 
 
 class PaiementMissionSerializer(serializers.ModelSerializer):
@@ -651,7 +689,8 @@ class SalaireListSerializer(serializers.ModelSerializer):
         model = Salaire
         fields = [
             'pk_salaire', 'chauffeur_nom', 'mois', 'annee',
-            'salaire_base', 'salaire_net', 'statut'
+            'salaire_base', 'salaire_net', 'total_primes', 'total_deductions',
+            'date_paiement', 'statut',
         ]
 
 
@@ -714,3 +753,6 @@ class DashboardStatsSerializer(serializers.Serializer):
     contrats_actifs = serializers.IntegerField()
     total_clients = serializers.IntegerField()
     salaires_en_attente = serializers.IntegerField()
+    missions_en_retard = serializers.IntegerField()
+    conteneurs_frais_stationnement = serializers.IntegerField()
+    total_frais_stationnement = serializers.DecimalField(max_digits=15, decimal_places=2)
