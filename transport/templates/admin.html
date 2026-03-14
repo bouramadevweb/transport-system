@@ -210,6 +210,9 @@
             <a href="{% url 'piece_reparee_list' %}" class="{% if 'piece_reparee' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Pièces">
               <i class="fas fa-cog"></i><span>Pièces réparées</span>
             </a>
+            <a href="{% url 'reparation_mecanicien_list' %}" class="{% if 'reparation_mecanicien' in request.resolver_match.url_name %}active{% endif %}" data-tooltip="Affectations mécaniciens">
+              <i class="fas fa-link"></i><span>Affectations</span>
+            </a>
           </div>
         </div>
 

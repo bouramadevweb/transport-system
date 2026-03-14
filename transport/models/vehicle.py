@@ -232,6 +232,9 @@ class PieceReparee(models.Model):
             )
         ]
 
+    def get_cout_total(self):
+        return self.quantite * self.cout_unitaire
+
     def __str__(self):
         return f"{self.nom_piece} x{self.quantite} ({self.reparation})"
 

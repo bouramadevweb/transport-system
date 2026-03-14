@@ -207,7 +207,9 @@ def create_mecanicien(request):
     if request.method == 'POST':
         form = MecanicienForm(request.POST)
         if form.is_valid():
-            form.save()
+            mecanicien = form.save(commit=False)
+            mecanicien.entreprise = request.user.entreprise
+            mecanicien.save()
             return redirect('mecanicien_list')
     else:
         form = MecanicienForm()

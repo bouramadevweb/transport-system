@@ -53,11 +53,11 @@ class ConteneurForm(forms.ModelForm):
 class ReparationForm(forms.ModelForm):
     # Champ pour sélectionner les mécaniciens directement dans le formulaire
     mecaniciens = forms.ModelMultipleChoiceField(
-        queryset=Mecanicien.objects.all(),
-        required=True,
+        queryset=Mecanicien.objects.none(),
+        required=False,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
         label="Mécaniciens assignés",
-        help_text="Sélectionnez au moins un mécanicien pour cette réparation"
+        help_text="Sélectionnez les mécaniciens pour cette réparation"
     )
 
     class Meta:
@@ -79,7 +79,10 @@ class ReparationForm(forms.ModelForm):
         if entreprise:
             self.fields['camion'].queryset = Camion.objects.filter(entreprise=entreprise)
             self.fields['chauffeur'].queryset = Chauffeur.objects.filter(entreprise=entreprise)
-            self.fields['mecaniciens'].queryset = Mecanicien.objects.filter(entreprise=entreprise)
+            mecaniciens_qs = Mecanicien.objects.filter(entreprise=entreprise)
+            if not mecaniciens_qs.exists():
+                mecaniciens_qs = Mecanicien.objects.filter(entreprise__isnull=True)
+            self.fields['mecaniciens'].queryset = mecaniciens_qs
 
         # Ajouter les attributs pour la sélection automatique bidirectionnelle
         self.fields['camion'].widget.attrs.update({

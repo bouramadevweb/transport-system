@@ -7,6 +7,13 @@
 
 {%block content %}
 <div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{%url 'dashboard' %}"><i class="fas fa-home"></i></a></li>
+            <li class="breadcrumb-item"><a href="{%url 'reparation_list' %}">Réparations</a></li>
+            <li class="breadcrumb-item active">{{title}}</li>
+        </ol>
+    </nav>
     <div class="row justify-content-center">
         <div class="col-lg-10 col-xl-9">
             <div class="card shadow-lg border-0">
@@ -174,7 +181,7 @@
                     <ul class="small mb-0">
                         <li>Les champs marqués d'un <span class="text-danger">*</span> sont obligatoires</li>
                         <li>Le coût de main-d'œuvre n'inclut pas les pièces (à ajouter séparément)</li>
-                        <li>Au moins un mécanicien doit être assigné à la réparation</li>
+                        <li>Sélectionner un mécanicien est recommandé mais facultatif</li>
                         <li>La description aide à garder un historique détaillé des interventions</li>
                     </ul>
                 </div>

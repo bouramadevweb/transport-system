@@ -51,7 +51,7 @@
                             <td>{{ p.cout_unitaire }} FCFA</td>
                             <td>
                                 <strong class="text-success">
-                                    {% widthratio p.quantite 1 p.cout_unitaire %} FCFA
+                                    {{ p.get_cout_total }} FCFA
                                 </strong>
                             </td>
                             <td>{% if p.fournisseur %}{{ p.fournisseur.nom }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>

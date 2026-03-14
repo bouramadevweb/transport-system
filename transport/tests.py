@@ -1,10 +1,12 @@
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
+from django.contrib.messages.storage.fallback import FallbackStorage
 from decimal import Decimal
 from django.utils import timezone
 from transport.models import (
     ContratTransport, Cautions, Mission, PaiementMission,
     PrestationDeTransports, Camion, Chauffeur, Client, Transitaire,
-    Conteneur, Entreprise
+    Conteneur, Entreprise, Mecanicien, Reparation, PieceReparee,
+    Utilisateur,
 )
 
 
@@ -445,3 +447,388 @@ class AuditLogTest(TestCase):
         )
         self.assertIsNotNone(log)
         self.assertEqual(log.model_name, 'TestModel')
+
+
+# ===========================================================================
+# NON-REGRESSION : Mécaniciens / Réparations / Pièces réparées
+# Bug corrigé : create_mecanicien ne sauvegardait pas l'entreprise du user
+# Conséquence : ReparationForm vide → réparations non créables → pièces vides
+# ===========================================================================
+
+def _make_request(user, method='GET', data=None):
+    """Helper : crée une requête Django de test avec messages support."""
+    factory = RequestFactory()
+    req = factory.get('/') if method == 'GET' else factory.post('/', data or {})
+    req.user = user
+    req.session = {}
+    req._messages = FallbackStorage(req)
+    return req
+
+
+class MaintenanceSetupMixin:
+    """
+    Mixin commun : crée deux entreprises, deux users, un camion et
+    quelques mécaniciens pour tester l'isolation multi-tenant.
+    """
+
+    def setUp(self):
+        self.entreprise_a = Entreprise.objects.create(
+            nom="Entreprise A",
+            secteur_activite="Transport",
+            telephone_contact="0000000001",
+        )
+        self.entreprise_b = Entreprise.objects.create(
+            nom="Entreprise B",
+            secteur_activite="Transport",
+            telephone_contact="0000000002",
+        )
+
+        self.user_a = Utilisateur.objects.create_user(
+            email="usera@test.com",
+            password="pass",
+            entreprise=self.entreprise_a,
+        )
+        self.user_b = Utilisateur.objects.create_user(
+            email="userb@test.com",
+            password="pass",
+            entreprise=self.entreprise_b,
+        )
+
+        self.camion_a = Camion.objects.create(
+            entreprise=self.entreprise_a,
+            immatriculation="NR-TEST-A1",
+            modele="TestModel",
+            capacite_tonnes=Decimal("10"),
+        )
+        self.camion_b = Camion.objects.create(
+            entreprise=self.entreprise_b,
+            immatriculation="NR-TEST-B1",
+            modele="TestModel",
+            capacite_tonnes=Decimal("10"),
+        )
+
+        self.meca_a = Mecanicien.objects.create(
+            nom="MecaA",
+            telephone="0100000001",
+            entreprise=self.entreprise_a,
+        )
+        self.meca_b = Mecanicien.objects.create(
+            nom="MecaB",
+            telephone="0100000002",
+            entreprise=self.entreprise_b,
+        )
+
+
+# ---------------------------------------------------------------------------
+# 1. Tests UNITAIRES — Modèle & Formulaires
+# ---------------------------------------------------------------------------
+
+class MecanicienFormTest(MaintenanceSetupMixin, TestCase):
+    """Tests unitaires sur MecanicienForm et la sauvegarde de l'entreprise."""
+
+    def test_form_exclut_champ_entreprise(self):
+        """Le formulaire ne doit PAS exposer le champ entreprise (injection côté vue)."""
+        from transport.forms import MecanicienForm
+        form = MecanicienForm(data={"nom": "Test", "telephone": "0123456789"})
+        self.assertNotIn("entreprise", form.fields,
+                         "entreprise ne doit pas être dans les champs du formulaire")
+
+    def test_form_valide_sans_entreprise(self):
+        """Le formulaire est valide même sans entreprise (injected via view)."""
+        from transport.forms import MecanicienForm
+        form = MecanicienForm(data={"nom": "TestMeca", "telephone": "0123456789"})
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_save_commit_false_permet_injection_entreprise(self):
+        """commit=False + injection manulle de l'entreprise doit fonctionner."""
+        from transport.forms import MecanicienForm
+        form = MecanicienForm(data={"nom": "TestInject", "telephone": "0555555555"})
+        self.assertTrue(form.is_valid())
+        meca = form.save(commit=False)
+        meca.entreprise = self.entreprise_a
+        meca.save()
+
+        meca.refresh_from_db()
+        self.assertEqual(meca.entreprise, self.entreprise_a,
+                         "L'entreprise doit être celle du user, pas NULL")
+
+    def test_mecanicien_sans_entreprise_invisible_dans_liste(self):
+        """Un mécanicien avec entreprise=NULL ne doit PAS apparaître dans la liste filtrée."""
+        orphelin = Mecanicien.objects.create(
+            nom="Orphelin",
+            telephone="0666000000",
+            entreprise=None,
+        )
+        visibles = Mecanicien.objects.filter(entreprise=self.entreprise_a)
+        self.assertNotIn(orphelin, visibles,
+                         "Un mécanicien sans entreprise ne doit pas être visible")
+
+
+class PieceRepareeCoutTotalTest(TestCase):
+    """Tests unitaires sur PieceReparee.get_cout_total()."""
+
+    def setUp(self):
+        self.entreprise = Entreprise.objects.create(
+            nom="EntrepriseTest",
+            secteur_activite="Transport",
+            telephone_contact="0000000000",
+        )
+        self.camion = Camion.objects.create(
+            entreprise=self.entreprise,
+            immatriculation="COUT-TEST-01",
+            modele="Model",
+            capacite_tonnes=Decimal("5"),
+        )
+        self.reparation = Reparation.objects.create(
+            camion=self.camion,
+            date_reparation=timezone.now().date(),
+            cout=Decimal("0"),
+        )
+
+    def test_cout_total_entier(self):
+        piece = PieceReparee.objects.create(
+            reparation=self.reparation,
+            nom_piece="Filtre huile",
+            categorie="moteur",
+            quantite=3,
+            cout_unitaire=Decimal("5000"),
+        )
+        self.assertEqual(piece.get_cout_total(), Decimal("15000"))
+
+    def test_cout_total_decimal(self):
+        """get_cout_total() doit conserver les centimes — contrairement à widthratio."""
+        piece = PieceReparee.objects.create(
+            reparation=self.reparation,
+            nom_piece="Joint",
+            categorie="moteur",
+            quantite=2,
+            cout_unitaire=Decimal("1500.75"),
+        )
+        self.assertEqual(piece.get_cout_total(), Decimal("3001.50"),
+                         "Les centimes doivent être conservés (widthratio les tronquait)")
+
+    def test_cout_total_quantite_unitaire(self):
+        piece = PieceReparee.objects.create(
+            reparation=self.reparation,
+            nom_piece="Boulon",
+            categorie="carrosserie",
+            quantite=1,
+            cout_unitaire=Decimal("250.00"),
+        )
+        self.assertEqual(piece.get_cout_total(), Decimal("250.00"))
+
+
+class ReparationFormMecanicienTest(MaintenanceSetupMixin, TestCase):
+    """Tests sur le queryset mécaniciens dans ReparationForm."""
+
+    def test_mecaniciens_filtres_par_entreprise(self):
+        """Seuls les mécaniciens de l'entreprise du user doivent apparaître."""
+        from transport.forms import ReparationForm
+        form = ReparationForm(user=self.user_a)
+        qs = form.fields["mecaniciens"].queryset
+        self.assertIn(self.meca_a, qs)
+        self.assertNotIn(self.meca_b, qs,
+                         "Les mécaniciens d'une autre entreprise ne doivent pas apparaître")
+
+    def test_mecaniciens_non_requis(self):
+        """Le champ mecaniciens ne doit pas bloquer la soumission si vide."""
+        from transport.forms import ReparationForm
+        form = ReparationForm(user=self.user_a)
+        self.assertFalse(form.fields["mecaniciens"].required,
+                         "required=True bloquerait la création quand le queryset est vide")
+
+    def test_fallback_mecaniciens_null_entreprise(self):
+        """Si aucun mécanicien avec entreprise, le fallback NULL doit s'activer."""
+        from transport.forms import ReparationForm
+        # Créer une entreprise sans mécanicien
+        entreprise_vide = Entreprise.objects.create(
+            nom="EntrepriseVide",
+            secteur_activite="Transport",
+            telephone_contact="0999999999",
+        )
+        user_vide = Utilisateur.objects.create_user(
+            email="uservide@test.com",
+            password="pass",
+            entreprise=entreprise_vide,
+        )
+        meca_null = Mecanicien.objects.create(
+            nom="MecaNull",
+            telephone="0777000000",
+            entreprise=None,
+        )
+        form = ReparationForm(user=user_vide)
+        qs = form.fields["mecaniciens"].queryset
+        self.assertIn(meca_null, qs,
+                      "Le fallback doit afficher les mécaniciens sans entreprise")
+
+
+# ---------------------------------------------------------------------------
+# 2. Tests d'INTÉGRATION — Vues Django
+# ---------------------------------------------------------------------------
+
+class MecanicienListViewTest(MaintenanceSetupMixin, TestCase):
+    """Tests d'intégration sur la vue mecanicien_list."""
+
+    def _get_list(self, user):
+        from transport.views.personnel_views import mecanicien_list
+        req = _make_request(user)
+        return mecanicien_list(req)
+
+    def test_liste_charge_http_200(self):
+        resp = self._get_list(self.user_a)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_liste_affiche_mecaniciens_de_son_entreprise(self):
+        resp = self._get_list(self.user_a)
+        content = resp.content.decode()
+        self.assertIn("MecaA", content,
+                      "Le mécanicien de l'entreprise A doit être visible pour user_a")
+
+    def test_liste_cache_mecaniciens_autre_entreprise(self):
+        resp = self._get_list(self.user_a)
+        content = resp.content.decode()
+        self.assertNotIn("MecaB", content,
+                         "Le mécanicien de l'entreprise B ne doit PAS être visible pour user_a")
+
+    def test_isolation_inverse(self):
+        """User B ne voit que ses mécaniciens."""
+        resp = self._get_list(self.user_b)
+        content = resp.content.decode()
+        self.assertIn("MecaB", content)
+        self.assertNotIn("MecaA", content)
+
+
+class CreateMecanicienViewTest(MaintenanceSetupMixin, TestCase):
+    """Tests d'intégration sur la vue create_mecanicien."""
+
+    def test_create_injecte_entreprise_du_user(self):
+        """REGRESSION TEST : la vue doit sauvegarder l'entreprise du user connecté."""
+        from transport.views.personnel_views import create_mecanicien
+        req = _make_request(self.user_a, method='POST', data={
+            "nom": "NouveauMeca",
+            "telephone": "0888000001",
+            "email": "",
+        })
+        create_mecanicien(req)
+
+        meca = Mecanicien.objects.filter(nom="NouveauMeca").first()
+        self.assertIsNotNone(meca, "Le mécanicien doit avoir été créé")
+        self.assertEqual(meca.entreprise, self.entreprise_a,
+                         "L'entreprise doit être celle de user_a, pas NULL")
+
+    def test_create_ne_laisse_pas_entreprise_null(self):
+        """REGRESSION TEST : entreprise ne doit JAMAIS être NULL après création."""
+        from transport.views.personnel_views import create_mecanicien
+        req = _make_request(self.user_a, method='POST', data={
+            "nom": "MecaSansEntreprise",
+            "telephone": "0888000002",
+        })
+        create_mecanicien(req)
+
+        null_mecaniciens = Mecanicien.objects.filter(
+            nom="MecaSansEntreprise",
+            entreprise__isnull=True,
+        )
+        self.assertEqual(null_mecaniciens.count(), 0,
+                         "Aucun mécanicien ne doit être créé avec entreprise=NULL")
+
+    def test_mecaniciens_deux_entreprises_isoles(self):
+        """User A et user B créent chacun un mécanicien : ils ne se voient pas."""
+        from transport.views.personnel_views import create_mecanicien
+        req_a = _make_request(self.user_a, method='POST', data={"nom": "MecaIsoA", "telephone": "0001"})
+        req_b = _make_request(self.user_b, method='POST', data={"nom": "MecaIsoB", "telephone": "0002"})
+        create_mecanicien(req_a)
+        create_mecanicien(req_b)
+
+        self.assertFalse(Mecanicien.objects.filter(nom="MecaIsoA", entreprise=self.entreprise_b).exists())
+        self.assertFalse(Mecanicien.objects.filter(nom="MecaIsoB", entreprise=self.entreprise_a).exists())
+
+
+class ReparationListViewTest(MaintenanceSetupMixin, TestCase):
+    """Tests d'intégration sur la vue reparation_list."""
+
+    def setUp(self):
+        super().setUp()
+        self.rep_a = Reparation.objects.create(
+            camion=self.camion_a,
+            date_reparation=timezone.now().date(),
+            cout=Decimal("50000"),
+            description="Réparation entreprise A",
+        )
+        self.rep_b = Reparation.objects.create(
+            camion=self.camion_b,
+            date_reparation=timezone.now().date(),
+            cout=Decimal("30000"),
+            description="Réparation entreprise B",
+        )
+
+    def _get_list(self, user):
+        from transport.views.vehicle_views import reparation_list
+        req = _make_request(user)
+        return reparation_list(req)
+
+    def test_liste_charge_http_200(self):
+        self.assertEqual(self._get_list(self.user_a).status_code, 200)
+
+    def test_user_a_voit_sa_reparation(self):
+        content = self._get_list(self.user_a).content.decode()
+        self.assertIn("Réparation entreprise A", content)
+
+    def test_user_a_ne_voit_pas_reparation_b(self):
+        content = self._get_list(self.user_a).content.decode()
+        self.assertNotIn("Réparation entreprise B", content,
+                         "Une réparation d'une autre entreprise ne doit pas être visible")
+
+
+class PieceRepareeListViewTest(MaintenanceSetupMixin, TestCase):
+    """Tests d'intégration sur la vue piece_reparee_list — filtre entreprise."""
+
+    def setUp(self):
+        super().setUp()
+        rep_a = Reparation.objects.create(
+            camion=self.camion_a,
+            date_reparation=timezone.now().date(),
+            cout=Decimal("0"),
+        )
+        rep_b = Reparation.objects.create(
+            camion=self.camion_b,
+            date_reparation=timezone.now().date(),
+            cout=Decimal("0"),
+        )
+        self.piece_a = PieceReparee.objects.create(
+            reparation=rep_a,
+            nom_piece="Filtre A",
+            categorie="moteur",
+            quantite=1,
+            cout_unitaire=Decimal("5000"),
+        )
+        self.piece_b = PieceReparee.objects.create(
+            reparation=rep_b,
+            nom_piece="Filtre B",
+            categorie="moteur",
+            quantite=1,
+            cout_unitaire=Decimal("3000"),
+        )
+
+    def _get_list(self, user):
+        from transport.views.vehicle_views import piece_reparee_list
+        req = _make_request(user)
+        return piece_reparee_list(req)
+
+    def test_liste_charge_http_200(self):
+        self.assertEqual(self._get_list(self.user_a).status_code, 200)
+
+    def test_user_a_voit_ses_pieces(self):
+        content = self._get_list(self.user_a).content.decode()
+        self.assertIn("Filtre A", content)
+
+    def test_user_a_ne_voit_pas_pieces_entreprise_b(self):
+        """REGRESSION TEST : le filtre entreprise doit isoler les données."""
+        content = self._get_list(self.user_a).content.decode()
+        self.assertNotIn("Filtre B", content,
+                         "Les pièces d'une autre entreprise ne doivent pas être visibles")
+
+    def test_isolation_inverse(self):
+        content = self._get_list(self.user_b).content.decode()
+        self.assertIn("Filtre B", content)
+        self.assertNotIn("Filtre A", content)

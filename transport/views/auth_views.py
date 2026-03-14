@@ -61,7 +61,7 @@ def inscription_utilisateur(request):
         form = InscriptionUtilisateurForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('login') 
+            return redirect('utilisateur_list')
     else:
         form = InscriptionUtilisateurForm()
 

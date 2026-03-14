@@ -321,9 +321,12 @@ def delete_reparation_mecanicien(request, pk):
 
 @login_required
 def piece_reparee_list(request):
-    pieces = PieceReparee.objects.select_related('reparation', 'fournisseur')
+    entreprise = getattr(request.user, 'entreprise', None)
+    qs = PieceReparee.objects.select_related('reparation__camion', 'fournisseur')
+    if entreprise:
+        qs = qs.filter(reparation__camion__entreprise=entreprise)
     return render(request, 'transport/reparations/piece_reparee_list.html', {
-        'pieces': pieces,
+        'pieces': qs,
         'title': 'Pièces réparées'
     })
 

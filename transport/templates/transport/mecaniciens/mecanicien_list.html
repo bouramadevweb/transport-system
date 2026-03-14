@@ -23,7 +23,6 @@
                             <th><i class="fas fa-user me-2"></i>Nom</th>
                             <th><i class="fas fa-phone me-2"></i>Téléphone</th>
                             <th><i class="fas fa-envelope me-2"></i>Email</th>
-                            <th><i class="fas fa-map-marker me-2"></i>Adresse</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -33,7 +32,6 @@
                             <td>{{ m.nom }}</td>
                             <td>{{ m.telephone }}</td>
                             <td>{{ m.email }}</td>
-                            <td>{{ m.adresse }}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     <a href="{%url 'update_mecanicien' m.pk_mecanicien %}"
